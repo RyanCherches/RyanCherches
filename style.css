@@ -58,6 +58,7 @@ h1 {
 }
 .first-how_to_play {
     max-width: 400px;
+    margin-bottom:18px;
 }
 .btn-link {
     display:inline-block;
@@ -91,7 +92,6 @@ footer {
     justify-content: space-around;
     text-align:center;
     padding: 16px;
-    margin:5px;
     background-color:var(--color-black);
     color:var(--color-natural-white);
 }
@@ -174,4 +174,88 @@ header {
     display:flex;
     gap:16px;
     justify-content: end;
+}
+#burger-button {
+    display: none;
+}
+/* Мобильные устройства */
+@media (max-width: 768px) {
+    header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    header > .logo-container {
+        width: 100%;
+        display: flex;
+        justify-content: inherit;
+        align-items: center;
+    }
+
+    #burger-button {
+        display: block;
+        fill: var(--color-black);
+    }
+
+    header > nav {
+        width: 100%;
+        background-color: var(--color-natural-white);
+        border-radius: 12px;
+        margin-top: 24px;
+        transition: height 0.5s ease;
+        overflow: clip;
+    }
+
+    header > nav > ul {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .main__container {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .first-how_to_play {
+        max-width: 100%;
+        text-align: center;
+    }
+
+    h1 {
+        font-size: 36px;
+    }
+
+    h2 {
+        font-size: 28px;
+    }
+
+    .similar_container {
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .similar_container > article {
+        min-width: 100%;
+        text-align: center;
+    }
+
+    .flags {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .flags img {
+        width: 30%;
+        max-width: 150px;
+    }
+
+    .btn-link, .link {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+
+    footer {
+        flex-direction: column;
+    }
 }

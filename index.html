@@ -9,10 +9,15 @@
 </head>
 <body>
     <header>
-        <div>
+        <div class="logo-container">
             <img src="images/Logo.svg" alt="image of website" width="154">
+            <svg viewBox="0 0 100 80" width="32" height="32" id="burger-button" onclick="changeBurgerMenu()">
+                <rect width="100" height="20"></rect>
+                <rect y="30" width="100" height="20"></rect>
+                <rect y="60" width="100" height="20"></rect>
+            </svg>
         </div>
-        <nav>
+        <nav id="header-nav" style="height:0px;">
             <ul>
                 <li class="header-link"><a href="#home" >Home</a></li>
                 <li class="header-link"><a href="#how-to-play" >How to Play</a></li>
@@ -30,7 +35,7 @@
                     <a class="btn-link" href="https://worldle.teuteuf.fr/" target="_blank">Play</a>
                 </div>
                 <div>
-                    <img src="images/world map.svg" alt="image of world map">
+                    <img src="images/world map.svg" alt="image of world map" width="100%">
                 </div>
             </div>
         </div>
@@ -76,8 +81,8 @@
             <img src="images/Logo.svg" alt="image of website" width="154">
         </div>
         <div class="footer2">
-            <p>This website was made with the help of Kodland. Kodland is a company that helps young learners(like me) learn coding languages very easily. Here is the link to Kodland if you wan't to:</p>
             <p>Thank you for reading about Worldle and hope you have fun playing it!</p>
+            <p>This website was made with the help of Kodland. Kodland is a company that helps young learners(like me) learn coding languages very easily. Here is the link to Kodland if you wan't to:</p>
             <div class="footer_links">
                 <a href="https://www.kodland.org/" target="_blank">The link to Kodland</a>
                 <a href="mailto:rfcherches13@gmail.com">rfcherches13@gmail.com</a>
@@ -85,5 +90,6 @@
             <p class="footer-last">© Worldle, 2025</p>
         </div>
     </footer>
+    <script src="script.js"></script>
 </body>
 </html>

@@ -32,6 +32,7 @@ header>nav>ul {
     gap: 16px;
     font-weight:500;
     text-decoration: none;
+    margin-top: 0px;;
     a:link{color:var(--color-primary);}
     a:hover {color:var(--color-secondary);}
     a:visited {color:var(--color-primary);}

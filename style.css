@@ -33,14 +33,15 @@ header>nav>ul {
     font-weight:500;
     text-decoration: none;
     margin-top: 0px;;
-    a:link{color:var(--color-primary);}
-    a:hover {color:var(--color-secondary);}
-    a:visited {color:var(--color-primary);}
-    
+}
+.header-link>a {
+    color:var(--color-primary);
+}
+.header-link>a:hover {
+    color:var(--color-secondary);
 }
 a {
-    text-decoration: none;
-    
+    text-decoration: none;  
 }
 .main__container {
     display:flex;
@@ -182,6 +183,9 @@ header {
 #about-me {
     font-size: 30px;
 }
+.footer {
+    max-width:100%;
+}
 /* Мобильные устройства */
 @media (max-width: 768px) {
     header {
@@ -208,6 +212,7 @@ header {
         margin-top: 24px;
         transition: height 0.5s ease;
         overflow: clip;
+        
     }
 
     header > nav > ul {
@@ -262,4 +267,8 @@ header {
     footer {
         flex-direction: column;
     }
+}
+.header-nav2 {
+    a:link{color:var(--color-primary);}
+    a:hover {color:var(--color-secondary);}
 }

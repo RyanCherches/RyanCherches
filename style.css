@@ -179,6 +179,9 @@ header {
 #burger-button {
     display: none;
 }
+#about-me {
+    font-size: 30px;
+}
 /* Мобильные устройства */
 @media (max-width: 768px) {
     header {
@@ -198,7 +201,7 @@ header {
         fill: var(--color-black);
     }
 
-    header > nav {
+    #header-nav {
         width: 100%;
         background-color: var(--color-natural-white);
         border-radius: 12px;

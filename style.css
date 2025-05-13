@@ -172,6 +172,22 @@ header {
     object-fit: cover;
     border-radius: 8px;
 }
+#container_image1 {
+    width:130px;
+}
+#container_image2 {
+    height:300px;
+}
+#home {
+    font-size: 50px;
+}
+#home-header {
+    display:flex;
+    align-items:center;
+}
+#footer-text {
+    color:red;
+}
 .footer_links {
     display:flex;
     gap:16px;
@@ -180,7 +196,7 @@ header {
 #burger-button {
     display: none;
 }
-#about-me {
+.about-me {
     font-size: 30px;
 }
 .footer {

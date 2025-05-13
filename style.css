@@ -109,6 +109,7 @@ footer {
 }
 .similar_container {
     display:flex;
+    justify-content:space-around;
     gap:125px;
     margin-top: 36px;
 }

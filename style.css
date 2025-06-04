@@ -32,7 +32,7 @@ header>nav>ul {
     gap: 16px;
     font-weight:500;
     text-decoration: none;
-    margin-top: 0px;;
+    margin-top: 0px;
 }
 .header-link>a {
     color:var(--color-primary);
@@ -54,6 +54,13 @@ a {
 .main__container-background {
     background-color: var(--color-background-silver);
 }
+.why {
+    font-size: 40px;
+}
+.why-space {
+    max-width:1000px;
+    margin:auto;
+}
 h1 {
     font-weight:600;
     font-size:64px;
@@ -61,6 +68,11 @@ h1 {
 .first-how_to_play {
     max-width: 400px;
     margin-bottom:18px;
+}
+.second-how_to_play {
+    margin:auto;
+    max-width:500px;
+    align-items:center;
 }
 .btn-link {
     display:inline-block;
@@ -179,6 +191,14 @@ header {
 #container_image2 {
     height:300px;
 }
+#container_image3 {
+    width:400px;
+    height:200px;
+}
+.fist-how_to_play>p {
+    color:var(--color-natural-gray);
+}
+
 #home {
     font-size: 50px;
 }

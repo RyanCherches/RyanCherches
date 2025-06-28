@@ -69,6 +69,14 @@ h1 {
     max-width: 400px;
     margin-bottom:18px;
 }
+.third-how_to_play {
+    display:flex;
+    flex-direction:column;
+    max-width: 450px;
+    margin-bottom:18px;
+    margin:auto;
+    align-items:center;
+}
 .second-how_to_play {
     margin:auto;
     max-width:500px;

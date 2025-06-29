@@ -317,3 +317,20 @@ header {
     a:link{color:var(--color-primary);}
     a:hover {color:var(--color-secondary);}
 }
+.link {
+    transition: all 1s ease;
+}
+
+.link:hover {
+    background-color: darkgreen;
+}
+.link:hover {
+    animation: shake 1s ease-in-out; 
+}
+@keyframes shake {
+    0% { transform: scale(2,2); }
+    25% { transform: rotate(45deg); }
+    50% { transform: rotate(-45deg); }
+    75% { transform: rotate(0); }
+    100% { transform: scale(1,1); }
+}

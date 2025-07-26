@@ -162,6 +162,8 @@ h1,h2,h3 {
 }
 header {
     position: sticky;
+    top:0px;
+    height:100px;
 }
 .link {
     display:inline-block;
@@ -226,7 +228,9 @@ header {
     display: none;
 }
 .about-me {
-    font-size: 30px;
+    width:150px;
+    height:250px;
+    position:absolute;
 }
 .footer {
     max-width:100%;

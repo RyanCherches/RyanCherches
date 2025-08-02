@@ -113,9 +113,11 @@ footer {
     align-items:center;
     justify-content: space-between;
     text-align:center;
-    padding: 16px;
+    padding-right: 20px;
+    padding-left: 20px;
     background-color:var(--color-black);
     color:var(--color-natural-white);
+    padding-bottom: 14px;
 }
 .footer2 {
     text-align: right;
@@ -228,8 +230,6 @@ header {
     display: none;
 }
 .about-me {
-    width:150px;
-    height:250px;
     position:absolute;
 }
 .footer {

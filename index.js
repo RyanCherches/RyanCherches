@@ -115,7 +115,7 @@ if (value === "admin") {
     letter.innerHTML = '';
 }
 });*/
-const login = document.getElementsByClassName("login")[0];
+/*const login = document.getElementsByClassName("login")[0];
 login.addEventListener("click", function () {
     const username = document.getElementById("username").value;
 
@@ -126,4 +126,4 @@ login.addEventListener("click", function () {
     if (username === "admin") {
         document.getElementById("admin").style.display = "block";
     }
-});
+});*/

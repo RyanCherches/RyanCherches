@@ -189,8 +189,12 @@
 
             localStorage.setItem("Uabcd", Uabcd); // Store username for later
 
-            if (Uabcd === "admin" && Pabc === "rfcthebest") {
+            if (Uabcd === "admin" && Pabc === "rfc51813") {
                 window.location.href = "main_admin.html";
+            } else if  (Uabcd == "advisor" && Pabc === "rfcthebest") {
+                window.location.href = "main_advisor.html"
+            } else if (Uabcd === "family" && Pabc === "rfcthebest") {
+                window.location.href = "main_advisor.html"
             } else {
                 window.location.href = "main_normal.html";
             }

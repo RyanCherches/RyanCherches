@@ -146,8 +146,8 @@
             <div class="login-box">
                 <h2>Login</h2>
                 <form action="#" method="POST">
-                    <input type="text" id="username" name="username" required placeholder="Username">
-                    <input type="password" name="password" repuired placeholder="Password">
+                    <input type="text" id="Uabcd" name="username" required placeholder="Username">
+                    <input type="password" id="Pabc" name="password" repuired placeholder="Password">
                     <div class="options">
                         <input type="checkbox" id="remember" name="remember">
                         <label for="remember">Remeber me</label>
@@ -171,15 +171,29 @@
                 </div>
             </footer>-->
     <script>
-        function login() {
+        /*function login() {
             const username = document.getElementById("username").value.trim();
             localStorage.setItem("username", username);
-            if (username.toLowerCase() === "admin") {
+            const password = document.getElementById("password");
+            localStorage.setItem("password", password)
+            if (username.toLowerCase() === "admin" && password == "rfcdabest") {
                 window.location.href = "main_admin.html";
             } else {
                 window.location.href = "main_normal.html";
             }
             
+        }*/
+        function login() {
+            const Uabcd = document.getElementById("Uabcd").value.trim().toLowerCase();
+            const Pabc = document.getElementById("Pabc").value;
+
+            localStorage.setItem("Uabcd", Uabcd); // Store username for later
+
+            if (Uabcd === "admin" && Pabc === "rfcthebest") {
+                window.location.href = "main_admin.html";
+            } else {
+                window.location.href = "main_normal.html";
+            }
         }
     </script>
 </body>

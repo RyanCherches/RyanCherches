@@ -152,7 +152,7 @@
                         <input type="checkbox" id="remember" name="remember">
                         <label for="remember">Remeber me</label>
                     </div>
-                    <a href="main.html" href="main.html" class="login">Login</a>
+                    <a href="#" class="login" onclick="login()">Login</a>
                     <p>Don't have an account/forgot your password? <a href="signup.html" id= "register">Register</a></p>
                 </form>
             </div>
@@ -170,6 +170,17 @@
                     </div>
                 </div>
             </footer>-->
-    <script src="index.js"></script>
+    <script>
+        function login() {
+            const username = document.getElementById("username").value.trim();
+            localStorage.setItem("username", username);
+            if (username.toLowerCase() === "admin") {
+                window.location.href = "main_admin.html";
+            } else {
+                window.location.href = "main_normal.html";
+            }
+            
+        }
+    </script>
 </body>
 </html>

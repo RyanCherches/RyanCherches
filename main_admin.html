@@ -55,9 +55,9 @@
                 </article>
             </div>
             <br>
-            <div class="similar_container">
+            <div class="similar_container" id="similar_container2">
                 <article class="letter">
-                    <!--<img src="images/letter.jpg" alt="image of letter" class="container_image4"><p>click ONLY if you are my advisor. ONLY!!!!!</p><a href="advisory letter.html" class="link">Advisory Letter for my advisor ONLY!</a>-->
+                    <img src="images/letter.jpg" alt="image of letter" class="container_image4"><p>click ONLY if you are my advisor. ONLY!!!!!</p><a href="advisory letter.html" class="link">Advisory Letter for my advisor ONLY!</a>
                 </article>
             </div>
         </div>
@@ -76,7 +76,13 @@
                     </div>
                 </div>
             </footer>
-    <script src="script.js"></script>
-    <script src="index.js"></script>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const username = params.get("user");
+
+        if (username === "admin") {
+            document.getElementsByClassName("admin").style.display = "block";
+        }
+    </script>
 </body>
 </html>

@@ -1,15 +1,4 @@
-/*document.addEventListener("DOMContentLoaded", function () {
-    const restricted = document.querySelector("#username");
-    console.log("restricted input element:", restricted);
-    const value = restricted.value;
-
-    let button = document.querySelector(".login");
-
-    if (button) {
-        button.addEventListener('click', function () {
-            let letter = document.querySelector(".letter");
-            let whole = document.querySelector("html");
-            whole.innerHTML = `<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -37,7 +26,7 @@
             25% {transform: scale(100)};
         }*/
 
-    /*</style>
+    </style>
 </head>
 
 <body>
@@ -66,11 +55,6 @@
                 </article>
             </div>
             <br>
-            <div class="similar_container">
-                <article class="letter">
-                    <!--<img src="images/letter.jpg" alt="image of letter" class="container_image4"><p>click ONLY if you are my advisor. ONLY!!!!!</p><a href="advisory letter.html" class="link">Advisory Letter for my advisor ONLY!</a>-->
-                </article>
-            </div>
         </div>
             <br><br><br>
     </main>
@@ -87,43 +71,13 @@
                     </div>
                 </div>
             </footer>
-    <script src="script.js"></script>
-</body>
-</html>`
-    });
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const username = params.get("user");
+
+        if (username === "admin") {
+            document.getElementsByClassName("admin").style.display = "block";
         }
-/*let letter = document.querySelector(".letter")
-if (value === "admin") {
-    window.location.href = 'https://google.com';
-    // Save to localStorage
-    localStorage.setItem("isAdmin", "true");
-
-    // Optional: update UI
-    letter.innerHTML = `
-        <img src="images/letter.jpg" alt="image of letter" class="container_image4">
-        <p>click ONLY if you are my advisor. ONLY!!!!!</p>
-        <a href="advisory letter.html" class="link">Advisory Letter for my advisor ONLY!</a>
-    `;
-
-    // Redirect after short delay (optional)
-    setTimeout(() => {
-        window.location.href = "advisory letter.html";
-    }, 1000); // 1 second delay
-} else {
-    localStorage.removeItem("isAdmin"); // Clear just in case
-    console.log(letter); // This should output 'null' in the console
-    letter.innerHTML = '';
-}
-});*/
-const login = document.getElementsByClassName("login")[0];
-login.addEventListener("click", function () {
-    const username = document.getElementById("username").value;
-
-    // Hide all content areas first
-    document.getElementByID("admin").style.display = "none";
-
-    // Show content based on username
-    if (username === "admin") {
-        document.getElementById("admin").style.display = "block";
-    }
-});
+    </script>
+</body>
+</html>

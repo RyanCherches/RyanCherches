@@ -128,9 +128,35 @@
         color:black;
        }
        @media (max-width: 964px) {
-        body {
-            background-size:contain;
-        }
+            body {
+                background-size:contain;
+            }
+       }
+       .passwd-wrap {
+        position:relative;
+       }
+       #show-passwd {
+        position: absolute;
+        top: 50%;
+        right:1rem;
+        transform: translateY(-50%);
+        cursor: pointer;
+        width:1.5rem;
+        display:flex;
+        align-items:center;
+        background-color:transparent;
+       }
+       #show-passwd:hover {
+        border:0px  none transparent;
+       }
+       #show-passwd img {
+        width: 20px;
+        height:auto;
+        color:black;
+        
+       }
+       #Pabc {
+        width:250px;
        }
 
     </style>
@@ -147,7 +173,12 @@
                 <h2>Login</h2>
                 <form action="#" method="POST">
                     <input type="text" id="Uabcd" name="username" required placeholder="Username">
-                    <input type="password" id="Pabc" name="password" repuired placeholder="Password">
+                    <div class="passwd-wrap">
+                        <input type="password" id="Pabc" name="password" required placeholder="Password">
+                        <button type="button" id="show-passwd">
+                            <img src="images/visible_password.png" alt="visible">
+                        </button>
+                    </div>
                     <div class="options">
                         <input type="checkbox" id="remember" name="remember">
                         <label for="remember">Remeber me</label>
@@ -171,6 +202,18 @@
                 </div>
             </footer>-->
     <script>
+        const toggleBtn = document.getElementById("show-passwd");
+        const passwordInput = document.getElementById("Pabc");
+        const icon = toggleBtn.querySelector("img");
+
+        toggleBtn.addEventListener("click", function () {
+            const isPassword = passwordInput.type === "password";
+            passwordInput.type = isPassword ? "text" : "password";
+
+            // Optional: change icon when toggling
+            icon.src = isPassword ? "images/notvisible_password.png" : "images/visible_password.png";
+            icon.alt = isPassword ? "hidden" : "visible";
+        });
         /*function login() {
             const username = document.getElementById("username").value.trim();
             localStorage.setItem("username", username);

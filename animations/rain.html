@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat&display=swap');
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.5em;
+            background-repeat: repeat;
+
+        }
+
+        img {
+            margin: 0;
+            padding: 0;
+        }
+
+        .rain {
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+    </style>
+</head>
+<body>
+    <canvas class="rain"></canvas>
+</body>
+<script>
+    let drop_radius = 1;
+    let timer;
+    let canvas = document.querySelector('.rain');
+    let rain = canvas.getContext("2d");
+    let drops_x = [];
+    let drops_y = [];
+    let drops_speed = [];
+    function create_drops() {
+        for (let i = 0; i < 800; i++) {
+            let x = Math.random() * canvas.width;
+            let y = Math.random() * canvas.height * -1;
+            let speed = Math.random() * 3 + 2;
+            drops_x.push(x);
+            drops_y.push(y);
+            drops_speed.push(speed);
+        }
+    }
+
+    function move_drops() {
+        for (let i = 0; i < 800; i++) {
+            drops_y[i] += drops_speed[i];
+            if (drops_y[i] >= canvas.height) {
+                drops_x[i] = Math.random() * canvas.width;
+                drops_y[i] = 0;
+            }
+        }
+    }
+
+    function randomRGB() {
+        const r = Math.floor(Math.random()*256);
+        const g = Math.floor(Math.random()*256);
+        const b = Math.floor(Math.random()*256);
+        return `rgb(${r}, ${g}, ${b})`;
+    }
+
+    function draw_scene() {
+        for (let i = 0; i < 1000; i++) {
+            rain.beginPath();
+            rain.fillStyle = randomRGB();
+            rain.arc(drops_x[i], drops_y[i], drop_radius, 0, Math.PI * 2);
+            rain.fill();
+            rain.closePath();
+        }
+    }
+
+    function engine() {
+        rain.clearRect(0, 0, canvas.width, canvas.height);
+        move_drops();
+        draw_scene();
+    }
+    timer = setInterval(engine, 10);
+    create_drops();
+</script>
+</html>

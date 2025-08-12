@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <canvas class="squares"></canvas>
+    <script>
+        let x;
+        let y;
+        let timer;
+
+        let canvas = document.querySelector('.squares');
+        let squares = canvas.getContext("2d");
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        let width = canvas.width;
+        let height = canvas.height;
+        function randomRGB() {
+        const r = Math.floor(Math.random() * 256);
+        const g = Math.floor(Math.random() * 256);
+        const b = Math.floor(Math.random() * 256);
+        return `rgb(${r}, ${g}, ${b})`;
+        }
+        function draw() {
+            x = Math.random() * width;
+            y = Math.random() * height;
+            x = Math.round(x);
+            y = Math.round(y);
+            squares.fillStyle = randomRGB();
+            squares.fillRect(x, y, 100, 100);
+        }
+        timer = setInterval(draw,100);
+
+    </script>
+</body>
+</html>

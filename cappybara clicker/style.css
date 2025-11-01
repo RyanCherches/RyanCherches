@@ -1,0 +1,43 @@
+.nugget_clicker {
+    display: flex;
+    height: 100vh;
+    width:100%;
+    flex-direction: row;
+}
+.cookie {
+    width: 50%;
+    height:100vh;
+    background-image: url("grass_background.jpeg");
+    background-repeat: no-repeat;
+    background-position: center bottom; /* Optional: Adjust position as needed */
+    background-size: cover;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:space-around;
+}
+.upgrades {
+    width: 50%;
+    height:100vh;
+    background-color:red;
+}
+body {
+    margin:0;
+}
+.clicker {
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    border: 5px dotted lightblue;
+    background-color:yellow;
+}
+.amount {
+    color:black;
+}
+.multiplier {
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    border: 5px dotted black;
+    background-color:darkgreen;
+}

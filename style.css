@@ -158,10 +158,10 @@ h1,h2,h3 {
     color:var(--color-secondary)
 }
 
-.similar_container>article {
-    min-width:150px;
+/*.similar_container>article {
+    min-width:200px;
 
-}
+}*/
 header {
     position: sticky;
     top:0px;
@@ -234,6 +234,10 @@ header {
 }*/
 .footer {
     max-width:100%;
+}
+.cappy_picture {
+    min-height:327px;
+    min-width: 300px;
 }
 /* Мобильные устройства */
 @media (max-width: 768px) {

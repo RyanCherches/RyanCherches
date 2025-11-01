@@ -21,6 +21,17 @@ let clicker_price = parseInt(localStorage.getItem("clicker_price")) || 15;
 let clicker_amount = parseInt(localStorage.getItem("clicker_amount")) || 0;
 let clicked = parseFloat(localStorage.getItem("clicked")) || 0.5;
 
+rebirth.addEventListener("click", function () {
+    if (score >= rebirth_cost) {
+        score -= rebirth_cost;
+        multiplier = multiplier * 10;
+        rebirth_amount += 1;
+        rebirth_cost = rebirth_cost * 10000;
+        rebirth.innerHTML = "rebirth = $" + rebirth_cost;
+        
+    }
+})
+
 // Display current stats
 currency.innerHTML = "score = " + score;
 clicker_price_element.innerHTML = clicker_price;
@@ -75,6 +86,8 @@ clicker.addEventListener("click", function () {
         localStorage.setItem("multiplier_cost", multiplier_cost);
         localStorage.setItem("multiplier", multiplier);
         localStorage.setItem("multiplier_amount", multiplier_amount);
+        localStorage.setItem("rebirth_amount", rebirth_amount);
+        localStorage.setItem("rebirth_cost", rebirth_cost);
     }
 });
 
@@ -101,6 +114,11 @@ full_reset.addEventListener("click", function () {
     localStorage.setItem("clicker_price", clicker_price);
     localStorage.setItem("clicker_amount", clicker_amount);
     localStorage.setItem("clicked", clicked);
+    localStorage.setItem("multiplier_cost", multiplier_cost);
+    localStorage.setItem("multiplier", multiplier);
+    localStorage.setItem("multiplier_amount", multiplier_amount);
+    localStorage.setItem("rebirth_amount", rebirth_amount);
+    localStorage.setItem("rebirth_cost", rebirth_cost);
     multiplier_text.innerHTML = multiplier_cost;
 })
 multiplier_div.addEventListener("click", function () {

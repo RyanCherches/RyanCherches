@@ -109,7 +109,6 @@ h2 {
     margin-bottom:0;
 }
 footer {
-    display:flex;
     align-items:center;
     justify-content: space-between;
     text-align:center;
@@ -117,7 +116,8 @@ footer {
     padding-left: 20px;
     background-color:var(--color-black);
     color:var(--color-natural-white);
-    padding-bottom: 14px;
+    padding-bottom: 16px;
+    padding-top:5px;
 }
 .footer2 {
     text-align: right;

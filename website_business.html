@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>business</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .smaller {
+            font-size: 30px;
+            align-items:center;
+            margin:auto;
+        }
+        .business {
+            max-width:75%;
+        }
+        .plan {
+            border: 2px dotted black;
+            padding: 10px;
+            border-radius: 5px;
+            width:50%;
+            margin: 5px;
+        }
+        .two_plans {
+            display:flex;
+            flex-direction: row;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo-container">
+            <img src="images/business.svg" alt = "image of me and my brother" class="about-me" width = "245px">
+        </div>
+        <nav class="header-nav2">
+            <ul class="nav-list">
+                <li class="header-link"><a href="#business_idea">About Business</a></li>
+                <li class="header-link"><a href="#Plan">Business Plans</a></li>
+                <li class="header-link"><a href="index.html" >Home</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <center>
+            <h1>Website Building</h1>
+            <br><br><br>
+            <div class="business">
+                <h1 class="smaller" id="business_idea">About my Business</h1>
+                <p>I've always wanted to make money, but didn't know how. A year ago I started learning how to code. First learned python, then HTML code(for websites). I haven't really done anything with this talent except make this website. But now I have the genius idea to make a business out of it. The point of this business is to help people make websites. We do have ChatGPT or Grok, but you still need to know how to tell it what to do. Also you will need to understand the code incase something dosen't work, because sometimes A.I. can make mistakes. So I hope to help you make a website without anything going wrong.</p>
+            </div>
+            <div class="business">
+                <h1 class="smaller" id="Plan">Business Plans</h1>
+                <div class="two_plans">
+                    <div class="plan">
+                        <h1>plan #1</h1>
+                        <p>This plan is for one-time use. $75</p>
+                        <a href="plans/plan1.html" class="link" id="plan1">Plan 1</a>
+                    </div>
+                    <div class="plan">
+                        <h1>plan #2</h1>
+                        <p>This plan will make it so that I can infinitely customize your website whenever you need to for just $29.99, but with an upfront cost of $299.99</p>
+                        <a href="plans/plan2.html" class="link" id="plan2">Plan 2</a>
+                    </div>
+                </div>
+            </div>
+        </center>
+    </main>
+<script>
+    /*plan1 = document.querySelector("#plan1");
+    plan2 = document.querySelector("#plan2");
+    plan1.addEventListener("click", function() {
+        alert("Please email  this to rfcherches13@gmail.com: Subject: Plan 1 ")
+    })
+    plan2.addEventListener("click", function() {
+        alert("Please email me at rfcherches13@gmail.com and tell me that you are asking for plan #2 and I will reach out to you")
+    })*/
+</script>
+
+</body>
+</html>

@@ -147,10 +147,6 @@ rebirth.addEventListener("click", function () {
 // 🔄 Reset picture size only
 // 🔄 Reset button — clears progress but keeps multiplier
 reset.addEventListener("click", function () {
-    score = 0;
-    cps = 0;
-    clicker_price = 15;
-    clicker_amount = 0;
     clicked = 0.5;
     save();
 });

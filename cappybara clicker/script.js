@@ -129,6 +129,17 @@ rebirth.addEventListener("click", function () {
     multiplier *= 10;
     rebirth_amount++;
     rebirth_cost *= 10000;
+    score = 0;
+    cps = 0;
+    clicker_price = 15;
+    clicker_amount = 0;
+    multiplier_cost = 100;
+    multiplier_amount = 0;
+    clicked = 1;
+    spc = 1;
+    multiplier_clicker_price = 100;
+    multiplier_clicker_amount = 0;
+    picture.style.transform = "scale(1)";
     save();
   }
 });

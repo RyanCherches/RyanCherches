@@ -30,12 +30,12 @@ let spc = parseInt(localStorage.getItem("spc")) || 1;
 
 // 🔢 Number formatter with words
 function formatNumber(num) {
-    if (num >= 1e15) return (num / 1e33).toFixed(2) + " Decillion";
-    if (num >= 1e15) return (num / 1e30).toFixed(2) + " Nonillion";
-    if (num >= 1e15) return (num / 1e27).toFixed(2) + " Octillion";
-    if (num >= 1e15) return (num / 1e24).toFixed(2) + " Septilion";
-    if (num >= 1e15) return (num / 1e21).toFixed(2) + " Sextillion";
-    if (num >= 1e15) return (num / 1e18).toFixed(2) + " Quintillion";
+    if (num >= 1e33) return (num / 1e33).toFixed(2) + " Decillion";
+    if (num >= 1e30) return (num / 1e30).toFixed(2) + " Nonillion";
+    if (num >= 1e27) return (num / 1e27).toFixed(2) + " Octillion";
+    if (num >= 1e24) return (num / 1e24).toFixed(2) + " Septilion";
+    if (num >= 1e21) return (num / 1e21).toFixed(2) + " Sextillion";
+    if (num >= 1e18) return (num / 1e18).toFixed(2) + " Quintillion";
     if (num >= 1e15) return (num / 1e15).toFixed(2) + " Quadrillion";
     if (num >= 1e12) return (num / 1e12).toFixed(2) + " Trillion";
     if (num >= 1e9) return (num / 1e9).toFixed(2) + " Billion";

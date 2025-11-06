@@ -30,10 +30,10 @@ let spc = parseInt(localStorage.getItem("spc")) || 1;
 
 // 🔢 Number formatter with words
 function formatNumber(num) {
-    if (num >= 1e15) return (num / 1e21).toFixed(2) + " Decillion";
-    if (num >= 1e15) return (num / 1e21).toFixed(2) + " Nonillion";
-    if (num >= 1e15) return (num / 1e21).toFixed(2) + " Octillion";
-    if (num >= 1e15) return (num / 1e21).toFixed(2) + " Septilion";
+    if (num >= 1e15) return (num / 1e33).toFixed(2) + " Decillion";
+    if (num >= 1e15) return (num / 1e30).toFixed(2) + " Nonillion";
+    if (num >= 1e15) return (num / 1e27).toFixed(2) + " Octillion";
+    if (num >= 1e15) return (num / 1e24).toFixed(2) + " Septilion";
     if (num >= 1e15) return (num / 1e21).toFixed(2) + " Sextillion";
     if (num >= 1e15) return (num / 1e18).toFixed(2) + " Quintillion";
     if (num >= 1e15) return (num / 1e15).toFixed(2) + " Quadrillion";
@@ -138,6 +138,17 @@ rebirth.addEventListener("click", function () {
     multiplier *= 10;
     rebirth_amount++;
     rebirth_cost *= 10000;
+    clicker_price = 15;
+    multiplier_clicker_price = 100;
+    multiplier_clicker_amount = 0;
+    spc = 1;
+    multiplier_cost = 100;
+    multiplier_amount = 0;
+    clicked = 1;
+    score = 0;
+    cps = 0;
+    clicker_price = 15;
+    clicker_amount = 0;
     save();
   }
 });

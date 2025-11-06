@@ -28,18 +28,25 @@ let multiplier_clicker_price = parseInt(localStorage.getItem("multiplier_clicker
 let multiplier_clicker_amount = parseInt(localStorage.getItem("multiplier_clicker_amount")) || 0;
 let spc = parseInt(localStorage.getItem("spc")) || 1;
 
-// 🔢 Number shortener
+// 🔢 Number formatter with words
 function formatNumber(num) {
-  if (num >= 1e12) return (num / 1e12).toFixed(2) + "T";
-  if (num >= 1e9) return (num / 1e9).toFixed(2) + "B";
-  if (num >= 1e6) return (num / 1e6).toFixed(2) + "M";
-  if (num >= 1e3) return (num / 1e3).toFixed(2) + "K";
-  return Math.floor(num);
+    if (num >= 1e15) return (num / 1e21).toFixed(2) + " Decillion";
+    if (num >= 1e15) return (num / 1e21).toFixed(2) + " Nonillion";
+    if (num >= 1e15) return (num / 1e21).toFixed(2) + " Octillion";
+    if (num >= 1e15) return (num / 1e21).toFixed(2) + " Septilion";
+    if (num >= 1e15) return (num / 1e21).toFixed(2) + " Sextillion";
+    if (num >= 1e15) return (num / 1e18).toFixed(2) + " Quintillion";
+    if (num >= 1e15) return (num / 1e15).toFixed(2) + " Quadrillion";
+    if (num >= 1e12) return (num / 1e12).toFixed(2) + " Trillion";
+    if (num >= 1e9) return (num / 1e9).toFixed(2) + " Billion";
+    if (num >= 1e6) return (num / 1e6).toFixed(2) + " Million";
+    if (num >= 1e3) return (num / 1e3).toFixed(2) + " Thousand";
+    return Math.floor(num);
 }
 
 // 🧠 Update UI
 function updateUI() {
-  currency.innerHTML = "score = " + formatNumber(score);
+  currency.innerHTML = "Score = " + formatNumber(score);
   clicker_price_element.innerHTML = formatNumber(clicker_price);
   multiplier_text.innerHTML = formatNumber(multiplier_cost);
   rebirth.innerHTML = "Rebirth = $" + formatNumber(rebirth_cost);
@@ -81,6 +88,8 @@ picture.addEventListener("click", function () {
     setTimeout(() => {
         picture.style.transform = "scale(1)";
     }, 200);
+
+  save();
 });
 
 // ⚙️ Clicker upgrade
@@ -129,26 +138,16 @@ rebirth.addEventListener("click", function () {
     multiplier *= 10;
     rebirth_amount++;
     rebirth_cost *= 10000;
-    score = 0;
-    cps = 0;
-    clicker_price = 15;
-    clicker_amount = 0;
-    multiplier_cost = 100;
-    multiplier_amount = 0;
-    clicked = 1;
-    spc = 1;
-    multiplier_clicker_price = 100;
-    multiplier_clicker_amount = 0;
-    picture.style.transform = "scale(1)";
     save();
   }
 });
 
 // 🔄 Reset picture size only
-// 🔄 Reset button — clears progress but keeps multiplier
 reset.addEventListener("click", function () {
-    clicked = 0.5;
-    save();
+  pictureScale = 1;
+  picture.style.transition = "transform 0.3s ease";
+  picture.style.transform = "scale(1)";
+  save();
 });
 
 // 💥 Full reset everything
@@ -167,6 +166,7 @@ full_reset.addEventListener("click", function () {
   multiplier_clicker_price = 100;
   multiplier_clicker_amount = 0;
   spc = 1;
+  pictureScale = 1;
   picture.style.transform = "scale(1)";
   save();
 });

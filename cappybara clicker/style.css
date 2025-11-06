@@ -1,51 +1,62 @@
 .nugget_clicker {
     display: flex;
-    height: 100vh;
-    width:100%;
+    width: 100%;
     flex-direction: row;
+    min-height: 100vh; /* Let it grow beyond screen height */
 }
+
 .cookie {
     width: 50%;
-    height:100vh;
     background-image: url("grass_background.jpeg");
     background-repeat: no-repeat;
-    background-position: center bottom; /* Optional: Adjust position as needed */
+    background-position: center bottom;
     background-size: cover;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:space-around;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+    min-height: 100vh; /* allows scroll growth */
+    height: auto; /* lets it expand as needed */
 }
+
 .upgrades {
     width: 50%;
-    height:100vh;
-    background-color:red;
+    background-color: red;
+    min-height: 100vh;
+    height: auto;
 }
+
 body {
-    margin:0;
+    margin: 0;
+    min-height: 100vh;
+    background-color: #000; /* fallback if background image doesn't fill */
 }
+
 .clicker {
-    display:flex;
-    flex-direction:column;
-    align-items:center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     border: 5px dotted lightblue;
-    background-color:yellow;
+    background-color: yellow;
 }
+
 .amount {
-    color:black;
+    color: black;
 }
+
 .multiplier {
-    display:flex;
-    flex-direction:column;
-    align-items:center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     border: 5px dotted black;
-    background-color:darkgreen;
+    background-color: darkgreen;
 }
+
 .clicker_multiplier {
-    display:flex;
-    flex-direction:column;
-    align-items:center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     border: 5px dotted yellow;
-    background-color:black;
-    color:white;
+    background-color: black;
+    color: white;
 }

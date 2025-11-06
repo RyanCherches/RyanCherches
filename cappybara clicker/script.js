@@ -144,7 +144,7 @@ rebirth.addEventListener("click", function () {
 
 // 🔄 Reset picture size only
 reset.addEventListener("click", function () {
-  pictureScale = 1;
+  clicked = 0.5;
   picture.style.transition = "transform 0.3s ease";
   picture.style.transform = "scale(1)";
   save();

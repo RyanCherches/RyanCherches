@@ -6,8 +6,8 @@
 }
 
 .cookie {
-    width: 50%;
-    background-image: url("grass_background.jpeg");
+    width: 100vw;
+    background-image: url("cappybara-background.svg");
     background-repeat: no-repeat;
     background-position: center bottom;
     background-size: cover;
@@ -19,17 +19,15 @@
     height: auto; /* lets it expand as needed */
 }
 
-.upgrades {
-    width: 50%;
-    background-color: red;
+.controls {
+    width: 70vw;
+    background-color: cyan;
     min-height: 100vh;
-    height: auto;
 }
 
 body {
     margin: 0;
     min-height: 100vh;
-    background-color: #000; /* fallback if background image doesn't fill */
 }
 
 .clicker {
@@ -38,6 +36,10 @@ body {
     align-items: center;
     border: 5px dotted lightblue;
     background-color: yellow;
+}
+.clicker:hover {
+    background-color:purple;
+    color:white;
 }
 
 .amount {
@@ -49,7 +51,10 @@ body {
     flex-direction: column;
     align-items: center;
     border: 5px dotted black;
-    background-color: darkgreen;
+    background-color: red;
+}
+.multiplier:hover {
+    background-color:green;
 }
 
 .clicker_multiplier {
@@ -59,4 +64,40 @@ body {
     border: 5px dotted yellow;
     background-color: black;
     color: white;
+}
+.clicker_multiplier:hover {
+    background-color:white;
+    color:black;
+}
+.store {
+    display:flex;
+    flex-direction: row;
+    height:50vh;
+    align-content:space-around;
+    flex-wrap: wrap;
+    align-items:center;
+    align-items: center;
+    justify-content:space-around;
+}
+.item {
+    border: black 5px double;
+}
+.item:hover {
+    border-left:white 10px dotted;
+    border-right: beige 7px double;
+    border-top: pink 5px dashed;
+    border-bottom: red 10px groove;
+}
+button:hover {
+    background-color:black;
+    color:white;
+    border: white 10px groove;
+}
+.nugget {
+    height: 200px;
+    display: inline-block;
+    transition: transform 0.4s ease-in-out;
+}
+.nugget:hover {
+    transform: scale(1.5);
 }

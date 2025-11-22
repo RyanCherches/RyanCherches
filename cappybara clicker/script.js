@@ -1,4 +1,4 @@
-// script.js (replace your existing file with this)
+// script.js
 
 /* ====== DOM nodes (safely queried) ====== */
 const currency = document.querySelector(".amount");
@@ -15,19 +15,16 @@ const multiplier_amount_button = document.querySelector(".multiplier_amount");
 const multiplier_clicker = document.querySelector(".clicker_multiplier");
 const multiplier_clicker_amount_element = document.querySelector(".clicker_multiplier_amount");
 const multiplier_clicker_price_element = document.querySelector(".clicker_multiplier_price");
-
-/* If crucial elements are missing, bail gracefully */
-if (!picture || !currency) {
-  console.warn("Essential DOM elements missing: .nugget or .amount not found.");
-  // Keep running to avoid completely breaking other scripts, but many features will be disabled.
-}
+const doubler_clicker_speed = document.querySelector(".double_clicker_speed");
+const double_clicker_power = document.querySelector(".double_clicker_power");
+const double_multiplier = document.querySelector(".double_multiplier");
 
 /* ====== Load saved values (with fallbacks) ====== */
 let score = parseInt(localStorage.getItem("score")) || 0;
 let cps = parseInt(localStorage.getItem("cps")) || 0;
 let clicker_price = parseInt(localStorage.getItem("clicker_price")) || 15;
 let clicker_amount = parseInt(localStorage.getItem("clicker_amount")) || 0;
-let clicked = parseFloat(localStorage.getItem("clicked")) || 1; // used as temporary click-scale multiplier
+let clicked = parseFloat(localStorage.getItem("clicked")) || 1;
 let multiplier = parseFloat(localStorage.getItem("multiplier")) || 1;
 let multiplier_cost = parseInt(localStorage.getItem("multiplier_cost")) || 100;
 let multiplier_amount = parseInt(localStorage.getItem("multiplier_amount")) || 0;
@@ -36,8 +33,37 @@ let rebirth_cost = parseInt(localStorage.getItem("rebirth_cost")) || 10000;
 let multiplier_clicker_price = parseInt(localStorage.getItem("multiplier_clicker_price")) || 100;
 let multiplier_clicker_amount = parseInt(localStorage.getItem("multiplier_clicker_amount")) || 0;
 let spc = parseInt(localStorage.getItem("spc")) || 1;
+let clicker_speed = parseInt(localStorage.getItem("clicker_speed")) || 1000;
+let clicker_multiplier = parseInt(localStorage.getItem("clicker_multiplier")) || 1;
+let multiplier_multiplier = parseInt(localStorage.getItem("multiplier_multiplier")) || 2;
 
-/* ====== Number formatter with suffix words ====== */
+/* ====== FIXED: Load as real boolean ====== */
+let is_clicked_speed = localStorage.getItem("is_clicked") === "true";
+let is_clicked_clickpower = localStorage.getItem("is_clicked_clickpower") == "true";
+let is_clicked_multiplierpower = localStorage.getItem("is_clicked_multiplierpower") == "true";
+
+/* ====== Show/hide upgrade at page load (FIXED) ====== */
+document.addEventListener("DOMContentLoaded", function () {
+  if (is_clicked_multiplierpower == true) {
+    double_multiplier.style.display = "";
+  }
+  else {
+    double_multiplier.style.display = "none";
+  }
+  if (is_clicked_clickpower == true) {
+    double_clicker_power.style.display = "";
+  }
+  else {
+    double_clicker_power.style.display = "none";
+  }
+  if (is_clicked_speed == true) {
+    doubler_clicker_speed.style.display = "";
+  } else {
+    doubler_clicker_speed.style.display = "none";
+  }
+});
+
+/* ====== Number formatter ====== */
 function formatNumber(num) {
     if (num >= 1e63) return (num / 1e63).toFixed(2) + " Vigintillion";
     if (num >= 1e60) return (num / 1e60).toFixed(2) + " Novemdecillion";
@@ -89,59 +115,48 @@ function save() {
   localStorage.setItem("multiplier_clicker_price", multiplier_clicker_price);
   localStorage.setItem("multiplier_clicker_amount", multiplier_clicker_amount);
   localStorage.setItem("spc", spc);
+  localStorage.setItem("clicker_speed", clicker_speed);
+
+  /* FIXED: save real boolean */
+  localStorage.setItem("is_clicked_speed", is_clicked_speed);
+
   updateUI();
 }
 
-/* ====== Click interaction (with safe hover restore) ====== */
+/* ====== Click interaction ====== */
 if (picture) {
   picture.addEventListener("click", function () {
-    // game logic
     clicked += 0.1;
     score += 1 * spc * multiplier;
 
-    // quick UI update (don't rely only on save())
     if (currency) currency.innerHTML = "Score = " + formatNumber(score);
     localStorage.setItem("score", score);
     localStorage.setItem("clicked", clicked);
 
-    // click animation: temporarily set transform to clicked scale
-    // use an explicit transition, then restore appropriate transform
     picture.style.transition = "transform 0.18s ease";
     picture.style.transform = "scale(" + clicked + ")";
 
-    // After the short animation, restore either the CSS :hover transform (by clearing inline transform)
-    // or set it to normal scale(1) if not hovered.
     setTimeout(() => {
-      // If the mouse is still over the image, removing the inline transform allows the CSS :hover rule
-      // (.nugget:hover { transform: scale(1.5); }) to take effect again.
       if (picture.matches(":hover")) {
         picture.style.removeProperty("transform");
       } else {
-        // Not hovered: explicitly return to scale(1)
         picture.style.transform = "scale(1)";
       }
-      // keep transition so the visual change is smooth
       picture.style.transition = "transform 0.4s ease";
     }, 180);
 
     save();
   });
 
-  // Optional: ensure when mouse leaves we remove any lingering inline transform so CSS can handle it.
   picture.addEventListener("mouseleave", () => {
-    // If inline transform is exactly scale(1) we can remove it so CSS :hover won't conflict later.
-    // But only do this if no animation is happening — we use a tiny timeout to avoid race conditions.
     setTimeout(() => {
-      // If not hovered, clear transform so default flow applies
       if (!picture.matches(":hover")) {
         picture.style.removeProperty("transform");
       }
     }, 100);
   });
 
-  // When mouse enters, also remove inline transform so CSS hover can immediately take over
   picture.addEventListener("mouseenter", () => {
-    // small timeout avoids clobbering an in-progress click animation
     setTimeout(() => {
       if (picture.matches(":hover")) {
         picture.style.removeProperty("transform");
@@ -150,7 +165,23 @@ if (picture) {
   });
 }
 
-/* ====== Store / upgrades / rebirth logic (unchanged except guards) ====== */
+/* ============================================
+   FIX: Auto-clicker interval can now update live
+   ============================================ */
+let clickerInterval = null;
+
+function startClickerInterval() {
+  if (clickerInterval) clearInterval(clickerInterval);
+
+  clickerInterval = setInterval(() => {
+    score += cps * multiplier * clicker_multiplier;
+    save();
+  }, clicker_speed);
+}
+
+startClickerInterval(); // start auto clicker right away
+
+/* ====== Store / upgrades / rebirth logic ====== */
 if (clicker) {
   clicker.addEventListener("click", function () {
     if (score >= clicker_price) {
@@ -167,7 +198,7 @@ if (multiplier_div) {
   multiplier_div.addEventListener("click", function () {
     if (score >= multiplier_cost) {
       score -= multiplier_cost;
-      multiplier *= 2;
+      multiplier *= multiplier_multiplier;
       multiplier_amount++;
       multiplier_cost *= 10;
       save();
@@ -180,24 +211,46 @@ if (multiplier_clicker) {
     if (score >= multiplier_clicker_price) {
       score -= multiplier_clicker_price;
       multiplier_clicker_amount++;
-      spc *= 2;
+      spc *= multiplier_multiplier;
       multiplier_clicker_price *= 5;
       save();
     }
   });
 }
 
-/* automatic clicks (1s) */
-setInterval(() => {
-  score += cps * multiplier;
-  save();
-}, 1000);
+/* ====== Doubler Clicker Speed (appears-once-upgrade) ====== */
+double_multiplier.addEventListener("click", function () {
+  if (score >= 100000) {
+    multiplier_multiplier += 2;
+    score -= 100000;
+    double_multiplier.style.display = "none";
+  }
+});
+double_clicker_power.addEventListener("click", function () {
+  if (score >= 10000) {
+    clicker_multiplier += 2;
+    score -= 10000;
+    double_clicker_power.style.display = "none";
+  }
+});
+doubler_clicker_speed.addEventListener("click", function () {
+  if (score >= 1000) {
+    clicker_speed = 500;
+    startClickerInterval(); // ← FIX: update speed instantly
 
-/* Rebirth (guarded) */
+    doubler_clicker_speed.style.display = "none";
+    is_clicked_speed = true;
+    save();
+  }
+});
+
+/* ====== Rebirth ====== */
 if (rebirth) {
   rebirth.addEventListener("click", function () {
     if (score >= rebirth_cost) {
-      // reset many things while keeping chosen persistent multipliers
+      clicker_speed = 1000;
+      startClickerInterval(); // ← FIX: restart after speed reset
+
       score = 0;
       multiplier *= 5;
       rebirth_amount++;
@@ -212,17 +265,22 @@ if (rebirth) {
       clicked = 1;
       cps = 0;
       clicker_amount = 0;
+
+      is_clicked_speed = false;
+      doubler_clicker_speed.style.display = "";
+      double_clicker_power.style.display = "";
+      double_multiplier.style.display = "";
+      clicker_multiplier = 1;
+      
       save();
     }
   });
 }
 
-/* Reset picture size only (button) */
+/* ====== Reset picture size ====== */
 if (reset) {
   reset.addEventListener("click", function () {
-    // Reset clicked scale factor to default:
     clicked = 1;
-    // Clear inline transform to allow CSS default hover to work normally
     if (picture) {
       picture.style.transition = "transform 0.12s ease";
       picture.style.removeProperty("transform");
@@ -231,7 +289,7 @@ if (reset) {
   });
 }
 
-/* Full reset everything */
+/* ====== Full reset ====== */
 if (full_reset) {
   full_reset.addEventListener("click", function () {
     localStorage.clear();
@@ -248,6 +306,15 @@ if (full_reset) {
     multiplier_clicker_price = 100;
     multiplier_clicker_amount = 0;
     spc = 1;
+
+    is_clicked_speed = false;
+    doubler_clicker_speed.style.display = "";
+    double_clicker_power.style.display = "";
+    double_multiplier.style.display = "";
+
+    clicker_speed = 1000;
+    startClickerInterval(); // ← FIX: restart interval
+
     if (picture) {
       picture.style.transition = "transform 0.12s ease";
       picture.style.removeProperty("transform");

@@ -81,12 +81,14 @@ body {
 }
 .item {
     border: black 5px double;
+    display:inline-block;
 }
 .item:hover {
     border-left:white 10px dotted;
     border-right: beige 7px double;
     border-top: pink 5px dashed;
     border-bottom: red 10px groove;
+    cursor:pointer;
 }
 button:hover {
     background-color:black;
@@ -100,4 +102,7 @@ button:hover {
 }
 .nugget:hover {
     transform: scale(1.5);
+}
+.center:hover {
+    background-color: lightgreen;
 }

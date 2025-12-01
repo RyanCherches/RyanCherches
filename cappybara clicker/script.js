@@ -37,29 +37,29 @@ let clicker_speed = parseInt(localStorage.getItem("clicker_speed")) || 1000;
 let clicker_multiplier = parseInt(localStorage.getItem("clicker_multiplier")) || 1;
 let multiplier_multiplier = parseInt(localStorage.getItem("multiplier_multiplier")) || 2;
 
-/* ====== FIXED: Load as real boolean ====== */
-let is_clicked_speed = localStorage.getItem("is_clicked") === "true";
-let is_clicked_clickpower = localStorage.getItem("is_clicked_clickpower") == "true";
-let is_clicked_multiplierpower = localStorage.getItem("is_clicked_multiplierpower") == "true";
+/* ====== FIXED: Load real booleans correctly ====== */
+let is_clicked_speed = localStorage.getItem("is_clicked_speed") === "true";
+let is_clicked_clickpower = localStorage.getItem("is_clicked_clickpower") === "true";
+let is_clicked_multiplierpower = localStorage.getItem("is_clicked_multiplierpower") === "true";
 
-/* ====== Show/hide upgrade at page load (FIXED) ====== */
+/* ====== Show/hide upgrade at page load (corrected) ====== */
 document.addEventListener("DOMContentLoaded", function () {
   if (is_clicked_multiplierpower == true) {
+    double_multiplier.style.display = "none";
+  } else {
     double_multiplier.style.display = "";
   }
-  else {
-    double_multiplier.style.display = "none";
-  }
+
   if (is_clicked_clickpower == true) {
+    double_clicker_power.style.display = "none";
+  } else {
     double_clicker_power.style.display = "";
   }
-  else {
-    double_clicker_power.style.display = "none";
-  }
+
   if (is_clicked_speed == true) {
-    doubler_clicker_speed.style.display = "";
-  } else {
     doubler_clicker_speed.style.display = "none";
+  } else {
+    doubler_clicker_speed.style.display = "";
   }
 });
 
@@ -117,8 +117,10 @@ function save() {
   localStorage.setItem("spc", spc);
   localStorage.setItem("clicker_speed", clicker_speed);
 
-  /* FIXED: save real boolean */
+  /* ====== FIXED: save booleans correctly ====== */
   localStorage.setItem("is_clicked_speed", is_clicked_speed);
+  localStorage.setItem("is_clicked_clickpower", is_clicked_clickpower);
+  localStorage.setItem("is_clicked_multiplierpower", is_clicked_multiplierpower);
 
   updateUI();
 }
@@ -166,7 +168,7 @@ if (picture) {
 }
 
 /* ============================================
-   FIX: Auto-clicker interval can now update live
+   FIX: Auto-clicker interval updates live
    ============================================ */
 let clickerInterval = null;
 
@@ -179,7 +181,7 @@ function startClickerInterval() {
   }, clicker_speed);
 }
 
-startClickerInterval(); // start auto clicker right away
+startClickerInterval();
 
 /* ====== Store / upgrades / rebirth logic ====== */
 if (clicker) {
@@ -218,25 +220,31 @@ if (multiplier_clicker) {
   });
 }
 
-/* ====== Doubler Clicker Speed (appears-once-upgrade) ====== */
+/* ====== Doubler Clicker Speed ====== */
 double_multiplier.addEventListener("click", function () {
   if (score >= 100000) {
     multiplier_multiplier += 2;
     score -= 100000;
     double_multiplier.style.display = "none";
+    is_clicked_multiplierpower = true; // FIX
+    save();
   }
 });
+
 double_clicker_power.addEventListener("click", function () {
   if (score >= 10000) {
     clicker_multiplier += 2;
     score -= 10000;
     double_clicker_power.style.display = "none";
+    is_clicked_clickpower = true; // FIX
+    save();
   }
 });
+
 doubler_clicker_speed.addEventListener("click", function () {
   if (score >= 1000) {
     clicker_speed = 500;
-    startClickerInterval(); // ← FIX: update speed instantly
+    startClickerInterval();
 
     doubler_clicker_speed.style.display = "none";
     is_clicked_speed = true;
@@ -249,7 +257,7 @@ if (rebirth) {
   rebirth.addEventListener("click", function () {
     if (score >= rebirth_cost) {
       clicker_speed = 1000;
-      startClickerInterval(); // ← FIX: restart after speed reset
+      startClickerInterval();
 
       score = 0;
       multiplier *= 5;
@@ -267,11 +275,15 @@ if (rebirth) {
       clicker_amount = 0;
 
       is_clicked_speed = false;
+      is_clicked_clickpower = false;
+      is_clicked_multiplierpower = false;
+
       doubler_clicker_speed.style.display = "";
       double_clicker_power.style.display = "";
       double_multiplier.style.display = "";
+
       clicker_multiplier = 1;
-      
+
       save();
     }
   });
@@ -308,12 +320,15 @@ if (full_reset) {
     spc = 1;
 
     is_clicked_speed = false;
+    is_clicked_clickpower = false;
+    is_clicked_multiplierpower = false;
+
     doubler_clicker_speed.style.display = "";
     double_clicker_power.style.display = "";
     double_multiplier.style.display = "";
 
     clicker_speed = 1000;
-    startClickerInterval(); // ← FIX: restart interval
+    startClickerInterval();
 
     if (picture) {
       picture.style.transition = "transform 0.12s ease";

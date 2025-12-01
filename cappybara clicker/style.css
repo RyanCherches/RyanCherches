@@ -6,7 +6,7 @@
 }
 
 .cookie {
-    width: 100vw;
+    width: 50vw;
     background-image: url("cappybara-background.svg");
     background-repeat: no-repeat;
     background-position: center bottom;
@@ -22,7 +22,6 @@
 .controls {
     width: 70vw;
     background-color: cyan;
-    min-height: 100vh;
 }
 
 body {
@@ -34,12 +33,6 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    border: 5px dotted lightblue;
-    background-color: yellow;
-}
-.clicker:hover {
-    background-color:purple;
-    color:white;
 }
 
 .amount {
@@ -61,13 +54,6 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    border: 5px dotted yellow;
-    background-color: black;
-    color: white;
-}
-.clicker_multiplier:hover {
-    background-color:white;
-    color:black;
 }
 .store {
     display:flex;
@@ -82,13 +68,18 @@ body {
 .item {
     border: black 5px double;
     display:inline-block;
+    border-radius:8px;
+    background-color:lightgreen;
+    padding:5px;
 }
 .item:hover {
     border-left:white 10px dotted;
     border-right: beige 7px double;
     border-top: pink 5px dashed;
-    border-bottom: red 10px groove;
+    border-bottom: #ff0000 10px groove;
     cursor:pointer;
+    border-radius:20px;
+    background-color:darkgreen;
 }
 button:hover {
     background-color:black;
@@ -103,6 +94,97 @@ button:hover {
 .nugget:hover {
     transform: scale(1.5);
 }
+.center {
+    width: 80%;
+    max-width: 150px;
+    margin: auto;
+    padding: 15px;
+    align-items:center;
+
+}
 .center:hover {
     background-color: lightgreen;
+}
+.item {
+    position: relative;
+}
+.tooltip {
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: grey;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    opacity: 0;
+    pointer-events: none;
+    white-space: nowrap;
+    transition: opacity 0.5s ease-in-out;
+    z-index: 50;
+}
+.item:hover .tooltip {
+    opacity: 1;
+}
+.button {
+    display: block;
+    width: 80%;
+    max-width: 300px;
+    margin: 10px auto;
+    padding: 15px;
+    text-align: center;
+    background-color: #f0c14b;
+    border: 2px solid #a88734;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    user-select: none;
+}
+
+.button:hover {
+    background-color:grey;
+    padding:10px;
+    color:white;
+
+}
+/* Wrap title and items in a column layout */
+.upgrades {
+    display: flex;
+    flex-direction: column;   /* title on top, items below */
+    align-items: center;      /* centers everything */
+    width: 100%;
+    text-align: center;
+}
+
+/* Title stays centered above the row */
+.upgrades h1 {
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+/* Row of upgrade items */
+.upgrades-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;  /* centers the entire row */
+    align-items: center;
+    gap: 20px;                /* spacing between items */
+    width: 100%;
+}
+
+/* Upgrade item box styling */
+.upgrades .item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;      /* center content inside the item */
+    justify-content: center;    /* optional soft background */
+    padding: 10px;
+    border-radius: 10px;
+    width: 160px;             /* consistent size */
+    text-align: center;
+}
+.controls {
+    text-align: center;
+    width: 50vw;
 }

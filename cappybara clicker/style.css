@@ -87,7 +87,7 @@ button:hover {
     border: white 10px groove;
 }
 .nugget {
-    height: 200px;
+    height: 300px;
     display: inline-block;
     transition: transform 0.4s ease-in-out;
 }

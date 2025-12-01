@@ -18,6 +18,10 @@ const multiplier_clicker_price_element = document.querySelector(".clicker_multip
 const doubler_clicker_speed = document.querySelector(".double_clicker_speed");
 const double_clicker_power = document.querySelector(".double_clicker_power");
 const double_multiplier = document.querySelector(".double_multiplier");
+const background_music = document.querySelector(".sound");
+const music = new Audio("capybara-wictor.mp3");
+
+
 
 /* ====== Load saved values (with fallbacks) ====== */
 let score = parseInt(localStorage.getItem("score")) || 0;
@@ -37,11 +41,30 @@ let clicker_speed = parseInt(localStorage.getItem("clicker_speed")) || 1000;
 let clicker_multiplier = parseInt(localStorage.getItem("clicker_multiplier")) || 1;
 let multiplier_multiplier = parseInt(localStorage.getItem("multiplier_multiplier")) || 2;
 
+
 /* ====== FIXED: Load real booleans correctly ====== */
 let is_clicked_speed = localStorage.getItem("is_clicked_speed") === "true";
 let is_clicked_clickpower = localStorage.getItem("is_clicked_clickpower") === "true";
 let is_clicked_multiplierpower = localStorage.getItem("is_clicked_multiplierpower") === "true";
+let is_clicked_music = localStorage.getItem("is_clicked_music") === "true";
 
+/* ====== Background music ====== */
+background_music.addEventListener("click", function () {
+  if (is_clicked_music == false) {
+    music.volume = 0.5;
+    music.loop = true;
+    music.play();
+    is_clicked_music = true;
+    localStorage.setItem("is_clicked_music", is_clicked_music);
+  }
+  else{
+    music.pause();
+    music.currentTime = 0;
+    is_clicked_music = false;
+    localStorage.setItem("is_clicked_music", is_clicked_music);
+  }
+  
+});
 /* ====== Show/hide upgrade at page load (corrected) ====== */
 document.addEventListener("DOMContentLoaded", function () {
   if (is_clicked_multiplierpower == true) {
@@ -128,6 +151,13 @@ function save() {
 /* ====== Click interaction ====== */
 if (picture) {
   picture.addEventListener("click", function () {
+    const clicksound = new Audio("Voicy_Real Capybara Barks.mp3");
+    clicksound.volume = 0.5;
+    clicksound.play();
+    setTimeout(() => {
+      clicksound.pause();
+      clicksound.currentTime = 0;
+    }, 1000);
     clicked += 0.1;
     score += 1 * spc * multiplier;
 

@@ -19,6 +19,15 @@ const doubler_clicker_speed = document.querySelector(".double_clicker_speed");
 const double_clicker_power = document.querySelector(".double_clicker_power");
 const double_multiplier = document.querySelector(".double_multiplier");
 const background_music = document.querySelector(".sound");
+const prestige_points_element = document.querySelector(".prestige-points");
+const rebirthBtn = document.querySelector(".rebirth");
+const rebirthPopup = document.querySelector(".rebirth-popup");
+const closeRebirth = document.querySelector(".close-rebirth");
+const rebirthpopup = document.querySelector(".rebirth-popup");
+const cheaper_amount_element = document.querySelector(".cheaper_amount");
+const cheaper_element = document.querySelector(".cheaper");
+
+
 const music = new Audio("capybara-wictor.mp3");
 
 
@@ -40,7 +49,17 @@ let spc = parseInt(localStorage.getItem("spc")) || 1;
 let clicker_speed = parseInt(localStorage.getItem("clicker_speed")) || 1000;
 let clicker_multiplier = parseInt(localStorage.getItem("clicker_multiplier")) || 1;
 let multiplier_multiplier = parseInt(localStorage.getItem("multiplier_multiplier")) || 2;
+let cheaper_amount = (localStorage.getItem("cheaper_amount") !== null)
+  ? parseFloat(localStorage.getItem("cheaper_amount"))
+  : 0;
 
+let prestige_points = (localStorage.getItem("prestige_points") !== null)
+  ? parseInt(localStorage.getItem("prestige_points"), 10)
+  : Math.floor(score / 10000);
+
+if (prestige_points_element) {
+  prestige_points_element.innerHTML = "prestige-points=" + prestige_points;
+}
 
 /* ====== FIXED: Load real booleans correctly ====== */
 let is_clicked_speed = localStorage.getItem("is_clicked_speed") === "true";
@@ -65,6 +84,15 @@ background_music.addEventListener("click", function () {
   }
   
 });
+
+cheaper_element.addEventListener("click", function () {
+  if (prestige_points >= 10) {
+    // increase discount by 1% and store with two decimals
+    cheaper_amount = parseFloat((cheaper_amount + 0.01).toFixed(2));
+    prestige_points -= 10;
+    save();
+  }
+});
 /* ====== Show/hide upgrade at page load (corrected) ====== */
 document.addEventListener("DOMContentLoaded", function () {
   if (is_clicked_multiplierpower == true) {
@@ -85,7 +113,13 @@ document.addEventListener("DOMContentLoaded", function () {
     doubler_clicker_speed.style.display = "";
   }
 });
+rebirthBtn.addEventListener("click", () => {
+    rebirthPopup.classList.remove("hidden");
+});
 
+closeRebirth.addEventListener("click", () => {
+    rebirthPopup.classList.add("hidden");
+});
 /* ====== Number formatter ====== */
 function formatNumber(num) {
     if (num >= 1e63) return (num / 1e63).toFixed(2) + " Vigintillion";
@@ -109,19 +143,29 @@ function formatNumber(num) {
     if (num >= 1e9) return (num / 1e9).toFixed(2) + " Billion";
     if (num >= 1e6) return (num / 1e6).toFixed(2) + " Million";
     if (num >= 1e3) return (num / 1e3).toFixed(2) + " Thousand";
-    return Math.floor(num);
+    return Math.floor(num).toString();
+}
+
+/* ====== Discount helper ====== */
+function discounted(price) {
+  const pct = Math.max(0, Math.min(cheaper_amount || 0, 0.99));
+  // Use Math.ceil so players always pay at least 1 and prices remain integers
+  const d = Math.ceil(price * (1 - pct));
+  return Math.max(1, d);
 }
 
 /* ====== UI updates and save ====== */
 function updateUI() {
   if (currency) currency.innerHTML = "Score = " + formatNumber(score);
-  if (clicker_price_element) clicker_price_element.innerHTML = formatNumber(clicker_price);
-  if (multiplier_text) multiplier_text.innerHTML = formatNumber(multiplier_cost);
-  if (rebirth) rebirth.innerHTML = "Rebirth = $" + formatNumber(rebirth_cost);
+  if (clicker_price_element) clicker_price_element.innerHTML = formatNumber(discounted(clicker_price));
+  if (multiplier_text) multiplier_text.innerHTML = formatNumber(discounted(multiplier_cost));
   if (clicker_amount_button) clicker_amount_button.innerHTML = "amount = " + clicker_amount;
   if (multiplier_amount_button) multiplier_amount_button.innerHTML = "amount = " + multiplier_amount;
   if (multiplier_clicker_amount_element) multiplier_clicker_amount_element.innerHTML = "amount = " + multiplier_clicker_amount;
-  if (multiplier_clicker_price_element) multiplier_clicker_price_element.innerHTML = formatNumber(multiplier_clicker_price);
+  if (multiplier_clicker_price_element) multiplier_clicker_price_element.innerHTML = formatNumber(discounted(multiplier_clicker_price));
+  cheaper_amount_element.innerHTML = "discount = " + cheaper_amount;
+  if (prestige_points_element) prestige_points_element.innerHTML = "prestige-points=" + prestige_points;
+
 }
 
 function save() {
@@ -144,15 +188,18 @@ function save() {
   localStorage.setItem("is_clicked_speed", is_clicked_speed);
   localStorage.setItem("is_clicked_clickpower", is_clicked_clickpower);
   localStorage.setItem("is_clicked_multiplierpower", is_clicked_multiplierpower);
+  localStorage.setItem("prestige_points", prestige_points);
+  localStorage.setItem("cheaper_amount", cheaper_amount);
+  prestige_points_element.innerHTML = "prestige-points=" + prestige_points;
 
   updateUI();
 }
-
+save();
 /* ====== Click interaction ====== */
 if (picture) {
   picture.addEventListener("click", function () {
     const clicksound = new Audio("Voicy_Real Capybara Barks.mp3");
-    clicksound.volume = 0.5;
+    clicksound.volume = 0.7;
     clicksound.play();
     setTimeout(() => {
       clicksound.pause();
@@ -216,8 +263,9 @@ startClickerInterval();
 /* ====== Store / upgrades / rebirth logic ====== */
 if (clicker) {
   clicker.addEventListener("click", function () {
-    if (score >= clicker_price) {
-      score -= clicker_price;
+    const price = discounted(clicker_price);
+    if (score >= price) {
+      score -= price;
       clicker_amount++;
       cps++;
       clicker_price *= 2;
@@ -228,8 +276,9 @@ if (clicker) {
 
 if (multiplier_div) {
   multiplier_div.addEventListener("click", function () {
-    if (score >= multiplier_cost) {
-      score -= multiplier_cost;
+    const price = discounted(multiplier_cost);
+    if (score >= price) {
+      score -= price;
       multiplier *= multiplier_multiplier;
       multiplier_amount++;
       multiplier_cost *= 10;
@@ -240,8 +289,9 @@ if (multiplier_div) {
 
 if (multiplier_clicker) {
   multiplier_clicker.addEventListener("click", function () {
-    if (score >= multiplier_clicker_price) {
-      score -= multiplier_clicker_price;
+    const price = discounted(multiplier_clicker_price);
+    if (score >= price) {
+      score -= price;
       multiplier_clicker_amount++;
       spc *= multiplier_multiplier;
       multiplier_clicker_price *= 5;
@@ -252,27 +302,34 @@ if (multiplier_clicker) {
 
 /* ====== Doubler Clicker Speed ====== */
 double_multiplier.addEventListener("click", function () {
-  if (score >= 100000) {
+  const baseCost = 100000;
+  const price = discounted(baseCost);
+  if (score >= price) {
     multiplier_multiplier += 2;
-    score -= 100000;
+    score -= price;
     double_multiplier.style.display = "none";
-    is_clicked_multiplierpower = true; // FIX
+    is_clicked_multiplierpower = true;
     save();
   }
 });
 
 double_clicker_power.addEventListener("click", function () {
-  if (score >= 10000) {
+  const baseCost = 10000;
+  const price = discounted(baseCost);
+  if (score >= price) {
     clicker_multiplier += 2;
-    score -= 10000;
+    score -= price;
     double_clicker_power.style.display = "none";
-    is_clicked_clickpower = true; // FIX
+    is_clicked_clickpower = true;
     save();
   }
 });
 
 doubler_clicker_speed.addEventListener("click", function () {
-  if (score >= 1000) {
+  const baseCost = 1000;
+  const price = discounted(baseCost);
+  if (score >= price) {
+    score -= price;
     clicker_speed = 500;
     startClickerInterval();
 
@@ -285,21 +342,22 @@ doubler_clicker_speed.addEventListener("click", function () {
 /* ====== Rebirth ====== */
 if (rebirth) {
   rebirth.addEventListener("click", function () {
-    if (score >= rebirth_cost) {
-      clicker_speed = 1000;
-      startClickerInterval();
 
+      // Calculate prestige gained from current score
+      let gained = Math.floor(score / 10000);
+      prestige_points += gained;
+
+      // Save old prestige if needed
+      localStorage.setItem("old_prestige_points", prestige_points);
+
+      // Reset all stats
       score = 0;
-      multiplier *= 5;
-      rebirth_amount++;
-      rebirth_cost *= 10000;
-
       clicker_price = 15;
       multiplier_clicker_price = 100;
       multiplier_clicker_amount = 0;
-      spc = 1;
       multiplier_cost = 100;
       multiplier_amount = 0;
+      spc = 1;
       clicked = 1;
       cps = 0;
       clicker_amount = 0;
@@ -313,11 +371,16 @@ if (rebirth) {
       double_multiplier.style.display = "";
 
       clicker_multiplier = 1;
+      clicker_speed = 1000;
+      startClickerInterval();
+
+      // Update UI
+      prestige_points_element.innerHTML = "prestige-points=" + prestige_points;
 
       save();
-    }
   });
 }
+
 
 /* ====== Reset picture size ====== */
 if (reset) {

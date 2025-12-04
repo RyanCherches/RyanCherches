@@ -70,6 +70,7 @@ let is_clicked_music = localStorage.getItem("is_clicked_music") === "true";
 /* ====== Background music ====== */
 background_music.addEventListener("click", function () {
   if (is_clicked_music == false) {
+    background_music.innerHTML = "pause background music";
     music.volume = 0.5;
     music.loop = true;
     music.play();
@@ -77,6 +78,7 @@ background_music.addEventListener("click", function () {
     localStorage.setItem("is_clicked_music", is_clicked_music);
   }
   else{
+    background_music.innerHTML = "play background music";
     music.pause();
     music.currentTime = 0;
     is_clicked_music = false;

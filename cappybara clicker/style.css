@@ -15,18 +15,21 @@
     flex-direction: column;
     align-items: center;
     justify-content: space-around;
-    min-height: 100vh; /* allows scroll growth */
-    height: auto; /* lets it expand as needed */
+    height: 100vh; /* allows scroll growth */
+    overflow: hidden;
 }
 
-.controls {
+.pannel {
     width: 70vw;
     background-color: cyan;
+    /*position:relative;*/
+    height:100vh;
+    overflow:auto;
 }
 
 body {
     margin: 0;
-    min-height: 100vh;
+    height: 100vh;
 }
 
 .clicker {

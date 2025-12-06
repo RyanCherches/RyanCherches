@@ -20,12 +20,14 @@ const double_clicker_power = document.querySelector(".double_clicker_power");
 const double_multiplier = document.querySelector(".double_multiplier");
 const background_music = document.querySelector(".sound");
 const prestige_points_element = document.querySelector(".prestige-points");
+const prestige_points_popup = document.querySelector(".prestige-points-popup");
 const rebirthBtn = document.querySelector(".rebirth");
 const rebirthPopup = document.querySelector(".rebirth-popup");
 const closeRebirth = document.querySelector(".close-rebirth");
 const rebirthpopup = document.querySelector(".rebirth-popup");
 const cheaper_amount_element = document.querySelector(".cheaper_amount");
 const cheaper_element = document.querySelector(".cheaper");
+const cheaper_price_element = document.querySelector(".cost");
 
 
 const music = new Audio("capybara-wictor.mp3");
@@ -49,6 +51,8 @@ let spc = parseInt(localStorage.getItem("spc")) || 1;
 let clicker_speed = parseInt(localStorage.getItem("clicker_speed")) || 1000;
 let clicker_multiplier = parseInt(localStorage.getItem("clicker_multiplier")) || 1;
 let multiplier_multiplier = parseInt(localStorage.getItem("multiplier_multiplier")) || 2;
+let cheaper_bought = (localStorage.getItem("prestige_bought")) || 0;
+let cheaper_price = 10 + (cheaper_bought * 10);
 let cheaper_amount = (localStorage.getItem("cheaper_amount") !== null)
   ? parseFloat(localStorage.getItem("cheaper_amount"))
   : 0;
@@ -57,10 +61,39 @@ let prestige_points = (localStorage.getItem("prestige_points") !== null)
   ? parseInt(localStorage.getItem("prestige_points"), 10)
   : Math.floor(score / 10000);
 
-if (prestige_points_element) {
-  prestige_points_element.innerHTML = "prestige-points=" + prestige_points;
+/* ====== Prestige points live update ====== */
+function update_prestige_points() {
+  // read stored prestige (previous rebirths)
+  const stored = (localStorage.getItem("prestige_points") !== null)
+    ? parseInt(localStorage.getItem("prestige_points"), 10)
+    : 0;
+
+  // compute how many you'd gain right now from current score
+  const potential = Math.floor(score / 10000);
+
+  // keep the game's prestige_points variable synced to the stored total
+  prestige_points = stored;
+
+  // defensive DOM updates
+  if (prestige_points_element) {
+    // show total if you rebirthed now (stored + potential)
+    prestige_points_element.innerHTML = "prestige-points=" + (stored + potential);
+  }
+
+  if (prestige_points_popup) {
+    // show both current stored points and how many you'd gain on rebirth
+    prestige_points_popup.innerHTML =
+      "You have " + stored + " prestige points.";
+  }
 }
 
+// initial render
+update_prestige_points();
+
+// update live (250ms is a responsive default)
+const prestigeInterval = setInterval(update_prestige_points, 250);
+
+update_prestige_points();
 /* ====== FIXED: Load real booleans correctly ====== */
 let is_clicked_speed = localStorage.getItem("is_clicked_speed") === "true";
 let is_clicked_clickpower = localStorage.getItem("is_clicked_clickpower") === "true";
@@ -88,10 +121,21 @@ background_music.addEventListener("click", function () {
 });
 
 cheaper_element.addEventListener("click", function () {
-  if (prestige_points >= 10) {
+  if (prestige_points >= cheaper_price) {
     // increase discount by 1% and store with two decimals
     cheaper_amount = parseFloat((cheaper_amount + 0.01).toFixed(2));
-    prestige_points -= 10;
+    prestige_points -= cheaper_price;
+    cheaper_bought += 1;
+    prestige_points_element.innerHTML = "prestige-points=" + cheaper_price;
+    cheaper_price += cheaper_bought * 5;
+    cheaper_price_element.innerHTML = "Cost: " + cheaper_price + " Prestige Points";
+    cheaper_amount_element.innerHTML = "discount = " + cheaper_amount;
+    prestige_points_popup.innerHTML = "You have " + prestige_points + " prestige points.";
+    localStorage.setItem("cheaper_amount", cheaper_amount);
+    localStorage.setItem("prestige_bought", cheaper_bought);
+    localStorage.setItem("prestige_points", prestige_points);
+    localStorage.setItem("cheaper_price", cheaper_price);
+    update_prestige_points();
     save();
   }
 });
@@ -166,7 +210,7 @@ function updateUI() {
   if (multiplier_clicker_amount_element) multiplier_clicker_amount_element.innerHTML = "amount = " + multiplier_clicker_amount;
   if (multiplier_clicker_price_element) multiplier_clicker_price_element.innerHTML = formatNumber(discounted(multiplier_clicker_price));
   cheaper_amount_element.innerHTML = "discount = " + cheaper_amount;
-  if (prestige_points_element) prestige_points_element.innerHTML = "prestige-points=" + prestige_points;
+  prestige_points_element.innerHTML = "prestige-points=" + prestige_points;
 
 }
 
@@ -192,9 +236,19 @@ function save() {
   localStorage.setItem("is_clicked_multiplierpower", is_clicked_multiplierpower);
   localStorage.setItem("prestige_points", prestige_points);
   localStorage.setItem("cheaper_amount", cheaper_amount);
+  prestige_points_popup.innerHTML = "You have " + prestige_points + " prestige points.";
   prestige_points_element.innerHTML = "prestige-points=" + prestige_points;
+  cheaper_price_element.innerHTML = "Cost: " + cheaper_price + " Prestige Points";
+  cheaper_amount_element.innerHTML = "discount = " + cheaper_amount;
+  prestige_points_popup.innerHTML = "You have " + prestige_points + " prestige points.";
+  localStorage.setItem("cheaper_amount", cheaper_amount);
+  localStorage.setItem("prestige_bought", cheaper_bought);
+  localStorage.setItem("prestige_points", prestige_points);
+  localStorage.setItem("cheaper_price", cheaper_price);
+  update_prestige_points();
 
   updateUI();
+  update_prestige_points();
 }
 save();
 /* ====== Click interaction ====== */
@@ -225,7 +279,7 @@ if (picture) {
       }
       picture.style.transition = "transform 0.4s ease";
     }, 180);
-
+    prestige_points_element.innerHTML = "prestige-points=" + prestige_points;
     save();
   });
 
@@ -417,6 +471,19 @@ if (full_reset) {
     is_clicked_speed = false;
     is_clicked_clickpower = false;
     is_clicked_multiplierpower = false;
+    cheaper_amount = 0;
+    cheaper_bought = 0;
+    cheaper_price = 10;
+    prestige_points = 0;
+    cheaper_price_element.innerHTML = "Cost: " + cheaper_price + " Prestige Points";
+    cheaper_amount_element.innerHTML = "discount = " + cheaper_amount;
+    prestige_points_popup.innerHTML = "You have " + prestige_points + " prestige points.";
+    
+
+    localStorage.setItem("cheaper_amount", cheaper_amount);
+    localStorage.setItem("prestige_bought", cheaper_bought);
+    localStorage.setItem("prestige_points", prestige_points);
+    localStorage.setItem("cheaper_price", cheaper_price);
 
     doubler_clicker_speed.style.display = "";
     double_clicker_power.style.display = "";

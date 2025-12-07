@@ -3,103 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Front Page</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="icon" href="images/about.jpg" type="image/x-icon">
-    <style>
-        #vroom {
-            transition: all 1s ease-in-out;
-        }
-        #vroom:hover {
-            animation: goo 25s ease-in-out; 
-        }
-        @keyframes goo {
-            25% {transform: translate(1000000px)};
-        }
-        /*.container_image1 {
-            transition: all 1s ease-in-out;
-        }
-        .container_image1 {
-            animation: massive 5s ease-in-out;
-        }
-        @keyframes massive {
-            25% {transform: scale(100)};
-        }*/
-
-    </style>
+    <style>@import url('intro.css');</style>
+    <title>introduction</title>
 </head>
-
 <body>
-    <header id="home-header">
-        <h1>Home Page</h1>
-        <nav id="header-nav" style="height:0px;">
-            <ul>
-                <li class="header-link"><a href="login.html">Login for more articles!</a></li>
-            </ul>
-        </nav>
+    <header>
+        <h2>Introduction Page</h2>
+        
     </header>
     <main>
-        <br><br><br><br>
-        <div class="similar" id="similar_websites">
-            <div class="similar_container">
-                <article>
-                    <img src="images/world-svgrepo-com.svg" alt="worldle" id="container_image1">
-                    <p>click to learn about worldle:</p>
-                    <a href="worldle.html" class="link">worldle</a>
-                </article>
-                <article>
-                    <img src="images/Ryan and Alan.jpg" alt="about me" id="container_image2">
-                    <p>click to learn about me:) :</p>
-                    <a href="me.html" class="link">About Me</a>
-                </article>
-            
-                <article>
-                    <img src="images/space.jpg" alt="image of space" class="container_image3" id="vroom">
-                    <p>Click to learn about space:</p>
-                    <a href="space.html"class="link">space</a>
-                </article>
-            </div>
-            <div class="similar_container">
-                <article>
-                    <img src="images/soothing.jpeg" alt="soothing">
-                    <p>Click to be soothed:)</p>
-                    <a href="cool_animation.html" class="link">Soothing::::)))))</a>
-                </article>
-                <article>
-                    <img src="images/business.svg" alt="soothing">
-                    <p>Click to learn about my website building business:)</p>
-                    <a href="website_business.html" class="link">click here to learn more:</a>
-                </article>
-                <article>
-                    <img src="cappybara clicker/capybara-hamburger.svg" alt="cappybara" class="cappy_picture">
-                    <p>Click for a cappybara clicker game that I made myself</p>
-                    <a href="cappybara clicker/index.html" class="link">hope you enjoy :)</a>
-                </article>
-            </div>
-            <br>
-        </div>
-            <br><br><br><br>
+        <h1>Welcome to my website!</h1>
+        <p>This is my personal website where I share information about myself, my interests, and my projects. Feel free to explore and learn more about me!</p>
+        <a href="main.html">Go to Main Page</a>
     </main>
-        <footer class="main__footer">
-            <div class="footer1">
-                <h2 id="footer-text">Front Page</h2>
-            </div>
-            <div class="footer2">
-                <p>This website was made with the help of Kodland. Kodland is a company that helps young learners(like me) learn coding languages very easily. 
-                </p>
-                <div class="footer_links">
-                    <a href="https://www.kodland.org/" target="_blank">The link to Kodland</a>
-                    <a href="mailto:rfcherches13@gmail.com">rfcherches13@gmail.com</a>
-                    </div>
-                </div>
-            </footer>
-    <script>
-        const params = new URLSearchParams(window.location.search);
-        const username = params.get("user");
-
-        if (username === "admin") {
-            document.getElementsByClassName("admin").style.display = "block";
-        }
-    </script>
 </body>
 </html>

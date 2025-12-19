@@ -1,0 +1,109 @@
+header {
+    display:flex;
+    flex-direction:row;
+    align-items:center;
+    justify-content:space-around;
+    padding: 10px 20px;
+    background-color:rgb(25, 182, 235);
+}
+nav {
+    gap: 20px;
+    margin-left: auto;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+nav a {
+    color: rgb(0, 252, 0);
+    transition: color 1s ease-in-out;
+    font-weight: bold;
+    text-decoration: none;
+    font-size: 18px;
+    margin: 0 10px;
+}
+@keyframes color {
+    0% {
+        color:rgb(0, 252, 0);
+    }
+    25% {
+        color:green;
+    }
+    50% {
+        color:lightblue;
+    }
+    100% {
+        color:blue;
+    }
+}
+nav a:hover {
+    text-decoration: underline;
+    color:blue;
+}
+main {
+    padding: 20px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background-color:green;
+    background-size: cover;
+}
+main * {
+    margin: 0 auto;
+}
+main ul {
+    padding: 0;
+    list-style-position: inside;
+}
+p{
+    padding-bottom:10px;
+    margin-bottom:20px;
+}
+h2{
+    padding-bottom:10px;
+    margin-bottom:20px;
+}
+body {
+    margin:0;
+}
+div {
+    padding-bottom:20px;
+}
+.blue {
+    background-color:lightblue;
+}
+.green {
+    background-color:lightgreen;
+}
+.buy {
+    background-color:lightcoral;
+    padding:20px;
+    margin-bottom:5px;
+    border-radius:10px;
+    cursor: pointer;
+    transition: background-color 1s ease-in-out;
+}
+@keyframes background-color {
+    0% {
+        background-color:lightcoral;
+        color:blue;
+    }
+    25% {
+        background-color:blue;
+        color:lightcoral;
+    }
+    50% {
+        background-color:lightcoral;
+        color:blue;
+    }
+    100% {
+        background-color:blue;
+        color:lightcoral;
+    }
+}
+.buy:hover {
+    background-color: blue;
+    color: lightcoral;
+}

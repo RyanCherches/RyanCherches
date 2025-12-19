@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About the doge Business</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/bxslider/4.2.12/jquery.bxslider.css">
+    <style>
+        .bx-wrapper {
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div>
+            <img src="Im just a chill guy.png" alt="doge">
+        </div>
+        <div>
+            <nav>
+                <a href="#about">About</a>
+                <a href="#types">Services</a>
+                <a href="#contact">Contact</a>
+            </nav>
+        </div>
+    </header>
+    <main>
+        <section id="about">
+            <h1>Welcome to Doge Business</h1>
+            <p>have you ever wanted a cute little chill dog? Well you can get them here for the cheap price of $5.00! It can come in many shapes and sizes.</p>
+            <div class="slider">
+                <div><img src="Im just a chill guy.png"></div>
+                <div><img src="Im just a chill guy.png"></div>
+                <div><img src="Im just a chill guy.png"></div>
+            </div>
+        </section>
+        <section id="types">
+            <h2>As we told you there are a few different types of doges here are a few. Each have different prices.</h2>
+            <div class="blue">
+                <p>blue doge</p>
+                <img src="Im just a chill guy.png">
+                <p>Price: $10.00</p>
+                <a href="payement.html" class="buy">Buy Now</a>
+                <br><br>
+            </div>
+            <br><br>
+            <div class="green">
+                <p>green doge</p>
+                <img src="Im just a chill guy.png">
+                <p>Price: $15.00</p>
+                <a href="payement.html" class="buy">Buy Now</a>
+                <br><br>
+            </div>
+        </section>
+        <section>
+            <h2 id="contact">Contact Us</h2>
+            <p>If you have any questions feel free to email us at ssing@mcdonogh.org, zchen@mcdonogh.org, or rfcherches@mcdonogh.org</p>
+            <p>or call us at (667) 490-2013</p>
+    
+        </section>
+    </main>
+    <footer>
+
+    </footer>
+<script src="script.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/bxslider/4.2.12/jquery.bxslider.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $('.slider').bxSlider();
+    });
+</script>
+</body>
+</html>

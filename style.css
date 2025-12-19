@@ -239,6 +239,10 @@ header {
     min-height:327px;
     min-width: 300px;
 }
+.doge_picture {
+    min-height: 297px;
+    min-width: 300px;
+}
 /* Мобильные устройства */
 @media (max-width: 768px) {
     header {

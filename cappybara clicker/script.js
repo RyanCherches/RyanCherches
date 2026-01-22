@@ -245,12 +245,25 @@ function save() {
   localStorage.setItem("prestige_bought", cheaper_bought);
   localStorage.setItem("prestige_points", prestige_points);
   localStorage.setItem("cheaper_price", cheaper_price);
+  if (score < 1000) {
+    picture.src = "cappy swim.png";
+    picture.style.width = "250px";
+    picture.style.height = "200px";
+  }
+  if (score >= 1000) {
+    picture.src = "cappy.svg";
+  }
+  if (score >= 10000) {
+    picture.src = "real_cappy.png";
+    picture.style.height = "300px";
+  }
   update_prestige_points();
 
   updateUI();
   update_prestige_points();
 }
 save();
+
 /* ====== Click interaction ====== */
 if (picture) {
   picture.addEventListener("click", function () {

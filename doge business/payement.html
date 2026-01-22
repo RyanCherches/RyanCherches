@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Doge Business - Payment</title>
     <link rel="stylesheet" href="payement.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/build/email.min.js"></script>
 </head>
 <body>
     <div class="payment-container">
@@ -18,7 +19,11 @@
             <div class="products-section">
                 <h2>Select Products</h2>
                 <div class="products-list">
+                    <div class="put_name product-checkbox">
+                        <input name ="first and last name" type="text" placeholder="Please put your first and last name" required>
+                    </div>
                     <div class="product-item" data-price="10.00" data-name="Blue Doge">
+                        
                         <div class="product-checkbox">
                             <input type="checkbox" id="blueDoge" name="blueDoge" value="10.00">
                         </div>
@@ -60,69 +65,8 @@
 
             <!-- Payment Form -->
             <form class="payment-form" id="paymentForm">
-                <h2>Billing Information</h2>
-                
-                <!-- Name -->
-                <div class="form-group">
-                    <label for="fullName">Full Name</label>
-                    <input type="text" id="fullName" name="fullName" required>
-                </div>
-
-                <!-- Email -->
-                <div class="form-group">
-                    <label for="email">Email Address</label>
-                    <input type="email" id="email" name="email" required>
-                </div>
-
-                <!-- Address -->
-                <div class="form-group">
-                    <label for="address">Street Address</label>
-                    <input type="text" id="address" name="address" required>
-                </div>
-
-                <!-- City, State, Zip -->
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="city">City</label>
-                        <input type="text" id="city" name="city" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="state">State</label>
-                        <input type="text" id="state" name="state" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="zip">Zip Code</label>
-                        <input type="text" id="zip" name="zip" required>
-                    </div>
-                </div>
-
-                <h2>Payment Details</h2>
-
-                <!-- Card Number -->
-                <div class="form-group">
-                    <label for="cardNumber">Card Number</label>
-                    <input type="text" id="cardNumber" name="cardNumber" placeholder="1234 5678 9012 3456" required>
-                </div>
-
-                <!-- Expiry and CVC -->
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="expiry">Expiry Date</label>
-                        <input type="text" id="expiry" name="expiry" placeholder="MM/YY" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="cvc">CVC</label>
-                        <input type="text" id="cvc" name="cvc" placeholder="123" required>
-                    </div>
-                </div>
-
-                <!-- Terms -->
-                <div class="form-group checkbox">
-                    <input type="checkbox" id="terms" name="terms" required>
-                    <label for="terms">I agree to the terms and conditions</label>
-                </div>
-
                 <!-- Submit Button -->
+                 
                 <button type="submit" class="payment-button">Complete Payment</button>
                 <a href="index.html" class="cancel-button">Cancel</a>
             </form>

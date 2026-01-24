@@ -1,0 +1,29 @@
+header {
+    display: flex;
+    align-items: center;
+    justify-content:space-around;
+    gap: 20px;
+    background-color: #f0f0f0;
+    padding: 10px;
+}
+header a{
+    text-decoration: none;
+    color: #333;
+    font-weight: bold;
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+header a:hover {
+    color: #007BFF;
+    text-decoration: dotted underline;
+    transform: scale(1.5) rotate(360deg);
+}
+#doge-attack {
+    background-image: url("doge attack.png");
+    background-size: contain;
+    background-repeat: no-repeat;
+    transition: transform 0.3s ease;
+}
+#doge-attack:hover {
+    transform: translate(500px);
+}

@@ -1,10 +1,20 @@
-header {
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100vh;
+}
+header{
     display: flex;
-    align-items: center;
-    justify-content:space-around;
-    gap: 20px;
-    background-color: #f0f0f0;
-    padding: 10px;
+    flex-direction: row;
+    justify-content: space-around;
+    padding-top: 20px;
+    background-color: transparent;
+    padding-bottom: 10px;
+    position: absolute;
+    top: 0;
+    width: 100%;
+    z-index: 10;
 }
 header a{
     text-decoration: none;
@@ -24,6 +34,67 @@ header a:hover {
     background-repeat: no-repeat;
     transition: transform 0.3s ease;
 }
-#doge-attack:hover {
-    transform: translate(500px);
+.army{
+    display:block;
+}
+#doge-attack2 {
+    background-image: url("doge attack2.png");
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    left:180px;
+    transform:scale(1.2);
+    display:none;
+}
+#doge-attack3 {
+    background-image: url("doge attack2.png");
+    background-size: contain;
+    background-repeat: no-repeat;
+    position: absolute;
+    left:180px;
+    top:40px;
+    transform:scale(0.8);
+    display:none;
+}
+/* main {
+    background-image:url("levels horizontal.png");
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    min-height: 100vh;
+    width: 100%;
+    box-sizing: border-box;
+} */
+#green-doge {
+    top:31%;
+    left:7%;
+    position:absolute;
+    width:102px;
+    cursor:pointer;
+}
+#background {
+    background-image:url("levels horizontal.png");
+    height:107vh;
+    width:100vw;
+}
+#red-doge {
+    top:31%;
+    left:30%;
+    position:absolute;
+    width:102px;
+    cursor:pointer;
+}
+#spooky-doge {
+    top:31%;
+    left:59%;
+    position:absolute;
+    width:102px;
+    cursor:pointer;
+}
+#rainbow-doge {
+    top:30%;
+    left:84%;
+    position:absolute;
+    width:102px;
+    cursor:pointer;
 }

@@ -5,9 +5,16 @@ const enemy_hlth_element = document.getElementById("enemy-hlth");
 const hlth_element = document.getElementById("hlth");
 const victory = document.getElementById("victory");
 const home = document.getElementById("bye-btn");
+const beforeFightAudio = new Audio("before fight.mp3");
+const duringFightAudio = new Audio("during fight.mp3");
 home.addEventListener("click", function() {
     window.location.href = "adventure.html";
 });
+
+window.onload = function() {
+    beforeFightAudio.loop = true;
+    beforeFightAudio.play();
+}
 
 const enemy_max_health = 100;
 let enemy_health = 100;
@@ -24,8 +31,11 @@ yes_btn.addEventListener("click", function (){
     yes_no.style.display = "none";
     enemy_hlth_element.style.display = "block";
     hlth_element.style.display = "block";
-    loadhealth()
-    battleLoop()
+    loadhealth();
+    battleLoop();
+    beforeFightAudio.pause();
+    duringFightAudio.loop = true;
+    duringFightAudio.play();
 });
 
 async function battleLoop() {
@@ -41,6 +51,7 @@ async function battleLoop() {
         enemy_damage *= 2;
     }
     victory.style.display = "block";
+    duringFightAudio.pause();
 }
 function loadhealth() {
     if (enemy_health <= 0) {

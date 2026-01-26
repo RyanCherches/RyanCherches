@@ -12,6 +12,7 @@ dogeAttack.addEventListener("mouseenter", () => {
   dogeAttack3.src = "doge attack.png";
   dogeAttack3.style.display="block";
   isHovering = true;
+
   
   const moveInterval = setInterval(() => {
     if (!isHovering) {

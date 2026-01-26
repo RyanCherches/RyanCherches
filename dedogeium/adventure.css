@@ -15,6 +15,7 @@ header{
     top: 0;
     width: 100%;
     z-index: 10;
+    height: 10%;
 }
 header a{
     text-decoration: none;
@@ -66,22 +67,31 @@ header a:hover {
     box-sizing: border-box;
 } */
 #green-doge {
-    top:31%;
-    left:7%;
+    top:38%;
+    left:9.5%;
     position:absolute;
     width:102px;
+    min-width:50px;
+    transform:translate(-50%, -50%);
     cursor:pointer;
 }
 #background {
     background-image:url("levels horizontal.png");
-    height:107vh;
-    width:100vw;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    width:100%;
+    aspect-ratio: 16 / 9;
+    min-height: 100vh;
+    position: relative;
 }
 #red-doge {
-    top:31%;
-    left:30%;
+    top:38%;
+    left:33%;
     position:absolute;
     width:102px;
+    min-width:50px;
+    transform:translate(-50%, -50%);
     cursor:pointer;
 }
 #spooky-doge {

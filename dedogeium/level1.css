@@ -1,0 +1,57 @@
+#game {
+    display:flex;
+    justify-content:space-around;
+    align-items:center;
+    flex-direction:row;
+}
+#yes-no {
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:space-around;
+    background-color:white;
+    padding:20px;
+}
+#btns {
+    gap:40px;
+}
+body {
+    height:100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    background-image:url("cool fight scene.jpg");
+    background-size: cover;
+    background-attachment: fixed;
+    margin: 0;
+    padding: 0;
+}
+#ok-btn {
+    background-color:blue;
+    border-radius:5px;
+    border: 1px solid red;
+    padding:10px;
+    cursor:pointer;
+}
+#cancel-btn {
+    cursor:pointer;
+}
+#enemy-hlth {
+    display:none;
+    color:white;
+}
+#hlth {
+    display:none;
+    color:white;
+}
+#victory {
+    display:none;
+    background:white;
+    padding:10px;
+}
+#bye-btn {
+    color:white;
+    background-color:blue;
+    padding:5px;
+    border-radius:5px;
+}

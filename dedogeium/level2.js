@@ -7,7 +7,9 @@ const victory = document.getElementById("victory");
 const home = document.getElementById("bye-btn");
 const beforeFightAudio = new Audio("before fight.mp3");
 const duringFightAudio = new Audio("during fight.mp3");
-const completedLevel = Number(localStorage.getItem("completedLevel"));
+const maybe_vic = document.getElementById("maybe-vic");
+localStorage.getItem("completedLevel");
+
 home.addEventListener("click", function() {
     window.location.href = "adventure.html";
 });
@@ -17,12 +19,12 @@ window.onload = function() {
     beforeFightAudio.play();
 }
 
-const enemy_max_health = 200;
-let enemy_health = 200;
+const enemy_max_health = 300;
+let enemy_health = 300;
 const max_health = 500;
 let health = 500;
 let damage = 20;
-let enemy_damage = 20;
+let enemy_damage = 30;
 
 cancel_btn.addEventListener("click", function() {
     window.location.href = "adventure.html";
@@ -51,8 +53,11 @@ async function battleLoop() {
         damage *= 2;
         enemy_damage *= 2;
     }
-    Number(localStorage.getItem("completedLevel"))
+    localStorage.setItem("completedLevel", 3);
     victory.style.display = "block";
+    if (enemy_health > 0) {
+        maybe_vic.innerHTML = "One more level and you level up!";
+    }
     duringFightAudio.pause();
 }
 function loadhealth() {

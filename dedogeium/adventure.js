@@ -1,9 +1,72 @@
 const dogeAttack = document.getElementById("doge-attack");
 const dogeAttack2 = document.getElementById("doge-attack2");
 const dogeAttack3 = document.getElementById("doge-attack3");
+const redDoge = document.getElementById("red-doge");
+const blueDoge = document.getElementById("spooky-doge");
+const rainbowDoge = document.getElementById("rainbow-doge");
+const completedLevel = Number(localStorage.getItem("completedLevel"));
 let isHovering = false;
 let offsetX = 0;
 let offsetY3 = 0;
+console.log("Completed Level:", localStorage.getItem("completedLevel"));
+if (completedLevel >= 2) {
+  redDoge.src = "red doge.png";
+} else {
+  redDoge.src = "red doge locked.png";
+}
+
+if (completedLevel >= 3) {
+  blueDoge.src = "spooky blue doge.png";
+} else {
+  blueDoge.src = "spooky blue doge locked.png";
+}
+
+if (completedLevel >= 4) {
+  rainbowDoge.src = "rainbow doge.png";
+} else {
+  rainbowDoge.src = "rainbow doge locked.png";
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  if (localStorage.getItem("completedLevel") === null) {
+    localStorage.setItem("completedLevel", "1");
+  }
+  // else {
+  //   if (localStorage.getItem("completedLevel") >= 2) {
+  //     redDoge.src="red doge.png";
+  //   }
+  //   if (localStorage.getItem("completedLevel") >= 3) {
+  //     blueDoge.src="spooky doge.png";
+  //   }
+  //   if (localStorage.getItem("completedLevel") >= 3) {
+  //     rainbowDoge.src="rainbow doge.png";
+  //   }
+  // }
+});
+redDoge.addEventListener("click", function() {
+  if (localStorage.getItem("completedLevel") >= 2) {
+    window.location.href = "level2.html";
+  }
+  else {
+    alert("Complete Level 1 to unlock level 2!");
+  }
+});
+blueDoge.addEventListener("click", function() {
+  if (localStorage.getItem("completedLevel") >= 3) {
+    window.location.href = "level3.html";
+  }
+  else {
+    alert("Complete Level 2 to unlock level 3!");
+  }
+});
+rainbowDoge.addEventListener("click", function() {
+  if (localStorage.getItem("completedLevel") >= 4) {
+    window.location.href = "level4.html";
+  }
+  else {
+    alert("Complete Level 3 to unlock level 4!");
+  }
+});
 
 dogeAttack.addEventListener("mouseenter", () => {
   dogeAttack.src = "doge attack.png";

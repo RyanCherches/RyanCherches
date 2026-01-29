@@ -51,7 +51,8 @@ async function battleLoop() {
         damage *= 2;
         enemy_damage *= 2;
     }
-    Number(localStorage.getItem("completedLevel"))
+    Number(localStorage.getItem("completedLevel"));
+    localStorage.setItem("completedLevel", 2);
     victory.style.display = "block";
     duringFightAudio.pause();
 }

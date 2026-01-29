@@ -34,3 +34,11 @@ main {
 body {
     background: radial-gradient(rgb(255, 251, 8) 10%, rgb(25, 0, 255) 100%);
 }
+.animation {
+    display: inline-block;
+    transition: transform 0.3s;
+}
+.animation:hover {
+    transform: scale(1.2);
+    color: lightgreen;
+}

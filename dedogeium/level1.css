@@ -56,3 +56,21 @@ body {
     border-radius:5px;
     cursor:pointer;
 }
+
+/* skip button for cutscene control */
+#skip-btn {
+    display: none;
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    padding: 8px 12px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.white {
+    color:white;
+}

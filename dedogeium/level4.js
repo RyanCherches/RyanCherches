@@ -5,6 +5,9 @@ const enemy_hlth_element = document.getElementById("enemy-hlth");
 const hlth_element = document.getElementById("hlth");
 const victory = document.getElementById("victory");
 const home = document.getElementById("bye-btn");
+const speech_good = document.getElementById("speech-good");
+const speech_bad = document.getElementById("speech-bad");
+const skipBtn = document.getElementById("skip-btn");
 const beforeFightAudio = new Audio("before fight.mp3");
 const duringFightAudio = new Audio("during fight.mp3");
 const maybe_vic = document.getElementById("maybe-vic");
@@ -30,8 +33,65 @@ cancel_btn.addEventListener("click", function() {
     window.location.href = "adventure.html";
     
 });
-yes_btn.addEventListener("click", function (){
-    yes_no.style.display = "none";
+let speechTimeoutId = null;
+
+// cutscene/dialogue state
+const dialogue = [
+    { speaker: 'good', text: "I am here to show my brother who did the better choice." },
+    { speaker: 'bad', text: "Oh I know your brother, but I am above him." },
+    { speaker: 'good', text: "May you give me something?" },
+    { speaker: 'bad', text: "Only if you defeat me first(later update)." },
+    { speaker: 'good', text: "Thats fine." },
+    { speaker: 'bad', text: "Ok. Good luck. You will need it. I am VERY strong!" },
+];
+let dialogueIndex = 0;
+let inCutscene = false;
+
+function speech() {
+    // clear any ongoing cutscene state and pending timeouts
+    inCutscene = false;
+    dialogueIndex = 0;
+    if (speechTimeoutId) {
+        clearTimeout(speechTimeoutId);
+        speechTimeoutId = null;
+    }
+    speech_good.innerHTML = "";
+    speech_bad.innerHTML = "";
+    if (skipBtn) skipBtn.style.display = 'none';
+}
+
+function showLine(index) {
+    speech_good.innerHTML = "";
+    speech_bad.innerHTML = "";
+    const line = dialogue[index];
+    if (!line) return;
+    if (line.speaker === 'good') speech_good.innerText = line.text;
+    else speech_bad.innerText = line.text;
+}
+
+function showNextLine() {
+    if (!inCutscene) return;
+    dialogueIndex++;
+    if (dialogueIndex < dialogue.length) {
+        showLine(dialogueIndex);
+    } else {
+        endCutsceneAndStartBattle();
+    }
+}
+
+function startCutscene() {
+    inCutscene = true;
+    dialogueIndex = 0;
+    showLine(0);
+    if (skipBtn) skipBtn.style.display = 'inline-block';
+}
+
+function endCutsceneAndStartBattle() {
+    inCutscene = false;
+    if (skipBtn) skipBtn.style.display = 'none';
+    speech_good.innerHTML = "";
+    speech_bad.innerHTML = "";
+    // begin the fight
     enemy_hlth_element.style.display = "block";
     hlth_element.style.display = "block";
     loadhealth();
@@ -39,8 +99,28 @@ yes_btn.addEventListener("click", function (){
     beforeFightAudio.pause();
     duringFightAudio.loop = true;
     duringFightAudio.play();
+}
+yes_btn.addEventListener("click", function (){
+    // yes_no.style.display = "none";
+    // enemy_hlth_element.style.display = "block";
+    // hlth_element.style.display = "block";
+    // loadhealth();
+    // battleLoop();
+    // beforeFightAudio.pause();
+    // duringFightAudio.loop = true;
+    // duringFightAudio.play();
+    yes_no.style.display = "none";
+    speech();
+    startCutscene();
 });
 
+// skip button advances to the next line in the cutscene
+if (skipBtn) {
+    skipBtn.addEventListener('click', function() {
+        if (!inCutscene) return;
+        showNextLine();
+    });
+}
 async function battleLoop() {
     while (enemy_health > 0 && health > 0) {
         await new Promise(resolve => setTimeout(resolve, 1000));

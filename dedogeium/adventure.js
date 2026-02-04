@@ -10,21 +10,21 @@ let offsetX = 0;
 let offsetY3 = 0;
 console.log("Completed Level:", localStorage.getItem("completedLevel"));
 if (completedLevel >= 2) {
-  redDoge.src = "red doge.png";
+  redDoge.src = "first boss doge.png";
 } else {
-  redDoge.src = "red doge locked.png";
+  redDoge.src = "first boss doge locked.png";
 }
 
 if (completedLevel >= 3) {
-  blueDoge.src = "spooky blue doge.png";
+  blueDoge.src = "second boss doge.png";
 } else {
-  blueDoge.src = "spooky blue doge locked.png";
+  blueDoge.src = "second boss doge locked.png";
 }
 
 if (completedLevel >= 4) {
-  rainbowDoge.src = "rainbow doge.png";
+  rainbowDoge.src = "final boss doge.png";
 } else {
-  rainbowDoge.src = "rainbow doge locked.png";
+  rainbowDoge.src = "final boss doge locked.png";
 }
 
 document.addEventListener("DOMContentLoaded", function () {

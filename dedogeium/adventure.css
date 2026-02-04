@@ -67,16 +67,16 @@ header a:hover {
     box-sizing: border-box;
 } */
 #green-doge {
-    top:38%;
+    /* top:38%;
     left:9.5%;
-    position:absolute;
+    position:absolute; */
     width:102px;
     min-width:50px;
-    transform:translate(-50%, -50%);
+    /* transform:translate(-50%, -50%); */
     cursor:pointer;
 }
 #background {
-    background-image:url("levels horizontal.png");
+    background-image:url("levels background.png");
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
@@ -84,27 +84,77 @@ header a:hover {
     aspect-ratio: 16 / 9;
     min-height: 100vh;
     position: relative;
+    display:flex;
+    justify-content:space-around;
+    flex-wrap:wrap;
+    /* align-items:top; */
+    padding-top:40px;
+
 }
 #red-doge {
-    top:38%;
+    /* top:38%;
     left:33%;
-    position:absolute;
+    position:absolute; */
     width:102px;
     min-width:50px;
-    transform:translate(-50%, -50%);
+    /* transform:translate(-50%, -50%); */
     cursor:pointer;
 }
 #spooky-doge {
-    top:31%;
+    /* top:31%;
     left:59%;
-    position:absolute;
+    position:absolute; */
     width:102px;
     cursor:pointer;
 }
 #rainbow-doge {
-    top:30%;
+    /* top:30%;
     left:84%;
-    position:absolute;
+    position:absolute; */
     width:102px;
     cursor:pointer;
+}
+
+/* level boxes */
+.levels {
+    background-image: url("level.png");
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 220px; /* increased size so the background fully contains the doge */
+    height: 220px; /* match width so background fits predictably */
+    box-sizing: border-box;
+    padding: 12px;
+}
+
+/* ensure the doge images fit inside their level boxes */
+.levels img {
+    max-width: 100%;
+    max-height: 100%;
+    height: auto;
+    display: block;
+}
+
+/* make green doge slightly smaller so it doesn't touch the edges */
+#green-doge {
+    width: 72%;
+    max-width: 100px;
+    height: auto;
+    display: block;
+}
+
+.levels p {
+    margin: 6px 0 0 0;
+    font-weight: bold;
+    text-align: center;
+}
+
+/* responsive: scale down level boxes on small screens */
+@media (max-width: 520px) {
+    .levels { width: 140px; height: 140px; padding: 8px; }
+    #green-doge { width: 70%; }
 }

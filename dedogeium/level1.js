@@ -178,7 +178,9 @@ async function battleLoop() {
         enemy_damage *= 2;
     }
     Number(localStorage.getItem("completedLevel"));
-    localStorage.setItem("completedLevel", 2);
+    if (completedLevel < 2) {
+        localStorage.setItem("completedLevel", 2);
+    }
     // start post-battle dialogue that uses the same speaking placement
     startPostDialogue();
     duringFightAudio.pause();

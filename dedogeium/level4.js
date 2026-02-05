@@ -28,12 +28,41 @@ window.onload = function() {
     beforeFightAudio.play();
 }
 
+// Rarity bonuses for equipped items
+const rarityBonuses = {
+    "Common": { damage: 2, health: 50 },
+    "Uncommon": { damage: 5, health: 100 },
+    "Rare": { damage: 10, health: 150 },
+    "Epic": { damage: 20, health: 250 },
+    "Legendary": { damage: 40, health: 400 },
+    "Godly": { damage: 80, health: 600 }
+};
+
 const enemy_max_health = 500;
 let enemy_health = 500;
-const max_health = 500;
+let max_health = 500;
 let health = 500;
 let damage = 20;
 let enemy_damage = 19;
+
+// Apply equipment bonuses at battle start
+function applyEquipmentBonuses() {
+    const equippedItems = JSON.parse(localStorage.getItem("equippedItems")) || [];
+    let totalDamageBonus = 0;
+    let totalHealthBonus = 0;
+    
+    equippedItems.forEach(item => {
+        const bonus = rarityBonuses[item.rarity] || { damage: 0, health: 0 };
+        totalDamageBonus += bonus.damage;
+        totalHealthBonus += bonus.health;
+    });
+    
+    damage += totalDamageBonus;
+    max_health += totalHealthBonus;
+    health = max_health;
+    
+    console.log(`Equipment applied: +${totalDamageBonus} damage, +${totalHealthBonus} max health`);
+}
 
 cancel_btn.addEventListener("click", function() {
     window.location.href = "adventure.html";
@@ -46,7 +75,7 @@ const dialogue = [
     { speaker: 'good', text: "I am here to show my brother who did the better choice." },
     { speaker: 'bad', text: "Oh I know your brother, but I am above him." },
     { speaker: 'good', text: "May you give me something?" },
-    { speaker: 'bad', text: "Only if you defeat me first(later update)." },
+    { speaker: 'bad', text: "Only if you defeat me first." },
     { speaker: 'good', text: "Thats fine." },
     { speaker: 'bad', text: "Ok. Good luck. You will need it. I am VERY strong!" },
 ];
@@ -100,6 +129,7 @@ function endCutsceneAndStartBattle() {
     // begin the fight
     enemy_hlth_element.style.display = "block";
     hlth_element.style.display = "block";
+    applyEquipmentBonuses();
     loadhealth();
     battleLoop();
     beforeFightAudio.pause();

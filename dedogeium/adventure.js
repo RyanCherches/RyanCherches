@@ -30,6 +30,7 @@ if (completedLevel >= 4) {
 document.addEventListener("DOMContentLoaded", function () {
   if (localStorage.getItem("completedLevel") === null) {
     localStorage.setItem("completedLevel", "1");
+    localStorage.setItem("inventory", JSON.stringify([]));
   }
   // else {
   //   if (localStorage.getItem("completedLevel") >= 2) {

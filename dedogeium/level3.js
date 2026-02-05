@@ -13,6 +13,12 @@ const duringFightAudio = new Audio("during fight.mp3");
 const maybe_vic = document.getElementById("maybe-vic");
 localStorage.getItem("completedLevel");
 
+// Inventory system
+let inventory = JSON.parse(localStorage.getItem("inventory")) || [];
+
+const rarities = ["Common", "Uncommon", "Rare", "Epic", "Legendary"];
+const rarityWeights = [30, 39, 30, 1, 0]; // percentage weights
+
 home.addEventListener("click", function() {
     window.location.href = "adventure.html";
 });
@@ -135,9 +141,21 @@ async function battleLoop() {
         enemy_damage *= 2;
     }
     localStorage.setItem("completedLevel", 4);
+    // Generate and add reward doge to inventory
+    const rewardItem = generateRewardItem();
+    addItemToInventory(rewardItem);
+    
+    // Display victory with doge reward
     victory.style.display = "block";
     if (enemy_health > 0) {
         maybe_vic.innerHTML = "One more level and you level up!";
+    } else {
+        maybe_vic.innerHTML = `Victory! You obtained: <br><strong>${rewardItem.name}</strong> <br><span style="color: gold;">[${rewardItem.rarity}]</span>`;
+    }
+    duringFightAudio.pause();
+    victory.style.display = "block";
+    if (enemy_health > 0) {
+        maybe_vic.innerHTML = "Grind more to beat it";
     }
     duringFightAudio.pause();
 }
@@ -157,4 +175,28 @@ function attack() {
 }
 function enemy_attack() {
     health -= enemy_damage;
+}
+
+function generateRandomRarity() {
+    const roll = Math.random() * 100;
+    let cumulative = 0;
+    for (let i = 0; i < rarities.length; i++) {
+        cumulative += rarityWeights[i];
+        if (roll <= cumulative) return rarities[i];
+    }
+    return rarities[rarities.length - 1];
+}
+
+function generateRewardItem() {
+    const randomRarity = generateRandomRarity();
+    return {
+        name: "Doge",
+        rarity: randomRarity,
+        id: Date.now() // unique id for tracking
+    };
+}
+
+function addItemToInventory(item) {
+    inventory.push(item);
+    localStorage.setItem("inventory", JSON.stringify(inventory));
 }

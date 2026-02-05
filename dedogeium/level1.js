@@ -20,8 +20,8 @@ window.onload = function() {
     beforeFightAudio.play();
 }
 
-const enemy_max_health = 200;
-let enemy_health = 200;
+const enemy_max_health = 1000;
+let enemy_health = 1000;
 const max_health = 500;
 let health = 500;
 let damage = 20;
@@ -47,6 +47,16 @@ const dialogue = [
 let dialogueIndex = 0;
 let inCutscene = false;
 
+// post-battle dialogue (speaking after the fight)
+const postDialogue = [
+    { speaker: 'good', text: "I will win one day. I will get the best gear and beat you." },
+    { speaker: 'bad', text: "Exuces. Exuces. Exuces." },
+    { speaker: 'good', text: "You think your so cool, well lets find out soon." },
+    { speaker: 'bad', text: "Well then see you soon." }
+];
+let postIndex = 0;
+let inPostDialogue = false;
+
 function speech() {
     // clear any ongoing cutscene state and pending timeouts
     inCutscene = false;
@@ -69,6 +79,15 @@ function showLine(index) {
     else speech_bad.innerText = line.text;
 }
 
+function showPostLine(index) {
+    speech_good.innerHTML = "";
+    speech_bad.innerHTML = "";
+    const line = postDialogue[index];
+    if (!line) return;
+    if (line.speaker === 'good') speech_good.innerText = line.text;
+    else speech_bad.innerText = line.text;
+}
+
 function showNextLine() {
     if (!inCutscene) return;
     dialogueIndex++;
@@ -77,6 +96,30 @@ function showNextLine() {
     } else {
         endCutsceneAndStartBattle();
     }
+}
+
+function showNextPostLine() {
+    if (!inPostDialogue) return;
+    postIndex++;
+    if (postIndex < postDialogue.length) {
+        showPostLine(postIndex);
+    } else {
+        endPostDialogue();
+    }
+}
+
+function startPostDialogue() {
+    inPostDialogue = true;
+    postIndex = 0;
+    showPostLine(0);
+    if (skipBtn) skipBtn.style.display = 'inline-block';
+}
+
+function endPostDialogue() {
+    inPostDialogue = false;
+    if (skipBtn) skipBtn.style.display = 'none';
+    // show victory UI after post-dialogue finishes
+    if (victory) victory.style.display = "block";
 }
 
 function startCutscene() {
@@ -111,8 +154,14 @@ yes_btn.addEventListener("click", function (){
 // skip button advances to the next line in the cutscene
 if (skipBtn) {
     skipBtn.addEventListener('click', function() {
-        if (!inCutscene) return;
-        showNextLine();
+        if (inCutscene) {
+            showNextLine();
+            return;
+        }
+        if (inPostDialogue) {
+            showNextPostLine();
+            return;
+        }
     });
 }
 
@@ -130,7 +179,8 @@ async function battleLoop() {
     }
     Number(localStorage.getItem("completedLevel"));
     localStorage.setItem("completedLevel", 2);
-    victory.style.display = "block";
+    // start post-battle dialogue that uses the same speaking placement
+    startPostDialogue();
     duringFightAudio.pause();
 }
 function loadhealth() {

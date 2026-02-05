@@ -11,7 +11,13 @@ const skipBtn = document.getElementById("skip-btn");
 const beforeFightAudio = new Audio("before fight.mp3");
 const duringFightAudio = new Audio("during fight.mp3");
 const maybe_vic = document.getElementById("maybe-vic");
-localStorage.getItem("completedLevel");
+const completedLevel = Number(localStorage.getItem("completedLevel")) || 0;
+
+// Inventory system
+let inventory = JSON.parse(localStorage.getItem("inventory")) || [];
+
+const rarities = ["Common", "Uncommon", "Rare", "Epic", "Legendary"];
+const rarityWeights = [75, 25, 0, 0, 0]; // percentage weights
 
 home.addEventListener("click", function() {
     window.location.href = "adventure.html";
@@ -26,7 +32,7 @@ const enemy_max_health = 300;
 let enemy_health = 300;
 const max_health = 500;
 let health = 500;
-let damage = 20;
+let damage = 21;
 let enemy_damage = 30;
 
 cancel_btn.addEventListener("click", function() {
@@ -123,7 +129,7 @@ if (skipBtn) {
 }
 
 async function battleLoop() {
-    while (enemy_health > 0 && health > 0) {
+    while (enemy_health >= 0 && health >= 0) {
         await new Promise(resolve => setTimeout(resolve, 1000));
         attack()
         loadhealth()
@@ -134,11 +140,23 @@ async function battleLoop() {
         damage *= 2;
         enemy_damage *= 2;
     }
-    localStorage.setItem("completedLevel", 3);
-    victory.style.display = "block";
-    if (enemy_health > 0) {
-        maybe_vic.innerHTML = "One more level and you level up!";
+    if (completedLevel < 3) {
+        localStorage.setItem("completedLevel", 3);
     }
+    
+    // Generate and add reward doge to inventory
+    const rewardItem = generateRewardItem();
+    addItemToInventory(rewardItem);
+    
+    // Display victory with doge reward (guard DOM references)
+    if (maybe_vic) {
+        if (enemy_health > 0) {
+            maybe_vic.innerHTML = "One more level and you level up!";
+        } else {
+            maybe_vic.innerHTML = `Victory! You obtained: <br><strong>${rewardItem.name}</strong> <br><span style="color: gold;">[${rewardItem.rarity}]</span>`;
+        }
+    }
+    if (victory) victory.style.display = "block";
     duringFightAudio.pause();
 }
 function loadhealth() {
@@ -157,4 +175,28 @@ function attack() {
 }
 function enemy_attack() {
     health -= enemy_damage;
+}
+
+function generateRandomRarity() {
+    const roll = Math.random() * 100;
+    let cumulative = 0;
+    for (let i = 0; i < rarities.length; i++) {
+        cumulative += rarityWeights[i];
+        if (roll <= cumulative) return rarities[i];
+    }
+    return rarities[rarities.length - 1];
+}
+
+function generateRewardItem() {
+    const randomRarity = generateRandomRarity();
+    return {
+        name: "Doge",
+        rarity: randomRarity,
+        id: Date.now() // unique id for tracking
+    };
+}
+
+function addItemToInventory(item) {
+    inventory.push(item);
+    localStorage.setItem("inventory", JSON.stringify(inventory));
 }

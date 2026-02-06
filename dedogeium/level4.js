@@ -38,12 +38,12 @@ const rarityBonuses = {
     "Godly": { damage: 80, health: 600 }
 };
 
-const enemy_max_health = 500;
-let enemy_health = 500;
+const enemy_max_health = 650;
+let enemy_health = 650;
 let max_health = 500;
 let health = 500;
 let damage = 20;
-let enemy_damage = 19;
+let enemy_damage = 20;
 
 // Apply equipment bonuses at battle start
 function applyEquipmentBonuses() {
@@ -177,7 +177,7 @@ async function battleLoop() {
     // Display victory with doge reward
     victory.style.display = "block";
     if (enemy_health > 0) {
-        maybe_vic.innerHTML = "One more level and you level up!";
+        maybe_vic.innerHTML = "Grind more gear to beat me.";
     } else {
         maybe_vic.innerHTML = `Victory! You obtained: <br><strong>${rewardItem.name}</strong> <br><span style="color: gold;">[${rewardItem.rarity}]</span>`;
     }

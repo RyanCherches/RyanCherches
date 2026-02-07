@@ -8,6 +8,7 @@ const home = document.getElementById("bye-btn");
 const speech_good = document.getElementById("speech-good");
 const speech_bad = document.getElementById("speech-bad");
 const skipBtn = document.getElementById("skip-btn");
+const crystal_attack = document.getElementById("crystal_attack");
 const beforeFightAudio = new Audio("before fight.mp3");
 const duringFightAudio = new Audio("during fight.mp3");
 const maybe_vic = document.getElementById("maybe-vic");
@@ -200,9 +201,18 @@ function loadhealth() {
     
 }
 function attack() {
+    if (crystal_attack) {
+        crystal_attack.style.display = "block";
+        crystal_attack.classList.remove("attack-strike");
+        void crystal_attack.offsetWidth; // trigger reflow to restart animation
+        crystal_attack.classList.add("attack-strike");
+    }
     enemy_health -= damage;
 }
 function enemy_attack() {
+    if (crystal_attack) {
+        crystal_attack.style.display = "none";
+    }
     health -= enemy_damage;
 }
 

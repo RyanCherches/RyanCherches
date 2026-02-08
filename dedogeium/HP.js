@@ -1,10 +1,13 @@
-// Load HP from localStorage
-let hpEarned = localStorage.getItem('hpEarned') ? parseInt(localStorage.getItem('hpEarned')) : 0;
-let lastTimeOnPage = localStorage.getItem('lastTimeOnPage') ? parseInt(localStorage.getItem('lastTimeOnPage')) : Date.now();
+// Load HP from localStorage (robust parsing with safe fallbacks)
+const _storedHp = parseInt(localStorage.getItem('hpEarned'));
+let hpEarned = Number.isFinite(_storedHp) ? _storedHp : 0;
+const _storedTime = parseInt(localStorage.getItem('lastTimeOnPage'));
+let lastTimeOnPage = Number.isFinite(_storedTime) ? _storedTime : Date.now();
 
 // Update HP display
 function updateHPDisplay() {
-    document.querySelector('#amount_earned h2').innerHTML = `HP earned: ${hpEarned}`;
+    const el = document.querySelector('#amount_earned h2');
+    if (el) el.textContent = `HP earned: ${hpEarned}`;
 }
 
 // Calculate HP gained from time away

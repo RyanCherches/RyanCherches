@@ -4,9 +4,21 @@
     align-items:center;
     height:80vh;
 }
-#amount_earned {
+.amount_earned {
     display:flex;
     justify-content:center;
     align-items:center;
     width:100vw;
+}
+a {
+    background-color:lightgreen;
+    padding: 20px;
+    border-radius:10px;
+    text-decoration:none;
+    color:blue;
+    transition:0.5s ease-in-out;
+}
+a:hover {
+    color:lightgreen;
+    background-color:blue;
 }

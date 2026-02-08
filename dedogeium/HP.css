@@ -1,0 +1,12 @@
+#hungry {
+    display:flex;
+    justify-content:space-around;
+    align-items:center;
+    height:80vh;
+}
+#amount_earned {
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    width:100vw;
+}

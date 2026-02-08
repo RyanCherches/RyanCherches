@@ -1,0 +1,30 @@
+main {
+    background-image:url("cool grass background.jpg");
+    height:100vh;
+    background-size:cover;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    flex-direction:column;
+    padding:0px;
+}
+body{
+    margin:0px;
+}
+ul {
+    list-style-type:none;
+    display:flex;
+    gap:50px;
+}
+a {
+    background-color:lightgreen;
+    padding: 20px;
+    border-radius:10px;
+}
+a:hover {
+    color:lightgreen;
+    background-color:blue;
+}
+a {
+    transition: 0.5s ease-in-out;
+}

@@ -5,7 +5,28 @@ window.addEventListener('DOMContentLoaded', function() {
     const inventory = JSON.parse(localStorage.getItem("inventory")) || [];
     const equippedItems = JSON.parse(localStorage.getItem("equippedItems")) || [];
     const listItemsContainer = document.querySelector(".list-items");
-    
+
+    // Display player total HP (reads common keys; creates a small badge if not present)
+    function getPlayerHP() {
+        const keys = ['playerHP', 'totalHP', 'hpTotal', 'total_hp', 'hp'];
+        for (let k of keys) {
+            const v = localStorage.getItem(k);
+            if (v !== null) return parseInt(v) || 0;
+        }
+        return 0;
+    }
+
+    let hpEl = document.getElementById('player-hp');
+    if (!hpEl) {
+        hpEl = document.createElement('div');
+        hpEl.id = 'player-hp';
+        hpEl.style.cssText = 'position:fixed;top:10px;right:10px;background:rgba(255,255,255,0.9);padding:6px 10px;border-radius:6px;z-index:9999;font-size:14px;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,0.2);';
+        document.body.appendChild(hpEl);
+    }
+    hpEl.textContent = `HP: ${getPlayerHP()}`;
+    // keep display in sync every 5 seconds
+    setInterval(() => { hpEl.textContent = `HP: ${getPlayerHP()}`; }, 5000);
+
     if (!listItemsContainer) return;
     
     // Map rarity to image source

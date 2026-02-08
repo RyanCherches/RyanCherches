@@ -4,7 +4,7 @@ let lastTimeOnPage = localStorage.getItem('lastTimeOnPage') ? parseInt(localStor
 
 // Update HP display
 function updateHPDisplay() {
-    document.querySelector('#amount_earned h2').textContent = `HP earned: ${hpEarned}`;
+    document.querySelector('#amount_earned h2').innerHTML = `HP earned: ${hpEarned}`;
 }
 
 // Calculate HP gained from time away

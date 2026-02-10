@@ -17,7 +17,7 @@ localStorage.getItem("completedLevel");
 // Inventory system
 let inventory = JSON.parse(localStorage.getItem("inventory")) || [];
 
-const rarities = ["Common", "Uncommon", "Rare", "Epic", "Legendary"];
+const rarities = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Godly"];
 const rarityWeights = [25, 20, 44.9, 10, 0.1]; // percentage weights
 
 home.addEventListener("click", function() {

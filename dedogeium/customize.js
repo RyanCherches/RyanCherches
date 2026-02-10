@@ -57,7 +57,84 @@ window.addEventListener('DOMContentLoaded', function() {
 
     // Display equipped items in slots and update stats
     displayEquippedItems(equippedItems, rarityImages, rarityBonuses);
+
+    // Build exchange UI
+    buildExchangeUI();
 });
+
+function buildExchangeUI() {
+    const exchangeList = document.getElementById('exchange-list');
+    const exchangeMsg = document.getElementById('exchange-msg');
+    if (!exchangeList) return;
+
+    const inventory = JSON.parse(localStorage.getItem("inventory")) || [];
+
+    // define exchange rules
+    const exchanges = [
+        { from: "Common", need: 2, to: "Uncommon" },
+        { from: "Uncommon", need: 3, to: "Rare" },
+        { from: "Rare", need: 4, to: "Epic" },
+        { from: "Epic", need: 5, to: "Legendary" },
+        { from: "Legendary", need: 6, to: "Godly" }
+    ];
+
+    // helper: count items by rarity
+    const countByRarity = inventory.reduce((acc, it) => {
+        acc[it.rarity] = (acc[it.rarity] || 0) + 1;
+        return acc;
+    }, {});
+
+    exchangeList.innerHTML = "";
+    exchanges.forEach(rule => {
+        const have = countByRarity[rule.from] || 0;
+        const container = document.createElement('div');
+        container.style.display = 'flex';
+        container.style.alignItems = 'center';
+        container.style.gap = '8px';
+        container.style.marginBottom = '6px';
+
+        const label = document.createElement('div');
+        label.innerText = `${rule.from} → ${rule.to}  (Need ${rule.need})`;
+
+        const count = document.createElement('div');
+        count.innerText = `You have: ${have}`;
+
+        const btn = document.createElement('button');
+        btn.innerText = 'Exchange';
+        btn.disabled = have < rule.need;
+        btn.addEventListener('click', function() {
+            const success = performExchange(rule.from, rule.need, rule.to);
+            if (success) {
+                exchangeMsg.innerText = `Exchanged ${rule.need} ${rule.from} for 1 ${rule.to}.`;
+                setTimeout(() => location.reload(), 600);
+            } else {
+                exchangeMsg.innerText = `Not enough ${rule.from}.`;
+                exchangeMsg.style.color = 'red';
+            }
+        });
+
+        container.appendChild(label);
+        container.appendChild(count);
+        container.appendChild(btn);
+        exchangeList.appendChild(container);
+    });
+}
+
+function performExchange(fromRarity, requiredCount, toRarity) {
+    let inventory = JSON.parse(localStorage.getItem("inventory")) || [];
+    const fromItems = inventory.filter(it => it.rarity === fromRarity);
+    if (fromItems.length < requiredCount) return false;
+
+    // remove the first `requiredCount` items of that rarity
+    const toRemoveIds = fromItems.slice(0, requiredCount).map(it => it.id);
+    inventory = inventory.filter(it => !toRemoveIds.includes(it.id));
+
+    // create new item of `toRarity`
+    const newItem = { name: "Doge", rarity: toRarity, id: Date.now() + Math.floor(Math.random()*1000) };
+    inventory.push(newItem);
+    localStorage.setItem("inventory", JSON.stringify(inventory));
+    return true;
+}
 
 function displayEquippedItems(equippedItems, rarityImages, rarityBonuses) {
     // Clear all slots

@@ -15,11 +15,12 @@ window.addEventListener('DOMContentLoaded', function() {
     // Map rarity to image source
     const rarityImages = {
         "Common": "common doge.png",
-        "Uncommon": "uncommon doge.png",
+        "Uncommon": "uncommon doge.svg",
         "Rare": "rare doge.png",
         "Epic": "epic doge.png",
         "Legendary": "legendary doge.png",
-        "Godly": "godly doge.png"
+        "Godly": "godly doge.png",
+        "Mythic": "mythic doge.svg"
     };
 
     // Map rarity to stat bonuses (damage, health)

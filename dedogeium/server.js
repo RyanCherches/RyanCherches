@@ -17,6 +17,34 @@ app.use((req, res, next) => {
   next();
 });
 
+// Optional Basic auth: set ADMIN_USER and ADMIN_PASS env vars to enable.
+const ADMIN_USER = process.env.ADMIN_USER || null;
+const ADMIN_PASS = process.env.ADMIN_PASS || null;
+
+function requireAuth(req, res, next) {
+  if (!ADMIN_USER || !ADMIN_PASS) return next(); // auth disabled
+  const auth = req.headers['authorization'];
+  if (!auth) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Dedogeium"');
+    return res.status(401).json({ error: 'Authorization required' });
+  }
+  const parts = auth.split(' ');
+  if (parts.length !== 2 || parts[0] !== 'Basic') return res.status(400).json({ error: 'Bad Authorization header' });
+  let creds;
+  try {
+    creds = Buffer.from(parts[1], 'base64').toString('utf8');
+  } catch (e) {
+    return res.status(400).json({ error: 'Invalid auth encoding' });
+  }
+  const idx = creds.indexOf(':');
+  if (idx < 0) return res.status(400).json({ error: 'Invalid auth format' });
+  const user = creds.slice(0, idx);
+  const pass = creds.slice(idx + 1);
+  if (user === ADMIN_USER && pass === ADMIN_PASS) return next();
+  res.setHeader('WWW-Authenticate', 'Basic realm="Dedogeium"');
+  return res.status(401).json({ error: 'Invalid credentials' });
+}
+
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 if (!fs.existsSync(PLAYERS_FILE)) fs.writeFileSync(PLAYERS_FILE, JSON.stringify({}), 'utf8');
 
@@ -31,11 +59,11 @@ function writePlayers(obj) {
   fs.writeFileSync(PLAYERS_FILE, JSON.stringify(obj, null, 2), 'utf8');
 }
 
-app.get('/api/players', (req, res) => {
+app.get('/api/players', requireAuth, (req, res) => {
   res.json(readPlayers());
 });
 
-app.post('/api/player', (req, res) => {
+app.post('/api/player', requireAuth, (req, res) => {
   const { username, player } = req.body || {};
   if (!username || !player) return res.status(400).json({ error: 'username and player required' });
   const name = String(username).trim().toLowerCase();
@@ -59,7 +87,7 @@ app.post('/api/player', (req, res) => {
   res.json({ ok: true, player: ep });
 });
 
-app.post('/api/merge', (req, res) => {
+app.post('/api/merge', requireAuth, (req, res) => {
   const payload = req.body || {};
   const players = readPlayers();
   Object.keys(payload).forEach(name => {

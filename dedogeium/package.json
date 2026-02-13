@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "docker-build": "docker build -t dedogeium .",
+    "docker-up": "docker compose up -d",
+    "backup": "powershell -ExecutionPolicy Bypass -File backup_players.ps1"
   },
   "dependencies": {
     "express": "^4.18.2"

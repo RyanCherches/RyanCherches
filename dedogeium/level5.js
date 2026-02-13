@@ -11,15 +11,8 @@ const skipBtn = document.getElementById("skip-btn");
 const crystal_attack = document.getElementById("crystal_attack");
 const beforeFightAudio = new Audio("before fight.mp3");
 const duringFightAudio = new Audio("during fight.mp3");
-const maybe_vic = document.getElementById("maybe-vic");
-localStorage.getItem("completedLevel");
-
-// Inventory system
-let inventory = JSON.parse(localStorage.getItem("inventory")) || [];
-
-const rarities = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Godly"];
-const rarityWeights = [25, 20, 44.9, 10, 0.1]; // percentage weights
-
+const postDialogueWinAudio = new Audio("postDialogueWin.mp3");
+const completedLevel = Number(localStorage.getItem("completedLevel"));
 home.addEventListener("click", function() {
     window.location.href = "adventure.html";
 });
@@ -29,7 +22,6 @@ window.onload = function() {
     beforeFightAudio.play();
 }
 
-// Rarity bonuses for equipped items
 const rarityBonuses = {
     "Common": { damage: 2, health: 50 },
     "Uncommon": { damage: 5, health: 100 },
@@ -38,15 +30,6 @@ const rarityBonuses = {
     "Legendary": { damage: 40, health: 400 },
     "Godly": { damage: 80, health: 600 }
 };
-
-const enemy_max_health = 650;
-let enemy_health = 650;
-let max_health = 500;
-let health = 500;
-let damage = 20;
-let enemy_damage = 20;
-
-// Apply equipment bonuses at battle start
 function applyEquipmentBonuses() {
     const equippedItems = JSON.parse(localStorage.getItem("equippedItems")) || [];
     let totalDamageBonus = 0;
@@ -64,24 +47,48 @@ function applyEquipmentBonuses() {
     
     console.log(`Equipment applied: +${totalDamageBonus} damage, +${totalHealthBonus} max health`);
 }
+const enemy_max_health = 200;
+let enemy_health = 2000;
+const max_health = 500;
+let health = 500;
+let damage = 20;
+let enemy_damage = 20;
 
 cancel_btn.addEventListener("click", function() {
     window.location.href = "adventure.html";
-    
 });
+
 let speechTimeoutId = null;
 
 // cutscene/dialogue state
 const dialogue = [
-    { speaker: 'good', text: "I am here to show my brother who did the better choice." },
-    { speaker: 'bad', text: "Oh I know your brother, but I am above him." },
-    { speaker: 'good', text: "May you give me something?" },
-    { speaker: 'bad', text: "Only if you defeat me first." },
-    { speaker: 'good', text: "Thats fine." },
-    { speaker: 'bad', text: "Ok. Good luck. You will need it. I am VERY strong!" },
+    { speaker: 'good', text: "Don't do it brother." },
+    { speaker: 'bad', text: "I must do it brother, they are better than us." },
+    { speaker: 'good', text: "I knew you were a traitor." },
+    { speaker: 'bad', text: "I had no choice, they are clearly stronger than us." },
+    { speaker: 'good', text: "That's called propaganda." },
+    { speaker: 'bad', text: "You know what? Let's fight to see who is right." },
+    { speaker: 'good', text: "I will get better gear over time; maybe we should do multiple fights or wait till the end." },
+    { speaker: 'bad', text: "We'll decide along the way. Good luck, brother." }
 ];
 let dialogueIndex = 0;
 let inCutscene = false;
+
+// post-battle dialogue (speaking after the fight)
+const postDialogue = [
+    { speaker: 'good', text: "I will win one day. I will get the best gear and beat you." },
+    { speaker: 'bad', text: "Exuces. Exuces. Exuces." },
+    { speaker: 'good', text: "You think your so cool, well lets find out soon." },
+    { speaker: 'bad', text: "Well then see you soon." }
+];
+let postIndex = 0;
+let inPostDialogue = false;
+const postDialogueWin = [
+    { speaker: 'good', text: "I told you I would beat you!" },
+    { speaker: 'bad', text: "How much did you grind?" },
+    { speaker: 'good', text: "Only for like 5 hours:)" },
+    { speaker: 'bad', text: "bru... I will beat you next time though." }
+];
 
 function speech() {
     // clear any ongoing cutscene state and pending timeouts
@@ -105,6 +112,24 @@ function showLine(index) {
     else speech_bad.innerText = line.text;
 }
 
+function showPostLine(index) {
+    speech_good.innerHTML = "";
+    speech_bad.innerHTML = "";
+    const line = postDialogue[index];
+    if (!line) return;
+    if (line.speaker === 'good') speech_good.innerText = line.text;
+    else speech_bad.innerText = line.text;
+}
+
+function showPostWinLine(index) {
+    speech_good.innerHTML = "";
+    speech_bad.innerHTML = "";
+    const line = postDialogueWin[index];
+    if (!line) return;
+    if (line.speaker === 'good') speech_good.innerText = line.text;
+    else speech_bad.innerText = line.text;
+}
+
 function showNextLine() {
     if (!inCutscene) return;
     dialogueIndex++;
@@ -113,6 +138,49 @@ function showNextLine() {
     } else {
         endCutsceneAndStartBattle();
     }
+}
+
+function showNextPostLine() {
+    if (!inPostDialogue) return;
+    postIndex++;
+    if (postIndex < postDialogue.length) {
+        showPostLine(postIndex);
+    } else {
+        endPostDialogue();
+    }
+}
+
+function showNextPostWinLine() {
+    if (!inPostDialogue) return;
+    postIndex++;
+    if (postIndex < postDialogueWin.length) {
+        showPostWinLine(postIndex);
+    } else {
+        endPostDialogue();
+    }
+}
+
+function startPostDialogue() {
+    inPostDialogue = true;
+    postIndex = 0;
+    showPostLine(0);
+    if (skipBtn) skipBtn.style.display = 'inline-block';
+}
+
+function startPostDialogueWin() {
+    inPostDialogue = true;
+    postIndex = 0;
+    showPostWinLine(0);
+    if (skipBtn) skipBtn.style.display = 'inline-block';
+    postDialogueWinAudio.loop = false;
+    postDialogueWinAudio.play();
+}
+
+function endPostDialogue() {
+    inPostDialogue = false;
+    if (skipBtn) skipBtn.style.display = 'none';
+    // show victory UI after post-dialogue finishes
+    if (victory) victory.style.display = "block";
 }
 
 function startCutscene() {
@@ -130,22 +198,15 @@ function endCutsceneAndStartBattle() {
     // begin the fight
     enemy_hlth_element.style.display = "block";
     hlth_element.style.display = "block";
-    applyEquipmentBonuses();
     loadhealth();
     battleLoop();
     beforeFightAudio.pause();
     duringFightAudio.loop = true;
     duringFightAudio.play();
 }
+
+// start cutscene on OK, instead of instantly starting the battle
 yes_btn.addEventListener("click", function (){
-    // yes_no.style.display = "none";
-    // enemy_hlth_element.style.display = "block";
-    // hlth_element.style.display = "block";
-    // loadhealth();
-    // battleLoop();
-    // beforeFightAudio.pause();
-    // duringFightAudio.loop = true;
-    // duringFightAudio.play();
     yes_no.style.display = "none";
     speech();
     startCutscene();
@@ -154,10 +215,22 @@ yes_btn.addEventListener("click", function (){
 // skip button advances to the next line in the cutscene
 if (skipBtn) {
     skipBtn.addEventListener('click', function() {
-        if (!inCutscene) return;
-        showNextLine();
+        if (inCutscene) {
+            showNextLine();
+            return;
+        }
+        if (inPostDialogue) {
+            // check which dialogue we're in
+            if (postIndex < postDialogueWin.length && health > 0) {
+                showNextPostWinLine();
+            } else {
+                showNextPostLine();
+            }
+            return;
+        }
     });
 }
+
 async function battleLoop() {
     while (enemy_health > 0 && health > 0) {
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -170,24 +243,17 @@ async function battleLoop() {
         damage *= 2;
         enemy_damage *= 2;
     }
-    localStorage.setItem("completedLevel", 5);
-    // Generate and add reward doge to inventory
-    const rewardItem = generateRewardItem();
-    addItemToInventory(rewardItem);
-    
-    // Display victory with doge reward
-    victory.style.display = "block";
-    if (enemy_health > 0) {
-        maybe_vic.innerHTML = "Grind more gear to beat me.";
+    Number(localStorage.getItem("completedLevel"));
+    if (completedLevel < 2) {
+        localStorage.setItem("completedLevel", 2);
+    }
+    // start post-battle dialogue (win or loss)
+    duringFightAudio.pause();
+    if (health > 0) {
+        startPostDialogueWin();
     } else {
-        maybe_vic.innerHTML = `Victory! You obtained: <br><strong>${rewardItem.name}</strong> <br><span style="color: gold;">[${rewardItem.rarity}]</span>`;
+        startPostDialogue();
     }
-    duringFightAudio.pause();
-    victory.style.display = "block";
-    if (enemy_health > 0) {
-        maybe_vic.innerHTML = "Grind more to beat it";
-    }
-    duringFightAudio.pause();
 }
 function loadhealth() {
     if (enemy_health <= 0) {
@@ -214,28 +280,4 @@ function enemy_attack() {
         crystal_attack.style.display = "none";
     }
     health -= enemy_damage;
-}
-
-function generateRandomRarity() {
-    const roll = Math.random() * 100;
-    let cumulative = 0;
-    for (let i = 0; i < rarities.length; i++) {
-        cumulative += rarityWeights[i];
-        if (roll <= cumulative) return rarities[i];
-    }
-    return rarities[rarities.length - 1];
-}
-
-function generateRewardItem() {
-    const randomRarity = generateRandomRarity();
-    return {
-        name: "Doge",
-        rarity: randomRarity,
-        id: Date.now() // unique id for tracking
-    };
-}
-
-function addItemToInventory(item) {
-    inventory.push(item);
-    localStorage.setItem("inventory", JSON.stringify(inventory));
 }

@@ -66,6 +66,10 @@ header a:hover {
     width: 100%;
     box-sizing: border-box;
 } */
+main {
+    margin: 0;
+    padding: 0;
+}
 #green-doge {
     /* top:38%;
     left:9.5%;
@@ -75,21 +79,23 @@ header a:hover {
     /* transform:translate(-50%, -50%); */
     cursor:pointer;
 }
-#background {
+.background {
     background-image:url("levels background.png");
-    background-size: contain;
+    background-size: cover;
     background-repeat: no-repeat;
     background-position: center;
     width:100%;
     aspect-ratio: 16 / 9;
-    min-height: 100vh;
+    /* min-height: 100vh; */
     position: relative;
     display:flex;
     justify-content:space-around;
     flex-wrap:wrap;
     /* align-items:top; */
-    padding-top:40px;
-
+    /* padding-top:40px; */
+    margin: 0;
+    padding: 0;
+    line-height: 0;
 }
 #red-doge {
     /* top:38%;
@@ -143,8 +149,8 @@ header a:hover {
 #green-doge {
     width: 72%;
     max-width: 100px;
-    height: auto;
-    display: block;
+    /* height: auto; */
+    /* display: block; */
 }
 
 .levels p {

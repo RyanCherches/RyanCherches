@@ -26,3 +26,24 @@ a:hover {
     color:#ffcc00;
     transform: scale(1.1);
 }
+#admin-log {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    padding: 10px 20px;
+    font-size: 1em;
+    background-color: #003cff;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2);
+    transition: 0.3s ease-in-out;
+    color:white;
+}
+#admin-log:hover {
+    background-color: white;
+    color: #003cff;
+    transform: scale(1.1);
+    padding:15px;
+    border-radius:5px;
+}

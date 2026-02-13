@@ -26,6 +26,11 @@ if (completedLevel >= 4) {
 } else {
   rainbowDoge.src = "final boss doge locked.png";
 }
+// if (completedLevel >= 5) {
+//   rainbowDoge.src = "im just a chill guy.png";
+// } else {
+//   rainbowDoge.src = "im just a chill guy locked.png";
+// }
 
 document.addEventListener("DOMContentLoaded", function () {
   if (localStorage.getItem("completedLevel") === null) {

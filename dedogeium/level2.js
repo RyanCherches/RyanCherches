@@ -38,6 +38,21 @@ const rarityBonuses = {
     "Legendary": { damage: 40, health: 400 },
     "Godly": { damage: 80, health: 600 }
 };
+const fireRarityBonuses = {
+    "Common": { damage: 4, health: 100 },
+    "Uncommon": { damage: 8, health: 160 },
+    "Rare": { damage: 15, health: 240 },
+    "Epic": { damage: 30, health: 375 },
+    "Legendary": { damage: 60, health: 600 },
+    "Godly": { damage: 120, health: 900 }
+};
+
+function getItemBonus(item) {
+    if (item && item.name === "Fire Doge") {
+        return fireRarityBonuses[item.rarity] || { damage: 0, health: 0 };
+    }
+    return rarityBonuses[item && item.rarity] || { damage: 0, health: 0 };
+}
 
 const enemy_max_health = 300;
 let enemy_health = 300;
@@ -53,7 +68,7 @@ function applyEquipmentBonuses() {
     let totalHealthBonus = 0;
     
     equippedItems.forEach(item => {
-        const bonus = rarityBonuses[item.rarity] || { damage: 0, health: 0 };
+        const bonus = getItemBonus(item);
         totalDamageBonus += bonus.damage;
         totalHealthBonus += bonus.health;
     });
@@ -230,7 +245,7 @@ function generateRandomRarity() {
 function generateRewardItem() {
     const randomRarity = generateRandomRarity();
     return {
-        name: "Doge",
+        name: "Fire Doge",
         rarity: randomRarity,
         id: Date.now() // unique id for tracking
     };

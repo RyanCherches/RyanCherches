@@ -12,7 +12,7 @@ window.addEventListener('DOMContentLoaded', function() {
 
     if (!listItemsContainer) return;
     
-    // Map rarity to image source
+    // Map base doge rarity to image source
     const rarityImages = {
         "Common": "common doge.png",
         "Uncommon": "uncommon doge.svg",
@@ -23,15 +23,49 @@ window.addEventListener('DOMContentLoaded', function() {
         "Mythic": "mythic doge.svg"
     };
 
-    // Map rarity to stat bonuses (damage, health)
-    const rarityBonuses = {
-        "Common": { damage: 2, health: 50 },
-        "Uncommon": { damage: 5, health: 100 },
-        "Rare": { damage: 10, health: 150 },
-        "Epic": { damage: 20, health: 250 },
-        "Legendary": { damage: 40, health: 400 },
-        "Godly": { damage: 80, health: 600 }
+    // Map fire doge rarity to image source
+    const fireRarityImages = {
+        "Common": "common fire doge.png",
+        "Uncommon": "uncommon fire doge.png",
+        "Rare": "rare fire doge.png",
+        "Epic": "epic fire doge.png",
+        "Legendary": "legendary fire doge.png",
+        "Godly": "godly fire doge.png"
     };
+
+    // Map doge type + rarity to stat bonuses (damage, health)
+    const rarityBonuses = {
+        "Doge": {
+            "Common": { damage: 2, health: 50 },
+            "Uncommon": { damage: 5, health: 100 },
+            "Rare": { damage: 10, health: 150 },
+            "Epic": { damage: 20, health: 250 },
+            "Legendary": { damage: 40, health: 400 },
+            "Godly": { damage: 80, health: 600 }
+        },
+        "Fire Doge": {
+            "Common": { damage: 4, health: 100 },
+            "Uncommon": { damage: 8, health: 160 },
+            "Rare": { damage: 15, health: 240 },
+            "Epic": { damage: 30, health: 375 },
+            "Legendary": { damage: 60, health: 600 },
+            "Godly": { damage: 120, health: 900 }
+        }
+    };
+
+    function getItemImage(item) {
+        const rarity = item && item.rarity;
+        if (item && item.name === "Fire Doge" && fireRarityImages[rarity]) {
+            return fireRarityImages[rarity];
+        }
+        return rarityImages[rarity] || "Im just a chill guy no background.png";
+    }
+
+    function getItemBonus(item) {
+        const itemName = item && item.name === "Fire Doge" ? "Fire Doge" : "Doge";
+        const bonusGroup = rarityBonuses[itemName] || {};
+        return bonusGroup[item && item.rarity] || { damage: 0, health: 0 };
+    }
     
     // Get all item divs (skip the first one which is the h3)
     const itemDivs = listItemsContainer.querySelectorAll(".item");
@@ -41,14 +75,14 @@ window.addEventListener('DOMContentLoaded', function() {
     
     // Create and add inventory items to the list
     inventory.forEach((item, index) => {
-        const imageSource = rarityImages[item.rarity] || "Im just a chill guy no background.png";
+        const imageSource = getItemImage(item);
         const itemDiv = document.createElement("div");
         itemDiv.className = "item";
         const isEquipped = equippedItems.some(eq => eq.id === item.id);
         if (isEquipped) {
             itemDiv.classList.add("equipped");
         }
-        itemDiv.innerHTML = `<img src="${imageSource}" height="50px"><p>${item.rarity}</p>`;
+        itemDiv.innerHTML = `<img src="${imageSource}" height="50px"><p>${item.name || "Doge"} (${item.rarity})</p>`;
         itemDiv.style.cursor = "pointer";
         itemDiv.addEventListener("click", function() {
             toggleEquipItem(item, index);
@@ -57,7 +91,7 @@ window.addEventListener('DOMContentLoaded', function() {
     });
 
     // Display equipped items in slots and update stats
-    displayEquippedItems(equippedItems, rarityImages, rarityBonuses);
+    displayEquippedItems(equippedItems, getItemImage, getItemBonus);
 
     // Build exchange UI
     buildExchangeUI();
@@ -134,51 +168,73 @@ function buildExchangeUI() {
         { from: "Legendary", need: 6, to: "Godly" }
     ];
 
-    // helper: count items by rarity
-    const countByRarity = inventory.reduce((acc, it) => {
-        acc[it.rarity] = (acc[it.rarity] || 0) + 1;
-        return acc;
-    }, {});
+    function getItemType(item) {
+        return item && item.name === "Fire Doge" ? "Fire Doge" : "Doge";
+    }
+
+    function countByRarity(itemType) {
+        return inventory
+            .filter(it => getItemType(it) === itemType)
+            .reduce((acc, it) => {
+                acc[it.rarity] = (acc[it.rarity] || 0) + 1;
+                return acc;
+            }, {});
+    }
+
+    function renderExchangeGroup(itemType) {
+        const title = document.createElement('h4');
+        title.innerText = itemType;
+        title.style.margin = '10px 0 6px 0';
+        exchangeList.appendChild(title);
+
+        const counts = countByRarity(itemType);
+        exchanges.forEach(rule => {
+            const have = counts[rule.from] || 0;
+            const container = document.createElement('div');
+            container.style.display = 'flex';
+            container.style.alignItems = 'center';
+            container.style.gap = '8px';
+            container.style.marginBottom = '6px';
+
+            const label = document.createElement('div');
+            label.innerText = `${rule.from} -> ${rule.to}  (Need ${rule.need})`;
+
+            const count = document.createElement('div');
+            count.innerText = `You have: ${have}`;
+
+            const btn = document.createElement('button');
+            btn.innerText = 'Exchange';
+            btn.disabled = have < rule.need;
+            btn.addEventListener('click', function() {
+                const success = performExchange(itemType, rule.from, rule.need, rule.to);
+                if (success) {
+                    exchangeMsg.style.color = 'green';
+                    exchangeMsg.innerText = `Exchanged ${rule.need} ${itemType} ${rule.from} for 1 ${itemType} ${rule.to}.`;
+                    setTimeout(() => location.reload(), 600);
+                } else {
+                    exchangeMsg.style.color = 'red';
+                    exchangeMsg.innerText = `Not enough ${itemType} ${rule.from}.`;
+                }
+            });
+
+            container.appendChild(label);
+            container.appendChild(count);
+            container.appendChild(btn);
+            exchangeList.appendChild(container);
+        });
+    }
 
     exchangeList.innerHTML = "";
-    exchanges.forEach(rule => {
-        const have = countByRarity[rule.from] || 0;
-        const container = document.createElement('div');
-        container.style.display = 'flex';
-        container.style.alignItems = 'center';
-        container.style.gap = '8px';
-        container.style.marginBottom = '6px';
-
-        const label = document.createElement('div');
-        label.innerText = `${rule.from} → ${rule.to}  (Need ${rule.need})`;
-
-        const count = document.createElement('div');
-        count.innerText = `You have: ${have}`;
-
-        const btn = document.createElement('button');
-        btn.innerText = 'Exchange';
-        btn.disabled = have < rule.need;
-        btn.addEventListener('click', function() {
-            const success = performExchange(rule.from, rule.need, rule.to);
-            if (success) {
-                exchangeMsg.innerText = `Exchanged ${rule.need} ${rule.from} for 1 ${rule.to}.`;
-                setTimeout(() => location.reload(), 600);
-            } else {
-                exchangeMsg.innerText = `Not enough ${rule.from}.`;
-                exchangeMsg.style.color = 'red';
-            }
-        });
-
-        container.appendChild(label);
-        container.appendChild(count);
-        container.appendChild(btn);
-        exchangeList.appendChild(container);
-    });
+    renderExchangeGroup("Doge");
+    renderExchangeGroup("Fire Doge");
 }
 
-function performExchange(fromRarity, requiredCount, toRarity) {
+function performExchange(itemType, fromRarity, requiredCount, toRarity) {
     let inventory = JSON.parse(localStorage.getItem("inventory")) || [];
-    const fromItems = inventory.filter(it => it.rarity === fromRarity);
+    const fromItems = inventory.filter(it => {
+        const currentType = it && it.name === "Fire Doge" ? "Fire Doge" : "Doge";
+        return it.rarity === fromRarity && currentType === itemType;
+    });
     if (fromItems.length < requiredCount) return false;
 
     // remove the first `requiredCount` items of that rarity
@@ -186,13 +242,13 @@ function performExchange(fromRarity, requiredCount, toRarity) {
     inventory = inventory.filter(it => !toRemoveIds.includes(it.id));
 
     // create new item of `toRarity`
-    const newItem = { name: "Doge", rarity: toRarity, id: Date.now() + Math.floor(Math.random()*1000) };
+    const newItem = { name: itemType, rarity: toRarity, id: Date.now() + Math.floor(Math.random()*1000) };
     inventory.push(newItem);
     localStorage.setItem("inventory", JSON.stringify(inventory));
     return true;
 }
 
-function displayEquippedItems(equippedItems, rarityImages, rarityBonuses) {
+function displayEquippedItems(equippedItems, getItemImage, getItemBonus) {
     // Clear all slots
     for (let i = 0; i < 5; i++) {
         const slot = document.getElementById(`equip-slot-${i}`);
@@ -206,8 +262,8 @@ function displayEquippedItems(equippedItems, rarityImages, rarityBonuses) {
     equippedItems.forEach((item, slotIndex) => {
         if (slotIndex < 5) {
             const slot = document.getElementById(`equip-slot-${slotIndex}`);
-            const imageSource = rarityImages[item.rarity] || "Im just a chill guy no background.png";
-            slot.innerHTML = `<img src="${imageSource}" height="50px"><p style="margin: 3px; font-size: 10px;">${item.rarity}</p>`;
+            const imageSource = getItemImage(item);
+            slot.innerHTML = `<img src="${imageSource}" height="50px"><p style="margin: 3px; font-size: 10px;">${item.name || "Doge"} (${item.rarity})</p>`;
             slot.style.cursor = "pointer";
             slot.addEventListener("click", function() {
                 unequipItem(slotIndex);
@@ -219,7 +275,7 @@ function displayEquippedItems(equippedItems, rarityImages, rarityBonuses) {
     let totalDamage = 0;
     let totalHealth = 0;
     equippedItems.forEach(item => {
-        const bonus = rarityBonuses[item.rarity] || { damage: 0, health: 0 };
+        const bonus = getItemBonus(item);
         totalDamage += bonus.damage;
         totalHealth += bonus.health;
     });
@@ -268,4 +324,5 @@ function unequipItem(slotIndex) {
     localStorage.setItem("equippedItems", JSON.stringify(equippedItems));
     location.reload();
 }
+
 

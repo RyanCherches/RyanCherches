@@ -17,7 +17,7 @@ const completedLevel = Number(localStorage.getItem("completedLevel"));
 
 let inventory = JSON.parse(localStorage.getItem("inventory")) || [];
 const rarities = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Godly"];
-const rarityWeights = [20, 28, 30, 15, 6, 1];
+const rarityWeights = [30, 39, 30, 1, 0, 0];
 home.addEventListener("click", function() {
     window.location.href = "adventure.html";
 });
@@ -68,12 +68,12 @@ function applyEquipmentBonuses() {
     
     console.log(`Equipment applied: +${totalDamageBonus} damage, +${totalHealthBonus} max health`);
 }
-const enemy_max_health = 1000;
-let enemy_health = 1000;
+const enemy_max_health = 1500;
+let enemy_health = 1500;
 let max_health = 500;
 let health = 500;
 let damage = 20;
-let enemy_damage = 20;
+let enemy_damage = 50;
 
 cancel_btn.addEventListener("click", function() {
     window.location.href = "adventure.html";
@@ -83,32 +83,29 @@ let speechTimeoutId = null;
 
 // cutscene/dialogue state
 const dialogue = [
-    { speaker: 'good', text: "Don't do it brother." },
-    { speaker: 'bad', text: "I must do it brother, they are better than us." },
-    { speaker: 'good', text: "I knew you were a traitor." },
-    { speaker: 'bad', text: "I had no choice, they are clearly stronger than us." },
-    { speaker: 'good', text: "That's called propaganda." },
-    { speaker: 'bad', text: "You know what? Let's fight to see who is right." },
-    { speaker: 'good', text: "I will get better gear over time; maybe we should do multiple fights or wait till the end." },
-    { speaker: 'bad', text: "We'll decide along the way. Good luck, brother." }
+    { speaker: 'good', text: "Oh wow. You are actually on fire." },
+    { speaker: 'bad', text: "Yeah I heard you joke to the last guy about it." },
+    { speaker: 'good', text: "Oh common. That was kinda funny." },
+    { speaker: 'bad', text: "Lets move on. What brings you here?" },
+    { speaker: 'good', text: "My stupid cousin who decided to switch sides." },
+    { speaker: 'bad', text: "You know what? Let's fight to see if your cousin really is stupid." },
+    { speaker: 'good', text: "Ok deal." },
 ];
 let dialogueIndex = 0;
 let inCutscene = false;
 
 // post-battle dialogue (speaking after the fight)
 const postDialogue = [
-    { speaker: 'good', text: "I will win one day. I will get the best gear and beat you." },
+    { speaker: 'good', text: "I am just a little tired from my other battles. I need some sleep and better gear." },
     { speaker: 'bad', text: "Exuces. Exuces. Exuces." },
-    { speaker: 'good', text: "You think your so cool, well lets find out soon." },
-    { speaker: 'bad', text: "Well then see you soon." }
+    { speaker: 'good', text: "You got me, but I will win sometime." },
+    { speaker: 'bad', text: "Sure buddy. Then see you soon." }
 ];
 let postIndex = 0;
 let inPostDialogue = false;
 const postDialogueWin = [
-    { speaker: 'good', text: "I told you I would beat you!" },
-    { speaker: 'bad', text: "How much did you grind?" },
-    { speaker: 'good', text: "Only for like 5 hours:)" },
-    { speaker: 'bad', text: "bru... I will beat you next time though." }
+    { speaker: 'good', text: "I beat you!" },
+    { speaker: 'bad', text: "There are many more people to fight against. Good luck. You will need it." },
 ];
 
 function speech() {
@@ -151,6 +148,7 @@ function showPostWinLine(index) {
     else speech_bad.innerText = line.text;
 }
 
+
 function showNextLine() {
     if (!inCutscene) return;
     dialogueIndex++;
@@ -180,6 +178,7 @@ function showNextPostWinLine() {
         endPostDialogue();
     }
 }
+
 
 function startPostDialogue() {
     inPostDialogue = true;
@@ -267,8 +266,8 @@ async function battleLoop() {
     }
     const hasWon = enemy_health <= 0;
     const currentCompletedLevel = Number(localStorage.getItem("completedLevel")) || 0;
-    if (hasWon && currentCompletedLevel < 6) {
-        localStorage.setItem("completedLevel", 6);
+    if (hasWon && currentCompletedLevel < 8) {
+        localStorage.setItem("completedLevel", 8);
     }
     // start post-battle dialogue (win or loss)
     duringFightAudio.pause();

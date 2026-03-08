@@ -79,6 +79,24 @@ main {
     /* transform:translate(-50%, -50%); */
     cursor:pointer;
 }
+#second-cousin-doge {
+    /* top:38%;
+    left:9.5%;
+    position:absolute; */
+    width:70px;
+    min-width:50px;
+    /* transform:translate(-50%, -50%); */
+    cursor:pointer;
+}
+#first-red-doge {
+    /* top:38%;
+    left:9.5%;
+    position:absolute; */
+    width:150px;
+    min-width:50px;
+    /* transform:translate(-50%, -50%); */
+    cursor:pointer;
+}
 .background {
     background-image:url("levels background.png");
     background-size: cover;
@@ -88,14 +106,17 @@ main {
     aspect-ratio: 16 / 9;
     /* min-height: 100vh; */
     position: relative;
-    display:flex;
-    justify-content:space-around;
-    flex-wrap:wrap;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    justify-items: center;
+    align-content: start;
+    gap: 14px 10px;
     /* align-items:top; */
     /* padding-top:40px; */
     margin: 0;
     padding: 0;
     line-height: 0;
+    height: auto;
 }
 #red-doge {
     /* top:38%;
@@ -161,6 +182,7 @@ main {
 
 /* responsive: scale down level boxes on small screens */
 @media (max-width: 520px) {
+    .background { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .levels { width: 140px; height: 140px; padding: 8px; }
     #green-doge { width: 70%; }
 }

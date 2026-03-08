@@ -4,6 +4,11 @@ const dogeAttack3 = document.getElementById("doge-attack3");
 const redDoge = document.getElementById("red-doge");
 const blueDoge = document.getElementById("spooky-doge");
 const rainbowDoge = document.getElementById("rainbow-doge");
+const secondGreen = document.getElementById("2green-doge")
+const secondCousin = document.getElementById("second-green-doge")
+const firstRed = document.getElementById("first-red-doge")
+const firstBossRed = document.getElementById("firstboss-red-doge")
+const finalBossRed = document.getElementById("finalboss-red-doge")
 const completedLevel = Number(localStorage.getItem("completedLevel"));
 let isHovering = false;
 let offsetX = 0;
@@ -26,11 +31,16 @@ if (completedLevel >= 4) {
 } else {
   rainbowDoge.src = "final boss doge locked.png";
 }
-// if (completedLevel >= 5) {
-//   rainbowDoge.src = "im just a chill guy.png";
-// } else {
-//   rainbowDoge.src = "im just a chill guy locked.png";
-// }
+if (completedLevel >= 5) {
+  secondGreen.src = "im just a chill guy.png";
+} else {
+  secondGreen.src = "im just a chill guy locked.png";
+}
+if (completedLevel >= 6) {
+  secondGreen.src = "im just a chill guy.png";
+} else {
+  secondGreen.src = "im just a chill guy locked.png";
+}
 
 document.addEventListener("DOMContentLoaded", function () {
   if (localStorage.getItem("completedLevel") === null) {
@@ -71,6 +81,42 @@ rainbowDoge.addEventListener("click", function() {
   }
   else {
     alert("Complete Level 3 to unlock level 4!");
+  }
+});
+secondCousin.addEventListener("click", function() {
+  if (localStorage.getItem("completedLevel") >= 5) {
+    window.location.href = "level5.html";
+    
+  }
+  else{
+    alert("Complete level 4 to unlock level 5!");
+  }
+});
+firstRed.addEventListener("click", function() {
+  if (localStorage.getItem("completedLevel") >= 6) {
+    window.location.href = "level6.html";
+    
+  }
+  else{
+    alert("Complete level 5 to unlock level 6!");
+  }
+});
+firstBossRed.addEventListener("click", function() {
+  if (localStorage.getItem("completedLevel") >= 7) {
+    window.location.href = "level7.html";
+    
+  }
+  else{
+    alert("Complete level 6 to unlock level 7!");
+  }
+});
+finalBossRed.addEventListener("click", function() {
+  if (localStorage.getItem("completedLevel") >= 8) {
+    window.location.href = "level8.html";
+    
+  }
+  else{
+    alert("Complete level 7 to unlock level 8!");
   }
 });
 

@@ -39,12 +39,12 @@ const rarityBonuses = {
     "Godly": { damage: 80, health: 600 }
 };
 const fireRarityBonuses = {
-    "Common": { damage: 4, health: 100 },
-    "Uncommon": { damage: 8, health: 160 },
-    "Rare": { damage: 15, health: 240 },
-    "Epic": { damage: 30, health: 375 },
-    "Legendary": { damage: 60, health: 600 },
-    "Godly": { damage: 120, health: 900 }
+    "Common": { damage: 6, health: 125 },
+    "Uncommon": { damage: 12, health: 165 },
+    "Rare": { damage: 22, health: 275 },
+    "Epic": { damage: 42, health: 550 },
+    "Legendary": { damage: 85, health: 700 },
+    "Godly": { damage: 100, health: 900 }
 };
 
 function getItemBonus(item) {

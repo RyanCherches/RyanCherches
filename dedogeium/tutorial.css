@@ -1,0 +1,117 @@
+.character-wrap {
+    position: relative;
+    display: inline-block;
+}
+#spotlight {
+    position: absolute;
+    bottom: 0;
+    left: -40px;
+    z-index: 0;
+    width: 250px;
+}
+#main-character {
+    position: relative;
+    z-index: 1;
+}
+
+#game {
+    display:flex;
+    justify-content:space-around;
+    align-items:center;
+    flex-direction:row;
+}
+#yes-no {
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:space-around;
+    background-color:white;
+    padding:20px;
+}
+#btns {
+    gap:40px;
+}
+body {
+    height:100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    background-image:url("cool fight scene.jpg");
+    background-size: cover;
+    background-attachment: fixed;
+    margin: 0;
+    padding: 0;
+}
+#ok-btn {
+    background-color:blue;
+    border-radius:5px;
+    border: 1px solid red;
+    padding:10px;
+    cursor:pointer;
+}
+#cancel-btn {
+    cursor:pointer;
+}
+#enemy-hlth {
+    display:none;
+    color:white;
+}
+#hlth {
+    display:none;
+    color:white;
+}
+#victory {
+    display:none;
+    background:white;
+    padding:10px;
+}
+#bye-btn {
+    color:white;
+    background-color:blue;
+    padding:5px;
+    border-radius:5px;
+    cursor:pointer;
+}
+
+/* skip button for cutscene control */
+#skip-btn {
+    display: none;
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    padding: 8px 12px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.white {
+    color:white;
+}
+#crystal_attack {
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100px;
+    height: auto;
+    z-index: 10;
+    display: none;
+}
+#crystal_attack.attack-strike {
+    animation: strikeDown 0.6s ease-in-out forwards;
+}
+@keyframes strikeDown {
+    0% {
+        bottom: 10%;
+        right: 100%;
+        opacity: 1;
+    }
+    100% {
+        top: 85%;
+        left: 86%;
+        opacity: 1;
+    }
+}

@@ -9,6 +9,13 @@
     z-index: 0;
     width: 250px;
 }
+#spotlight2 {
+    position: absolute;
+    bottom: 0;
+    right: -40px;
+    z-index: 0;
+    width: 250px;
+}
 #main-character {
     position: relative;
     z-index: 1;

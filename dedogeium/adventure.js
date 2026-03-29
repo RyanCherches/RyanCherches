@@ -47,6 +47,14 @@ document.addEventListener("DOMContentLoaded", function () {
     localStorage.setItem("completedLevel", "1");
     localStorage.setItem("inventory", JSON.stringify([]));
   }
+  if (localStorage.getItem("seenTutorialPrompt") === null) {
+    localStorage.setItem("seenTutorialPrompt", "true");
+    const goToTutorial = confirm("First time here? Want to start the tutorial?");
+    if (goToTutorial) {
+      window.location.href = "tutorial.html";
+      return;
+    }
+  }
   // else {
   //   if (localStorage.getItem("completedLevel") >= 2) {
   //     redDoge.src="red doge.png";

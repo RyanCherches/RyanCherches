@@ -245,7 +245,7 @@ function generateRandomRarity() {
 function generateRewardItem() {
     const randomRarity = generateRandomRarity();
     return {
-        name: "Fire Doge",
+        name: "Doge",
         rarity: randomRarity,
         id: Date.now() // unique id for tracking
     };

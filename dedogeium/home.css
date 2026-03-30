@@ -42,3 +42,136 @@ body {
     transform: scale(1.2);
     color: lightgreen;
 }
+#promo-code-img {
+    animation: pulse 2s infinite;
+    cursor:pointer;
+}
+.page-content {
+    text-align: center;
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 32px;
+    border-radius: 20px;
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.12);
+}
+
+.intro-text {
+    margin: 0 0 16px;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+button,
+input {
+    font: inherit;
+}
+
+#enter-btn,
+#submit-btn,
+#close-btn {
+    padding: 12px 18px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+#enter-btn,
+#submit-btn {
+    background: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.22);
+}
+
+#enter-btn:hover,
+#submit-btn:hover,
+#close-btn:hover {
+    transform: translateY(-1px);
+}
+
+#popup {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(5px);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
+}
+
+#popup.is-open {
+    display: flex;
+}
+
+.popup-card {
+    width: min(100%, 420px);
+    background-color: #ffffff;
+    padding: 32px 28px;
+    border-radius: 18px;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+    text-align: left;
+}
+
+.popup-card h2 {
+    margin: 0 0 10px;
+    font-size: 1.7rem;
+}
+
+.popup-description {
+    margin: 0 0 20px;
+    line-height: 1.5;
+    color: #475569;
+}
+
+.popup-card label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+#promo-code {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    background-color: #f8fafc;
+}
+
+#promo-code:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.popup-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.popup-actions button {
+    flex: 1;
+}
+
+#close-btn:hover {
+    background-color: #dbe4ff;
+}
+
+#close-btn {
+    background-color: #e2e8f0;
+    color: #1e293b;
+}
+
+@media (max-width: 480px) {
+    .page-content,
+    .popup-card {
+        padding: 24px 20px;
+    }
+
+    .popup-actions {
+        flex-direction: column;
+    }
+}

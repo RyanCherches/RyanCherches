@@ -1,10 +1,34 @@
-
+const aprilFoolsBox = document.getElementById('AprilFools-box');
 
 // Load inventory from localStorage and display items
 window.addEventListener('DOMContentLoaded', function() {
     const inventory = JSON.parse(localStorage.getItem("inventory")) || [];
     const equippedItems = JSON.parse(localStorage.getItem("equippedItems")) || [];
     const listItemsContainer = document.querySelector(".list-items");
+    const aprilFoolsDone = localStorage.getItem("aprilFoolsDone") === "true";
+    if (aprilFoolsBox) {
+        aprilFoolsBox.style.display = "block";
+        const aprilFoolsCheckbox = document.getElementById('April-fools');
+        if (aprilFoolsCheckbox) {
+            const saved = localStorage.getItem("aprilFoolsEnabled") === "true";
+            aprilFoolsCheckbox.checked = saved;
+            setAprilFoolsMode(saved);
+            if (saved) {
+                ensureRickAstleyDoge(inventory);
+            }
+            aprilFoolsCheckbox.addEventListener("change", () => {
+                const enabled = aprilFoolsCheckbox.checked;
+                localStorage.setItem("aprilFoolsEnabled", JSON.stringify(enabled));
+                setAprilFoolsMode(enabled);
+                if (enabled) {
+                    aprilFoolsBox.style.display = "none";
+                    ensureRickAstleyDoge(inventory);
+                    renderInventoryList();
+                    buildExchangeUI();
+                }
+            });
+        }
+    }
 
     // remove any floating player HP badge (we'll show HP in the stats instead)
     const existingHpBadge = document.getElementById('player-hp');
@@ -19,6 +43,7 @@ window.addEventListener('DOMContentLoaded', function() {
         "Rare": "rare doge.png",
         "Epic": "epic doge.png",
         "Legendary": "legendary doge.png",
+        "rick astley": "rick astley.webp",
         "Godly": "godly doge.png",
         "Mythic": "mythic doge.svg"
     };
@@ -55,6 +80,9 @@ window.addEventListener('DOMContentLoaded', function() {
 
     function getItemImage(item) {
         const rarity = item && item.rarity;
+        if (item && (item.name === "Rick Astley Doge" || item.name === "Rick Astley")) {
+            return "rick astley.webp";
+        }
         if (item && item.name === "Fire Doge" && fireRarityImages[rarity]) {
             return fireRarityImages[rarity];
         }
@@ -67,28 +95,30 @@ window.addEventListener('DOMContentLoaded', function() {
         return bonusGroup[item && item.rarity] || { damage: 0, health: 0 };
     }
     
-    // Get all item divs (skip the first one which is the h3)
-    const itemDivs = listItemsContainer.querySelectorAll(".item");
-    
-    // Clear existing items and populate with inventory items
-    itemDivs.forEach(div => div.remove());
-    
-    // Create and add inventory items to the list
-    inventory.forEach((item, index) => {
-        const imageSource = getItemImage(item);
-        const itemDiv = document.createElement("div");
-        itemDiv.className = "item";
-        const isEquipped = equippedItems.some(eq => eq.id === item.id);
-        if (isEquipped) {
-            itemDiv.classList.add("equipped");
-        }
-        itemDiv.innerHTML = `<img src="${imageSource}" height="50px"><p>${item.name || "Doge"} (${item.rarity})</p>`;
-        itemDiv.style.cursor = "pointer";
-        itemDiv.addEventListener("click", function() {
-            toggleEquipItem(item, index);
+    function renderInventoryList() {
+        if (!listItemsContainer) return;
+        const itemDivs = listItemsContainer.querySelectorAll(".item");
+        itemDivs.forEach(div => div.remove());
+
+        inventory.forEach((item, index) => {
+            const imageSource = getItemImage(item);
+            const itemDiv = document.createElement("div");
+            itemDiv.className = "item";
+            const isEquipped = equippedItems.some(eq => eq.id === item.id);
+            if (isEquipped) {
+                itemDiv.classList.add("equipped");
+            }
+            itemDiv.innerHTML = `<img src="${imageSource}" height="50px"><p>${item.name || "Doge"} (${item.rarity})</p>`;
+            itemDiv.style.cursor = "pointer";
+            itemDiv.addEventListener("click", function() {
+                toggleEquipItem(item, index);
+            });
+            listItemsContainer.appendChild(itemDiv);
         });
-        listItemsContainer.appendChild(itemDiv);
-    });
+    }
+
+    // Initial render
+    renderInventoryList();
 
     // Display equipped items in slots and update stats
     displayEquippedItems(equippedItems, getItemImage, getItemBonus);
@@ -103,6 +133,23 @@ window.addEventListener('DOMContentLoaded', function() {
         console.error('Failed to register player', e);
     }
 });
+
+function setAprilFoolsMode(enabled) {
+    const characterImg = document.querySelector(".display-character img");
+    if (!characterImg) return;
+    const normalSrc = characterImg.dataset.normalSrc || characterImg.src;
+    characterImg.dataset.normalSrc = normalSrc;
+    characterImg.src = enabled ? "rick astley.webp" : normalSrc;
+}
+
+function ensureRickAstleyDoge(inventoryOverride) {
+    const inventory = inventoryOverride || JSON.parse(localStorage.getItem("inventory")) || [];
+    const hasRick = inventory.some(it => it.name === "Rick Astley Doge" || it.name === "Rick Astley");
+    if (hasRick) return false;
+    inventory.push({ name: "Rick Astley Doge", rarity: "rick astley", id: Date.now() });
+    localStorage.setItem("inventory", JSON.stringify(inventory));
+    return true;
+}
 
 // Record the current player into a central players list stored at 'dedogeium_players'
 function registerCurrentPlayer(inventory) {
@@ -324,5 +371,3 @@ function unequipItem(slotIndex) {
     localStorage.setItem("equippedItems", JSON.stringify(equippedItems));
     location.reload();
 }
-
-

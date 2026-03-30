@@ -14,6 +14,7 @@ const duringFightAudio = new Audio("during fight.mp3");
 const postDialogueWinAudio = new Audio("postDialogueWin.mp3");
 const maybe_vic = document.getElementById("maybe-vic");
 const completedLevel = Number(localStorage.getItem("completedLevel"));
+const aprilFoolsEnabled = localStorage.getItem("aprilFoolsEnabled") === "true";
 
 let inventory = JSON.parse(localStorage.getItem("inventory")) || [];
 const rarities = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Godly"];
@@ -82,6 +83,15 @@ cancel_btn.addEventListener("click", function() {
 let speechTimeoutId = null;
 
 // cutscene/dialogue state
+const rickdialogue = [
+    { speaker: 'good', text: "Never gonna give you up." },
+    { speaker: 'bad', text: "stop. you are an old meme. Not to hate on you but just dont do it." },
+    { speaker: 'good', text: "Never gonna let you down." },
+    { speaker: 'bad', text: "Yeah no thats it, lets battle, just get right into it, and I better not here a single word out of you." },
+    { speaker: 'good', text: "Never" },
+    { speaker: 'bad', text: "Please shut up. Just shut up." },
+    { speaker: 'good', text: "ok:(" },
+];
 const dialogue = [
     { speaker: 'good', text: "Don't do it brother." },
     { speaker: 'bad', text: "I must do it brother, they are better than us." },
@@ -92,6 +102,7 @@ const dialogue = [
     { speaker: 'good', text: "I will get better gear over time; maybe we should do multiple fights or wait till the end." },
     { speaker: 'bad', text: "We'll decide along the way. Good luck, brother." }
 ];
+const activeDialogue = aprilFoolsEnabled ? rickdialogue : dialogue;
 let dialogueIndex = 0;
 let inCutscene = false;
 
@@ -127,7 +138,7 @@ function speech() {
 function showLine(index) {
     speech_good.innerHTML = "";
     speech_bad.innerHTML = "";
-    const line = dialogue[index];
+    const line = activeDialogue[index];
     if (!line) return;
     if (line.speaker === 'good') speech_good.innerText = line.text;
     else speech_bad.innerText = line.text;
@@ -154,7 +165,7 @@ function showPostWinLine(index) {
 function showNextLine() {
     if (!inCutscene) return;
     dialogueIndex++;
-    if (dialogueIndex < dialogue.length) {
+    if (dialogueIndex < activeDialogue.length) {
         showLine(dialogueIndex);
     } else {
         endCutsceneAndStartBattle();

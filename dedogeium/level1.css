@@ -1,8 +1,58 @@
 #game {
-    display:flex;
-    justify-content:space-around;
-    align-items:center;
-    flex-direction:row;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-end;
+    min-height: 100vh;
+    width: 100%;
+    padding: 0 24px 20px;
+    box-sizing: border-box;
+    gap: 12px;
+}
+#battle-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    width: 100%;
+    gap: 24px;
+}
+.character-container {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    min-width: 150px;
+}
+.character-container.enemy {
+    flex-direction: row-reverse;
+}
+.character-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.speech {
+    max-width: 320px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.65);
+    color: white;
+    text-shadow: 1px 1px 5px black;
+}
+.character-container.player .speech {
+    text-align: left;
+}
+.character-container.enemy .speech {
+    text-align: right;
+}
+#speech-good:empty,
+#speech-bad:empty {
+    display: none;
+}
+#yes-no {
+    width: 90%;
+    max-width: 480px;
+    margin: 8px auto;
+    align-self: center;
 }
 #yes-no {
     display:flex;
@@ -48,6 +98,7 @@ body {
     display:none;
     background:white;
     padding:10px;
+    align-self: center;
 }
 #bye-btn {
     color:white;
@@ -86,6 +137,36 @@ body {
 }
 #crystal_attack.attack-strike {
     animation: strikeDown 0.6s ease-in-out forwards;
+}
+#combat-zone {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 360px;
+    max-width: 90vw;
+    z-index: 9999;
+    display: none;
+    text-align: center;
+}
+#combat-bar {
+    width: 100%;
+    display: block;
+}
+#combat-pointer {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    left: 0;
+    width: 40px;
+    height: auto;
+    pointer-events: none;
+}
+#combat-message {
+    color: white;
+    margin-top: 8px;
+    font-size: 16px;
+    text-shadow: 1px 1px 5px black;
 }
 @keyframes strikeDown {
     0% {

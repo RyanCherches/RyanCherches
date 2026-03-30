@@ -10,11 +10,6 @@
 <body>
     <div id="game" width="100vw">
         <img src="crystal attack.png"  id="crystal_attack" width="100px">
-        <div>
-            <img src="Im just a chill guy no background.png">
-            <p id="hlth">sdfgf</p>
-        </div>
-        <p class="white" id="speech-good"></p>
         <div id="yes-no">
             <div>
                 <p>Do you wan't to play</p>
@@ -30,10 +25,21 @@
             <p id="maybe-vic"></p>
             <button id="bye-btn">Go back</button>
         </div>
-        <p class="white" id="speech-bad"></p>
-        <div>
-            <img src="fire doge final boss.png" width="500px">
-            <p id="enemy-hlth">dfsg</p>
+        <div id="battle-row">
+            <div class="character-container player">
+                <div class="character-body">
+                    <img src="Im just a chill guy no background.png">
+                    <p id="hlth">sdfgf</p>
+                </div>
+                <p class="speech" id="speech-good"></p>
+            </div>
+            <div class="character-container enemy">
+                <div class="character-body">
+                    <img src="fire doge final boss.png" width="500px">
+                    <p id="enemy-hlth">dfsg</p>
+                </div>
+                <p class="speech" id="speech-bad"></p>
+            </div>
         </div>
     </div>
 <script src="level8.js"></script>

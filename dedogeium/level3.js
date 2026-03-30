@@ -147,7 +147,8 @@ function endCutsceneAndStartBattle() {
     hlth_element.style.display = "block";
     applyEquipmentBonuses();
     loadhealth();
-    battleLoop();
+    setupCombatUI();
+    startPlayerTurn();
     beforeFightAudio.pause();
     duringFightAudio.loop = true;
     duringFightAudio.play();
@@ -255,3 +256,159 @@ function addItemToInventory(item) {
     inventory.push(item);
     localStorage.setItem("inventory", JSON.stringify(inventory));
 }
+
+const combat = {
+    active: false,
+    isPlayerTurn: true,
+    pointerPos: 0,
+    pointerDir: 1,
+    speed: 3.5,
+    intervalId: null,
+    barWidth: 0,
+    pointerWidth: 40,
+    maxX: 0
+};
+
+function setupCombatUI() {
+    const game = document.getElementById("game");
+    if (!game) return;
+    if (document.getElementById("combat-zone")) return;
+    const combatZone = document.createElement("div");
+    combatZone.id = "combat-zone";
+    const bar = document.createElement("img");
+    bar.id = "combat-bar";
+    bar.src = "combat bar.png";
+    const pointer = document.createElement("img");
+    pointer.id = "combat-pointer";
+    pointer.src = "combat pointer.png";
+    const message = document.createElement("div");
+    message.id = "combat-message";
+
+    combatZone.appendChild(bar);
+    combatZone.appendChild(pointer);
+    combatZone.appendChild(message);
+    document.body.appendChild(combatZone);
+}
+
+function showCombatUI(show) {
+    const combatZone = document.getElementById("combat-zone");
+    if (!combatZone) return;
+    combatZone.style.display = show ? "block" : "none";
+}
+
+function startPlayerTurn() {
+    combat.isPlayerTurn = true;
+    combat.active = true;
+    showCombatUI(true);
+
+    const bar = document.getElementById("combat-bar");
+    const pointer = document.getElementById("combat-pointer");
+    const message = document.getElementById("combat-message");
+    if (!bar || !pointer || !message) return;
+
+    const rect = bar.getBoundingClientRect();
+    combat.barWidth = rect.width;
+    combat.pointerWidth = pointer.clientWidth || combat.pointerWidth;
+    combat.maxX = Math.max(0, combat.barWidth - combat.pointerWidth);
+    combat.pointerPos = 0;
+    combat.pointerDir = 1;
+    pointer.style.left = "0px";
+    message.innerText = "Your turn! Press SPACE to stop pointer near center for higher damage.";
+
+    if (combat.intervalId) clearInterval(combat.intervalId);
+    combat.intervalId = setInterval(() => {
+        if (!combat.active || !combat.isPlayerTurn) return;
+        combat.pointerPos += combat.pointerDir * combat.speed;
+        if (combat.pointerPos <= 0) { combat.pointerPos = 0; combat.pointerDir = 1; }
+        if (combat.pointerPos >= combat.maxX) { combat.pointerPos = combat.maxX; combat.pointerDir = -1; }
+        pointer.style.left = `${combat.pointerPos}px`;
+    }, 12);
+}
+
+function calculatePlayerAccuracy() {
+    if (combat.maxX <= 0) return 0;
+    const center = combat.maxX / 2;
+    const dist = Math.abs(combat.pointerPos - center);
+    const ratio = Math.min(1, dist / center);
+    return Math.max(0, 1 - ratio);
+}
+
+function calculateDamage(base, acc) {
+    return Math.max(1, Math.round(base * (0.75 + 1.25 * acc)));
+}
+
+function enemyAccuracy() {
+    if (Math.random() < 0.2) {
+        return 0.85 + Math.random() * 0.15;
+    }
+    return Math.random() * 0.6;
+}
+
+function handlePlayerStop() {
+    if (!combat.active || !combat.isPlayerTurn) return;
+    clearInterval(combat.intervalId);
+    combat.intervalId = null;
+    combat.active = false;
+
+    const acc = calculatePlayerAccuracy();
+    const hit = calculateDamage(damage, acc);
+    enemy_health = Math.max(0, enemy_health - hit);
+    loadhealth();
+
+    const message = document.getElementById("combat-message");
+    if (message) message.innerText = `You hit ${hit} (accuracy ${Math.round(acc * 100)}%).`;
+
+    if (enemy_health <= 0) {
+        finishBattle(true);
+        return;
+    }
+
+    damage *= 2;
+    setTimeout(startEnemyTurn, 900);
+}
+
+function startEnemyTurn() {
+    combat.isPlayerTurn = false;
+    showCombatUI(true);
+    const message = document.getElementById("combat-message");
+    if (message) message.innerText = "Enemy is charging...";
+
+    const acc = enemyAccuracy();
+    const hit = calculateDamage(enemy_damage, acc);
+    health = Math.max(0, health - hit);
+    loadhealth();
+    if (message) message.innerText = `Enemy hit ${hit} (accuracy ${Math.round(acc * 100)}%).`;
+
+    if (health <= 0) {
+        finishBattle(false);
+        return;
+    }
+
+    enemy_damage *= 2;
+    setTimeout(startPlayerTurn, 900);
+}
+
+function finishBattle(playerWon) {
+    combat.active = false;
+    combat.isPlayerTurn = false;
+    clearInterval(combat.intervalId);
+    combat.intervalId = null;
+    showCombatUI(false);
+
+    if (playerWon) {
+        const rewardItem = generateRewardItem();
+        addItemToInventory(rewardItem);
+        if (maybe_vic) maybe_vic.innerHTML = `Victory! You obtained: <br><strong>${rewardItem.name}</strong> <br><span style="color: gold;">[${rewardItem.rarity}]</span>`;
+        if (victory) victory.style.display = "block";
+    } else {
+        if (maybe_vic) maybe_vic.innerHTML = "Defeated! Grind and try again.";
+        if (victory) victory.style.display = "block";
+    }
+}
+
+document.addEventListener("keydown", (event) => {
+    if (event.code === "Space") {
+        if (combat.active && combat.isPlayerTurn) { handlePlayerStop(); event.preventDefault(); }
+    }
+});
+

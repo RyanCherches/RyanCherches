@@ -11,9 +11,25 @@ const skipBtn = document.getElementById("skip-btn");
 const crystal_attack = document.getElementById("crystal_attack");
 const beforeFightAudio = new Audio("before fight.mp3");
 const duringFightAudio = new Audio("during fight.mp3");
+const duringFightRickAudio = new Audio("es-hora-de-mimir.mp3");
+const storedMusicVolume = Number(localStorage.getItem("musicVolume"));
+const musicVolume = Number.isFinite(storedMusicVolume) ? storedMusicVolume : 50;
+const musicVolumeNormalized = Math.min(1, Math.max(0, musicVolume / 100));
+beforeFightAudio.volume = musicVolumeNormalized;
+duringFightAudio.volume = musicVolumeNormalized;
+duringFightRickAudio.volume = musicVolumeNormalized;
 const maybe_vic = document.getElementById("maybe-vic");
 const completedLevel = Number(localStorage.getItem("completedLevel")) || 0;
 const aprilFoolsEnabled = localStorage.getItem("aprilFoolsEnabled") === "true";
+const playerImg = document.querySelector(".character-container.player img");
+
+if (aprilFoolsEnabled) {
+    // April 1 only: swap main character + music to Rick Astley.
+    if (playerImg) playerImg.src = "rick astley doge.png";
+    beforeFightAudio.src = "rick roll.mp3";
+    duringFightAudio.src = "rick roll.mp3";
+}
+
 
 // Inventory system
 let inventory = JSON.parse(localStorage.getItem("inventory")) || [];
@@ -24,10 +40,23 @@ const rarityWeights = [75, 25, 0, 0, 0]; // percentage weights
 home.addEventListener("click", function() {
     window.location.href = "adventure.html";
 });
+// if (aprilFoolsEnabled) {
+    playerImg.src = "rick astley doge.png";
+// }
 
 window.onload = function() {
-    beforeFightAudio.loop = true;
-    beforeFightAudio.play();
+    // if (aprilFoolsEnabled) {
+        beforeFightAudio.pause();
+        duringFightAudio.pause();
+        duringFightRickAudio.loop = true;
+        duringFightRickAudio.play();
+        return;
+    // }
+    // else {
+    //     beforeFightAudio.loop = true;
+    //     beforeFightAudio.play();
+    // }
+    
 }
 
 // Rarity bonuses for equipped items
@@ -90,7 +119,7 @@ let speechTimeoutId = null;
 // cutscene/dialogue state
 const rickdialogue = [
     { speaker: 'good', text: "Never gonna give you up." },
-    { speaker: 'bad', text: "stop. you are an old meme. Not to hate on you but just dont do it." },
+    { speaker: 'bad', text: "stop. you are an old meme. Not to hate on you but just don't do it." },
     { speaker: 'good', text: "Never gonna let you down." },
     { speaker: 'bad', text: "Yeah no thats it, lets battle, just get right into it, and I better not here a single word out of you." },
     { speaker: 'good', text: "Never" },
@@ -160,9 +189,18 @@ function endCutsceneAndStartBattle() {
     loadhealth();
     setupCombatUI();
     startPlayerTurn();
-    beforeFightAudio.pause();
-    duringFightAudio.loop = true;
-    duringFightAudio.play();
+    // if (aprilFoolsEnabled) { // for april fools this is what it is
+        beforeFightAudio.pause();
+        duringFightAudio.pause();
+        duringFightRickAudio.loop = true;
+        duringFightRickAudio.play();
+        return;
+    // }
+    // else {
+    //     beforeFightAudio.pause();
+    //     duringFightAudio.loop = true; // this is not for april first
+    //     duringFightAudio.play();
+    // }
 }
 yes_btn.addEventListener("click", function (){
     // yes_no.style.display = "none";
@@ -209,7 +247,7 @@ async function battleLoop() {
     // Display victory with doge reward (guard DOM references)
     if (maybe_vic) {
         if (enemy_health > 0) {
-            maybe_vic.innerHTML = "One more level and you level up!";
+            maybe_vic.innerHTML = "One more level and you will level up!";
         } else {
             maybe_vic.innerHTML = `Victory! You obtained: <br><strong>${rewardItem.name}</strong> <br><span style="color: gold;">[${rewardItem.rarity}]</span>`;
         }

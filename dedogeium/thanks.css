@@ -10,7 +10,8 @@ main {
     flex-direction:column;
     justify-content:space-around;
     align-items:center;
-    background-image: url("Rainbow Color GIF by Justin.gif");
+    /* background-image: url("Rainbow Color GIF by Justin.gif"); */
+    background-color: green;
     background-size: cover;
     color:white;
 }

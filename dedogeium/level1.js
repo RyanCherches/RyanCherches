@@ -11,12 +11,20 @@ const skipBtn = document.getElementById("skip-btn");
 const crystal_attack = document.getElementById("crystal_attack");
 const beforeFightAudio = new Audio("before fight.mp3");
 const duringFightAudio = new Audio("during fight.mp3");
+const storedMusicVolume = Number(localStorage.getItem("musicVolume"));
+const musicVolume = Number.isFinite(storedMusicVolume) ? storedMusicVolume : 50;
+const musicVolumeNormalized = Math.min(1, Math.max(0, musicVolume / 100));
+beforeFightAudio.volume = musicVolumeNormalized;
+duringFightAudio.volume = musicVolumeNormalized;
 const completedLevel = Number(localStorage.getItem("completedLevel"));
-const aprilFoolsEnabled = JSON.parse(localStorage.getItem("aprilFoolsEnabled")) || false;
-const playerImg = document.getElementById("player-img");
+const aprilFoolsEnabled = localStorage.getItem("aprilFoolsEnabled") === "true";
+const playerImg = document.querySelector(".character-container.player img");
 
 if (aprilFoolsEnabled) {
-    playerImg.src = "rick astley doge.png";
+    // April 1 only: swap main character + music to Rick Astley.
+    if (playerImg) playerImg.src = "rick astley doge.png";
+    beforeFightAudio.src = "rick roll.mp3";
+    duringFightAudio.src = "rick roll.mp3";
 }
     
 home.addEventListener("click", function() {
@@ -44,7 +52,7 @@ let speechTimeoutId = null;
 // cutscene/dialogue state
 const rickdialogue = [
     { speaker: 'good', text: "Never gonna give you up." },
-    { speaker: 'bad', text: "stop. you are an old meme. Not to hate on you but just dont do it." },
+    { speaker: 'bad', text: "stop. you are an old meme. Not to hate on you but just don't do it." },
     { speaker: 'good', text: "Never gonna let you down." },
     { speaker: 'bad', text: "Yeah no thats it, lets battle, just get right into it, and I better not here a single word out of you." },
     { speaker: 'good', text: "Never" },
@@ -68,7 +76,7 @@ let inCutscene = false;
 // post-battle dialogue (speaking after the fight)
 const postDialogue = [
     { speaker: 'good', text: "I will win one day. I will get the best gear and beat you." },
-    { speaker: 'bad', text: "Exuces. Exuces. Exuces." },
+    { speaker: 'bad', text: "Excuses. Exuces. Exuces." },
     { speaker: 'good', text: "You think your so cool, well lets find out soon." },
     { speaker: 'bad', text: "Well then see you soon." }
 ];

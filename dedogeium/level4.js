@@ -11,9 +11,22 @@ const skipBtn = document.getElementById("skip-btn");
 const crystal_attack = document.getElementById("crystal_attack");
 const beforeFightAudio = new Audio("before fight.mp3");
 const duringFightAudio = new Audio("during fight.mp3");
+const storedMusicVolume = Number(localStorage.getItem("musicVolume"));
+const musicVolume = Number.isFinite(storedMusicVolume) ? storedMusicVolume : 50;
+const musicVolumeNormalized = Math.min(1, Math.max(0, musicVolume / 100));
+beforeFightAudio.volume = musicVolumeNormalized;
+duringFightAudio.volume = musicVolumeNormalized;
 const maybe_vic = document.getElementById("maybe-vic");
 const aprilFoolsEnabled = localStorage.getItem("aprilFoolsEnabled") === "true";
+const playerImg = document.querySelector(".character-container.player img");
 localStorage.getItem("completedLevel");
+
+if (aprilFoolsEnabled) {
+    // April 1 only: swap main character + music to Rick Astley.
+    if (playerImg) playerImg.src = "rick astley doge.png";
+    beforeFightAudio.src = "rick roll.mp3";
+    duringFightAudio.src = "rick roll.mp3";
+}
 
 // Inventory system
 let inventory = JSON.parse(localStorage.getItem("inventory")) || [];
@@ -47,7 +60,9 @@ const fireRarityBonuses = {
     "Legendary": { damage: 85, health: 700 },
     "Godly": { damage: 100, health: 900 }
 };
-
+if (aprilFoolsEnabled) {
+    playerImg.src = "rick astley doge.png";
+}
 function getItemBonus(item) {
     if (item && item.name === "Fire Doge") {
         return fireRarityBonuses[item.rarity] || { damage: 0, health: 0 };
@@ -90,7 +105,7 @@ let speechTimeoutId = null;
 // cutscene/dialogue state
 const rickdialogue = [
     { speaker: 'good', text: "Never gonna give you up." },
-    { speaker: 'bad', text: "stop. you are an old meme. Not to hate on you but just dont do it." },
+    { speaker: 'bad', text: "stop. you are an old meme. Not to hate on you but just don't do it." },
     { speaker: 'good', text: "Never gonna let you down." },
     { speaker: 'bad', text: "Yeah no thats it, lets battle, just get right into it, and I better not here a single word out of you." },
     { speaker: 'good', text: "Never" },
@@ -212,7 +227,7 @@ async function battleLoop() {
     duringFightAudio.pause();
     victory.style.display = "block";
     if (enemy_health > 0) {
-        maybe_vic.innerHTML = "Grind more to beat it";
+        maybe_vic.innerHTML = "Grind more to beat it.";
     }
     duringFightAudio.pause();
 }

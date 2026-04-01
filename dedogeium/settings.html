@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings</title>
+    <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+    <header>
+        <h1><a href="home.html" class="animation">Dedogeium</a></h1>
+        <h1><a href="customize.html" class="animation">Customize</a></h1>
+        <h1><a href="adventure.html" class="animation">Adventure</a></h1>
+        <h1><a href="updates.html" class="animation">Updates</a></h1>
+        <h1><a href="settings.html" class="animation">Settings</a></h1>
+    </header>
+    <main>
+        <div id="mainBox">
+            <h1>Settings</h1>
+            <p>Here you can change the settings of the game, such as the music volume, and the sound effects volume.</p>
+            <label for="music-volume">Music Volume: <span id="music-volume-value">50%</span></label>
+            <input type="range" id="music-volume" name="music-volume" min="0" max="100" value="50">
+            <div class="volume-actions">
+                <button id="test-music-btn" type="button">Play Music</button>
+                <button id="test-sound-btn" type="button">Test Sound</button>
+            </div>
+            <br><br>
+        </div>
+    </main>
+    <script src="settings.js"></script>
+</body>
+</html>

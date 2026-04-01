@@ -7,7 +7,8 @@ window.addEventListener('DOMContentLoaded', function() {
     const listItemsContainer = document.querySelector(".list-items");
     const aprilFoolsDone = localStorage.getItem("aprilFoolsDone") === "true";
     if (aprilFoolsBox) {
-        aprilFoolsBox.style.display = "block";
+        const aprilFoolsHidden = localStorage.getItem("aprilFoolsBoxHidden") === "true";
+        aprilFoolsBox.style.display = aprilFoolsHidden ? "none" : "block";
         const aprilFoolsCheckbox = document.getElementById('April-fools');
         if (aprilFoolsCheckbox) {
             const saved = localStorage.getItem("aprilFoolsEnabled") === "true";
@@ -21,11 +22,12 @@ window.addEventListener('DOMContentLoaded', function() {
                 localStorage.setItem("aprilFoolsEnabled", JSON.stringify(enabled));
                 setAprilFoolsMode(enabled);
                 if (enabled) {
-                    aprilFoolsBox.style.display = "none";
                     ensureRickAstleyDoge(inventory);
                     renderInventoryList();
                     buildExchangeUI();
                 }
+                localStorage.setItem("aprilFoolsBoxHidden", "true");
+                aprilFoolsBox.style.display = "none";
             });
         }
     }

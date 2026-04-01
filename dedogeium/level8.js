@@ -12,9 +12,23 @@ const crystal_attack = document.getElementById("crystal_attack");
 const beforeFightAudio = new Audio("before fight.mp3");
 const duringFightAudio = new Audio("during fight.mp3");
 const postDialogueWinAudio = new Audio("postDialogueWin.mp3");
+const storedMusicVolume = Number(localStorage.getItem("musicVolume"));
+const musicVolume = Number.isFinite(storedMusicVolume) ? storedMusicVolume : 50;
+const musicVolumeNormalized = Math.min(1, Math.max(0, musicVolume / 100));
+beforeFightAudio.volume = musicVolumeNormalized;
+duringFightAudio.volume = musicVolumeNormalized;
+postDialogueWinAudio.volume = musicVolumeNormalized;
 const maybe_vic = document.getElementById("maybe-vic");
 const completedLevel = Number(localStorage.getItem("completedLevel"));
 const aprilFoolsEnabled = localStorage.getItem("aprilFoolsEnabled") === "true";
+const playerImg = document.querySelector(".character-container.player img");
+
+if (aprilFoolsEnabled) {
+    // April 1 only: swap main character + music to Rick Astley.
+    if (playerImg) playerImg.src = "rick astley doge.png";
+    beforeFightAudio.src = "rick roll.mp3";
+    duringFightAudio.src = "rick roll.mp3";
+}
 
 let inventory = JSON.parse(localStorage.getItem("inventory")) || [];
 const rarities = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Godly"];
@@ -27,7 +41,9 @@ window.onload = function() {
     beforeFightAudio.loop = true;
     beforeFightAudio.play();
 }
-
+if (aprilFoolsEnabled) {
+    playerImg.src = "rick astley doge.png";
+}
 const rarityBonuses = {
     "Common": { damage: 2, health: 50 },
     "Uncommon": { damage: 5, health: 100 },
@@ -85,7 +101,7 @@ let speechTimeoutId = null;
 // cutscene/dialogue state
 const rickdialogue = [
     { speaker: 'good', text: "Never gonna give you up." },
-    { speaker: 'bad', text: "stop. you are an old meme. Not to hate on you but just dont do it." },
+    { speaker: 'bad', text: "Stop. You are an old meme. Not to hate on you, but please don't do it." },
     { speaker: 'good', text: "Never gonna let you down." },
     { speaker: 'bad', text: "Yeah no thats it, lets battle, just get right into it, and I better not here a single word out of you." },
     { speaker: 'good', text: "Never" },

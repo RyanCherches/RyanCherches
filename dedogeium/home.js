@@ -3,6 +3,12 @@ const popup = document.getElementById("popup");
 const closeBtn = document.getElementById("close-btn");
 const submitBtn = document.getElementById("submit-btn");
 const promoInput = document.getElementById("promo-code");
+const music = new Audio("rick roll.mp3");
+music.loop = true;
+const storedMusicVolume = Number(localStorage.getItem("musicVolume"));
+const musicVolume = Number.isFinite(storedMusicVolume) ? storedMusicVolume : 50;
+music.volume = Math.min(1, Math.max(0, musicVolume / 100));
+music.play();
 
 function openPopup() {
     if (!popup) return;

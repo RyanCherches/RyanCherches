@@ -11,9 +11,22 @@ const skipBtn = document.getElementById("skip-btn");
 const crystal_attack = document.getElementById("crystal_attack");
 const beforeFightAudio = new Audio("before fight.mp3");
 const duringFightAudio = new Audio("during fight.mp3");
+const storedMusicVolume = Number(localStorage.getItem("musicVolume"));
+const musicVolume = Number.isFinite(storedMusicVolume) ? storedMusicVolume : 50;
+const musicVolumeNormalized = Math.min(1, Math.max(0, musicVolume / 100));
+beforeFightAudio.volume = musicVolumeNormalized;
+duringFightAudio.volume = musicVolumeNormalized;
 const maybe_vic = document.getElementById("maybe-vic");
 const aprilFoolsEnabled = localStorage.getItem("aprilFoolsEnabled") === "true";
+const playerImg = document.querySelector(".character-container.player img");
 localStorage.getItem("completedLevel");
+
+if (aprilFoolsEnabled) {
+    // April 1 only: swap main character + music to Rick Astley.
+    if (playerImg) playerImg.src = "rick astley doge.png";
+    beforeFightAudio.src = "rick roll.mp3";
+    duringFightAudio.src = "rick roll.mp3";
+}
 
 // Inventory system
 let inventory = JSON.parse(localStorage.getItem("inventory")) || [];
@@ -29,7 +42,9 @@ window.onload = function() {
     beforeFightAudio.loop = true;
     beforeFightAudio.play();
 }
-
+if (aprilFoolsEnabled) {
+    playerImg.src = "rick astley doge.png";
+}
 // Rarity bonuses for equipped items
 const rarityBonuses = {
     "Common": { damage: 2, health: 50 },
@@ -90,7 +105,7 @@ let speechTimeoutId = null;
 // cutscene/dialogue state
 const rickdialogue = [
     { speaker: 'good', text: "Never gonna give you up." },
-    { speaker: 'bad', text: "stop. you are an old meme. Not to hate on you but just dont do it." },
+    { speaker: 'bad', text: "stop. you are an old meme. Not to hate on you but just don't do it." },
     { speaker: 'good', text: "Never gonna let you down." },
     { speaker: 'bad', text: "Yeah no thats it, lets battle, just get right into it, and I better not here a single word out of you." },
     { speaker: 'good', text: "Never" },
@@ -206,14 +221,14 @@ async function battleLoop() {
     // Display victory with doge reward
     victory.style.display = "block";
     if (enemy_health > 0) {
-        maybe_vic.innerHTML = "One more level and you level up!";
+        maybe_vic.innerHTML = "One more level and you will level up!";
     } else {
         maybe_vic.innerHTML = `Victory! You obtained: <br><strong>${rewardItem.name}</strong> <br><span style="color: gold;">[${rewardItem.rarity}]</span>`;
     }
     duringFightAudio.pause();
     victory.style.display = "block";
     if (enemy_health > 0) {
-        maybe_vic.innerHTML = "Grind more to beat it";
+        maybe_vic.innerHTML = "Grind more to beat it.";
     }
     duringFightAudio.pause();
 }

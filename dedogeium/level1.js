@@ -27,8 +27,10 @@ if (aprilFoolsEnabled) {
     duringFightAudio.src = "rick roll.mp3";
 }
     
+const routeBase = window.location.pathname.endsWith('.html') ? '' : '../';
+
 home.addEventListener("click", function() {
-    window.location.href = "adventure.html";
+    window.location.href = routeBase + "adventure/";
 });
 
 window.onload = function() {
@@ -44,7 +46,7 @@ let damage = 20;
 let enemy_damage = 20;
 
 cancel_btn.addEventListener("click", function() {
-    window.location.href = "adventure.html";
+    window.location.href = routeBase + "adventure/";
 });
 
 let speechTimeoutId = null;
@@ -237,3 +239,4 @@ function enemy_attack() {
     }
     health -= enemy_damage;
 }
+

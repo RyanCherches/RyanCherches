@@ -1,4 +1,6 @@
-﻿document.addEventListener("DOMContentLoaded", function () {
+const routeBase = window.location.pathname.endsWith('.html') ? '' : '../';
+
+document.addEventListener("DOMContentLoaded", function () {
     const CharacterMain = document.getElementById("main-character");
     const CharacterEnemy = document.getElementById("enemy-character");
     const Spotlight1 = document.getElementById("spotlight");
@@ -13,7 +15,7 @@ function welcome(CharacterMain, Spotlight1, CharacterEnemy, Spotlight2) {
         if (answer === "yes") {
             mainPlayers(CharacterMain, Spotlight1, CharacterEnemy, Spotlight2);
         } else {
-            window.location.href = "adventure.html";
+            window.location.href = routeBase + "adventure/";
         }
     }, 50);
 }
@@ -42,7 +44,7 @@ function enemyPlayers(CharacterMain, Spotlight1, CharacterEnemy, Spotlight2) {
 function endTutorial() {
     setTimeout(function () {
         alert("This is the end of the tutorial! Click OK to start your adventure!");
-        window.location.href = "adventure.html";
+        window.location.href = routeBase + "adventure/";
     }, 50);
 }
 
@@ -98,3 +100,4 @@ function endTutorial() {
 //     // show defeat UI after post-dialogue finishes
 //     if (defeat) defeat.style.display = "block";
 // }
+

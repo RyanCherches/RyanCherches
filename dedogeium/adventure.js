@@ -10,6 +10,13 @@ const firstRed = document.getElementById("first-red-doge")
 const firstBossRed = document.getElementById("firstboss-red-doge")
 const finalBossRed = document.getElementById("finalboss-red-doge")
 const completedLevel = Number(localStorage.getItem("completedLevel"));
+const routeBase = window.location.pathname.endsWith('.html') ? '' : '../';
+const music = new Audio("rick roll.mp3");
+music.loop = true;
+const storedMusicVolume = Number(localStorage.getItem("musicVolume"));
+const musicVolume = Number.isFinite(storedMusicVolume) ? storedMusicVolume : 50;
+music.volume = Math.min(1, Math.max(0, musicVolume / 100));
+music.play();
 let isHovering = false;
 let offsetX = 0;
 let offsetY3 = 0;
@@ -51,7 +58,7 @@ document.addEventListener("DOMContentLoaded", function () {
     localStorage.setItem("seenTutorialPrompt", "true");
     const goToTutorial = confirm("First time here? Want to start the tutorial?");
     if (goToTutorial) {
-      window.location.href = "tutorial.html";
+      window.location.href = routeBase + "tutorial/";
       return;
     }
   }
@@ -69,7 +76,7 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 redDoge.addEventListener("click", function() {
   if (localStorage.getItem("completedLevel") >= 2) {
-    window.location.href = "level2.html";
+    window.location.href = routeBase + "level2/";
   }
   else {
     alert("Complete Level 1 to unlock level 2!");
@@ -77,7 +84,7 @@ redDoge.addEventListener("click", function() {
 });
 blueDoge.addEventListener("click", function() {
   if (localStorage.getItem("completedLevel") >= 3) {
-    window.location.href = "level3.html";
+    window.location.href = routeBase + "level3/";
   }
   else {
     alert("Complete Level 2 to unlock level 3!");
@@ -85,7 +92,7 @@ blueDoge.addEventListener("click", function() {
 });
 rainbowDoge.addEventListener("click", function() {
   if (localStorage.getItem("completedLevel") >= 4) {
-    window.location.href = "level4.html";
+    window.location.href = routeBase + "level4/";
   }
   else {
     alert("Complete Level 3 to unlock level 4!");
@@ -93,7 +100,7 @@ rainbowDoge.addEventListener("click", function() {
 });
 secondCousin.addEventListener("click", function() {
   if (localStorage.getItem("completedLevel") >= 5) {
-    window.location.href = "level5.html";
+    window.location.href = routeBase + "level5/";
     
   }
   else{
@@ -102,7 +109,7 @@ secondCousin.addEventListener("click", function() {
 });
 firstRed.addEventListener("click", function() {
   if (localStorage.getItem("completedLevel") >= 6) {
-    window.location.href = "level6.html";
+    window.location.href = routeBase + "level6/";
     
   }
   else{
@@ -111,7 +118,7 @@ firstRed.addEventListener("click", function() {
 });
 firstBossRed.addEventListener("click", function() {
   if (localStorage.getItem("completedLevel") >= 7) {
-    window.location.href = "level7.html";
+    window.location.href = routeBase + "level7/";
     
   }
   else{
@@ -120,7 +127,7 @@ firstBossRed.addEventListener("click", function() {
 });
 finalBossRed.addEventListener("click", function() {
   if (localStorage.getItem("completedLevel") >= 8) {
-    window.location.href = "level8.html";
+    window.location.href = routeBase + "level8/";
     
   }
   else{
@@ -163,3 +170,4 @@ dogeAttack.addEventListener("mouseleave", () => {
   dogeAttack2.style.transform = `translate(0, 0)`;
   dogeAttack3.style.transform = `translate(0, 0)`;
 });
+

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../">
+    <title>Home</title>
+    <link rel="stylesheet" href="home.css">
+</head>
+<body>
+    <header>
+        <img src="Im just a chill guy no background.png" height="100px">
+        <h1><a href="./" class="animation">Front Page</a></h1>
+        <h1><a href="customize/" class="animation">Customize</a></h1>
+        <h1><a href="adventure/" class="animation">Adventure</a></h1>
+        <h1><a href="updates/" class="animation">Updates</a></h1>
+        <h1><a href="settings/" class="animation">Settings</a></h1>
+    </header>
+    <main>
+        <div id="image">
+            <img src="Im just a chill guy no background.png" height="300px">
+        </div>
+        <div id="pages">
+            <div>
+                <a href="customize/"><img src="customize.png" width="50px"></a>
+                <p id="customize">Customize weapons</p>
+            </div>
+            <div>
+                <a href="adventure/"><img src="adventure.jpg" width="70px"></a>
+                <p id="adventure">Adventure mode</p>
+            </div>
+            <!-- <div>
+                <a href="afk/"><img src="afk doge.gif" width="50px"></a>
+                <p id="afk">Afk Arena</p>
+            </div> -->
+            <div>
+                <img src="promo code.png" width="50px" id="promo-code-img">
+                <p id="promo">Promo Codes</p>
+            </div>
+        </div>
+        <div id="popup">
+            <div class="popup-card">
+                <h2>Congratulations!</h2>
+                <p class="popup-description">Enter your promo code below to apply your discount.</p>
+                <label for="promo-code">Promo Code</label>
+                <input type="text" id="promo-code" name="promo-code" placeholder="Enter your promo code here">
+                <div class="popup-actions">
+                    <button id="submit-btn">Submit</button>
+                    <button id="close-btn" type="button">Close</button>
+                </div>
+            </div>
+    </div>
+    </main>
+    <script src="home.js"></script>
+</body>
+</html>
+
+

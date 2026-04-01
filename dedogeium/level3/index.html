@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../">
+    <title>Level 1</title>
+    <!-- <link rel="stylesheet" href="level1.css"> -->
+     <link rel="stylesheet" href="level1.css">
+</head>
+<body>
+    <div id="game" width="100vw">
+        <img src="crystal attack.png"  id="crystal_attack" width="100px">
+        <div id="yes-no">
+            <div>
+                <p>Do you want to play?</p>
+            </div>
+            <div id="btns">
+                <button id="ok-btn">OK</button>
+                <button id="cancel-btn">Cancel</button>
+            </div>
+        </div>
+        <button id="skip-btn" style="display:none;">Next</button>
+        <div id="victory">
+            <p id="maybe-vic"></p>
+            <button id="bye-btn">Go back</button>
+        </div>
+        <div id="battle-row">
+            <div class="character-container player">
+                <div class="character-body">
+                    <img src="Im just a chill guy no background.png" width="102px">
+                    <p id="hlth">sdfgf</p>
+                </div>
+                <p class="speech" id="speech-good"></p>
+            </div>
+            <div class="character-container enemy">
+                <div class="character-body">
+                    <img src="second boss doge.png" width="102px">
+                    <p id="enemy-hlth">dfsg</p>
+                </div>
+                <p class="speech" id="speech-bad"></p>
+            </div>
+        </div>
+    </div>
+<script src="level3.js"></script>
+</body>
+</html>
+
+

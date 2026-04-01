@@ -7,8 +7,8 @@ window.addEventListener('DOMContentLoaded', function() {
     const listItemsContainer = document.querySelector(".list-items");
     const aprilFoolsDone = localStorage.getItem("aprilFoolsDone") === "true";
     if (aprilFoolsBox) {
-        const aprilFoolsHidden = localStorage.getItem("aprilFoolsBoxHidden") === "true";
-        aprilFoolsBox.style.display = aprilFoolsHidden ? "none" : "block";
+        localStorage.removeItem("aprilFoolsBoxHidden");
+        aprilFoolsBox.style.display = "block";
         const aprilFoolsCheckbox = document.getElementById('April-fools');
         if (aprilFoolsCheckbox) {
             const saved = localStorage.getItem("aprilFoolsEnabled") === "true";
@@ -26,15 +26,13 @@ window.addEventListener('DOMContentLoaded', function() {
                     renderInventoryList();
                     buildExchangeUI();
                 }
-                localStorage.setItem("aprilFoolsBoxHidden", "true");
-                aprilFoolsBox.style.display = "none";
             });
         }
     }
 
     // remove any floating player HP badge (we'll show HP in the stats instead)
     const existingHpBadge = document.getElementById('player-hp');
-    if (existingHpBadge) existingHpBadge.remove();
+    // if (existingHpBadge) existingHpBadge.remove();
 
     if (!listItemsContainer) return;
     

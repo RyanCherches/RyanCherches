@@ -220,12 +220,14 @@
             const password = document.getElementById("password");
             localStorage.setItem("password", password)
             if (username.toLowerCase() === "admin" && password == "rfcdabest") {
-                window.location.href = "main_admin.html";
+                window.location.href = routeBase + "main_admin/";
             } else {
-                window.location.href = "main_normal.html";
+                window.location.href = routeBase + "main_normal/";
             }
             
         }*/
+        const routeBase = window.location.pathname.endsWith('.html') ? '' : '../';
+
         function login() {
             const Username = document.getElementById("Username").value.trim().toLowerCase();
             const Password = document.getElementById("Password").value;
@@ -234,9 +236,10 @@
             localStorage.setItem("Password", Password); // Store password for later
 
             if (Username === "admin" && Password === "coolgame") {
-                window.location.href = "admin_page.html";
+                window.location.href = routeBase + "admin_page/";
             }
         }
     </script>
 </body>
 </html>
+

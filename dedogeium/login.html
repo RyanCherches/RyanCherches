@@ -221,12 +221,14 @@
             const password = document.getElementById("password");
             localStorage.setItem("password", password)
             if (username.toLowerCase() === "admin" && password == "rfcdabest") {
-                window.location.href = "main_admin.html";
+                window.location.href = routeBase + "main_admin/";
             } else {
-                window.location.href = "main_normal.html";
+                window.location.href = routeBase + "main_normal/";
             }
             
         }*/
+        const routeBase = window.location.pathname.endsWith('.html') ? '' : '../';
+
         function login() {
             const Username = document.getElementById("Username").value.trim().toLowerCase();
             const Password = document.getElementById("Password").value;
@@ -262,8 +264,9 @@
             })();
 
             alert("Login successful! Redirecting to the homepage...");
-            window.location.href = "index.html";
+            window.location.href = routeBase || "./";
         }
     </script>
 </body>
 </html>
+

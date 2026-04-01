@@ -11,7 +11,7 @@ main {
     justify-content:space-around;
     align-items:center;
     /* background-image: url("Rainbow Color GIF by Justin.gif"); */
-    background-color: green;
+    background-color:rgb(40, 82, 40);
     background-size: cover;
     color:white;
 }

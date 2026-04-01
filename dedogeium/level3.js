@@ -34,8 +34,10 @@ let inventory = JSON.parse(localStorage.getItem("inventory")) || [];
 const rarities = ["Common", "Uncommon", "Rare", "Epic", "Legendary"];
 const rarityWeights = [30, 39, 30, 1, 0]; // percentage weights
 
+const routeBase = window.location.pathname.endsWith('.html') ? '' : '../';
+
 home.addEventListener("click", function() {
-    window.location.href = "adventure.html";
+    window.location.href = routeBase + "adventure/";
 });
 
 window.onload = function() {
@@ -97,7 +99,7 @@ function applyEquipmentBonuses() {
 }
 
 cancel_btn.addEventListener("click", function() {
-    window.location.href = "adventure.html";
+    window.location.href = routeBase + "adventure/";
     
 });
 let speechTimeoutId = null;
@@ -437,4 +439,5 @@ document.addEventListener("keydown", (event) => {
         if (combat.active && combat.isPlayerTurn) { handlePlayerStop(); event.preventDefault(); }
     }
 });
+
 

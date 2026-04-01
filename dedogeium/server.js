@@ -110,5 +110,17 @@ app.post('/api/merge', requireAuth, (req, res) => {
 
 app.get('/api/health', (req, res) => res.json({ ok: true, now: Date.now() }));
 
+app.use(express.static(__dirname));
+
+app.get('/:page', (req, res, next) => {
+  const page = req.params.page;
+  if (!/^[A-Za-z0-9_-]+$/.test(page)) return next();
+
+  const htmlFile = path.join(__dirname, `${page}.html`);
+  if (!fs.existsSync(htmlFile)) return next();
+
+  res.sendFile(htmlFile);
+});
+
 // Bind to all interfaces so other local user accounts and machines on the LAN can reach it.
 app.listen(port, '0.0.0.0', () => console.log(`Dedogeium admin server running on http://0.0.0.0:${port} (data: ${PLAYERS_FILE})`));

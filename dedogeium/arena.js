@@ -1,0 +1,513 @@
+const refreshBtn = document.getElementById("refresh-btn");
+const playerNameEl = document.getElementById("player-name");
+const playerTitleEl = document.getElementById("player-title");
+const playerAvatarEl = document.getElementById("player-avatar");
+const playerDamageEl = document.getElementById("player-damage");
+const playerHealthEl = document.getElementById("player-health");
+const playerEquippedEl = document.getElementById("player-equipped");
+const connectionStatusEl = document.getElementById("connection-status");
+const playersOnlineEl = document.getElementById("players-online");
+const playersListEl = document.getElementById("players-list");
+const incomingListEl = document.getElementById("incoming-list");
+const outgoingListEl = document.getElementById("outgoing-list");
+const battleStageEl = document.getElementById("battle-stage");
+const turnBadgeEl = document.getElementById("turn-badge");
+const attackBtn = document.getElementById("attack-btn");
+const forfeitBtn = document.getElementById("forfeit-btn");
+const battleLogEl = document.getElementById("battle-log");
+const recentMatchesEl = document.getElementById("recent-matches");
+
+const pageOrigin = window.location.origin && window.location.origin !== "null" ? window.location.origin : "";
+const serverBase = (window.SERVER_URL || pageOrigin || "http://localhost:3000").replace(/\/$/, "");
+const arenaState = {
+    username: null,
+    profile: null,
+    overview: null,
+    activeMatchId: null,
+    refreshInFlight: false,
+    refreshTimer: null,
+};
+
+const rarityBonuses = {
+    "Doge": {
+        "Common": { damage: 2, health: 50 },
+        "Uncommon": { damage: 5, health: 100 },
+        "Rare": { damage: 10, health: 150 },
+        "Epic": { damage: 20, health: 250 },
+        "Legendary": { damage: 40, health: 400 },
+        "Godly": { damage: 80, health: 600 },
+        "Mythic": { damage: 120, health: 900 },
+        "rick astley": { damage: 35, health: 350 },
+    },
+    "Fire Doge": {
+        "Common": { damage: 4, health: 100 },
+        "Uncommon": { damage: 8, health: 160 },
+        "Rare": { damage: 15, health: 240 },
+        "Epic": { damage: 30, health: 375 },
+        "Legendary": { damage: 60, health: 600 },
+        "Godly": { damage: 120, health: 900 },
+        "Mythic": { damage: 170, health: 1200 },
+    },
+};
+
+function getCurrentUsername() {
+    const keys = ["Username", "Uabcd", "username", "playerName"];
+    for (const key of keys) {
+        const value = localStorage.getItem(key);
+        if (value) return String(value).trim().toLowerCase();
+    }
+    return "";
+}
+
+function assetUrl(fileName) {
+    if (!fileName) return "";
+    if (/^https?:\/\//i.test(fileName)) return fileName;
+    const clean = String(fileName).replace(/^\/+/, "");
+    if (/^https?:\/\//i.test(serverBase)) {
+        return `${serverBase}/${encodeURI(clean)}`;
+    }
+    const routeBase = window.location.pathname.includes("/arena/") ? "../" : "";
+    return `${routeBase}${clean}`;
+}
+
+function getAvatar() {
+    return localStorage.getItem("aprilFoolsEnabled") === "true"
+        ? assetUrl("rick astley doge.png")
+        : assetUrl("Im just a chill guy no background.png");
+}
+
+function getStoredNumber(keys) {
+    for (const key of keys) {
+        const value = localStorage.getItem(key);
+        if (value !== null) {
+            const parsed = Number(value);
+            if (Number.isFinite(parsed)) return parsed;
+        }
+    }
+    return 0;
+}
+
+function getEquippedItems() {
+    try {
+        return JSON.parse(localStorage.getItem("equippedItems")) || [];
+    } catch (error) {
+        return [];
+    }
+}
+
+function getItemBonus(item) {
+    const itemType = item && item.name === "Fire Doge" ? "Fire Doge" : "Doge";
+    const group = rarityBonuses[itemType] || {};
+    return group[item && item.rarity] || { damage: 0, health: 0 };
+}
+
+function buildProfile() {
+    const username = getCurrentUsername();
+    const equippedItems = getEquippedItems();
+    let totalDamage = 20;
+    let totalHealth = 500;
+
+    equippedItems.forEach((item) => {
+        const bonus = getItemBonus(item);
+        totalDamage += bonus.damage;
+        totalHealth += bonus.health;
+    });
+
+    totalHealth += getStoredNumber(["playerHP", "totalHP", "hpTotal", "total_hp", "hp"]);
+
+    return {
+        username,
+        displayName: username || "doge",
+        title: equippedItems.length ? "Geared Arena Fighter" : "Fresh Arena Fighter",
+        damage: totalDamage,
+        maxHealth: totalHealth,
+        avatar: getAvatar(),
+        equippedCount: equippedItems.length,
+    };
+}
+
+function setConnectionStatus(message, isError) {
+    connectionStatusEl.textContent = message;
+    connectionStatusEl.style.color = isError ? "#b91c1c" : "#124559";
+}
+
+async function api(path, options = {}) {
+    const response = await fetch(`${serverBase}${path}`, {
+        method: options.method || "GET",
+        headers: {
+            "Content-Type": "application/json",
+            ...(options.headers || {}),
+        },
+        body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        const message = data && data.error ? data.error : "The arena server request failed.";
+        throw new Error(message);
+    }
+    return data;
+}
+
+function formatTimeAgo(timestamp) {
+    if (!timestamp) return "just now";
+    const diffSeconds = Math.max(0, Math.round((Date.now() - timestamp) / 1000));
+    if (diffSeconds < 5) return "just now";
+    if (diffSeconds < 60) return `${diffSeconds}s ago`;
+    const diffMinutes = Math.round(diffSeconds / 60);
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    const diffHours = Math.round(diffMinutes / 60);
+    return `${diffHours}h ago`;
+}
+
+function renderSelf(profile) {
+    playerNameEl.textContent = profile.username || "Not logged in";
+    playerTitleEl.textContent = profile.title;
+    playerAvatarEl.src = profile.avatar;
+    playerDamageEl.textContent = String(profile.damage);
+    playerHealthEl.textContent = String(profile.maxHealth);
+    playerEquippedEl.textContent = String(profile.equippedCount);
+}
+
+function createEmptyState(message) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "empty-state";
+    wrapper.textContent = message;
+    return wrapper;
+}
+
+function renderPlayers(players) {
+    playersListEl.innerHTML = "";
+    if (!players.length) {
+        playersListEl.appendChild(createEmptyState("No other fighters are active on this LAN server yet."));
+        return;
+    }
+
+    players.forEach((player) => {
+        const card = document.createElement("div");
+        card.className = "player-row";
+
+        const challengeDisabled = player.status.type !== "ready";
+        let buttonLabel = "Challenge";
+        if (player.status.type === "incoming-challenge") buttonLabel = "Check Inbox";
+        if (player.status.type === "outgoing-challenge") buttonLabel = "Challenge Sent";
+        if (player.status.type === "in-match") buttonLabel = "In Match";
+
+        card.innerHTML = `
+            <div class="row-top">
+                <div>
+                    <p class="fighter-name">${player.profile.displayName}</p>
+                    <p class="meta-line">${player.profile.title}</p>
+                </div>
+                <span class="badge">${player.status.type.replace(/-/g, " ")}</span>
+            </div>
+            <p class="meta-line">Damage ${player.profile.damage} | Health ${player.profile.maxHealth}</p>
+            <p class="meta-line">Seen ${formatTimeAgo(player.lastSeen)}</p>
+        `;
+
+        const buttonRow = document.createElement("div");
+        buttonRow.className = "button-row";
+        const challengeBtn = document.createElement("button");
+        challengeBtn.type = "button";
+        challengeBtn.textContent = buttonLabel;
+        challengeBtn.disabled = challengeDisabled;
+        challengeBtn.addEventListener("click", () => sendChallenge(player.username));
+        buttonRow.appendChild(challengeBtn);
+        card.appendChild(buttonRow);
+        playersListEl.appendChild(card);
+    });
+}
+
+function renderIncomingChallenges(challenges) {
+    incomingListEl.innerHTML = "";
+    if (!challenges.length) {
+        incomingListEl.appendChild(createEmptyState("No one is challenging you right now."));
+        return;
+    }
+
+    challenges.forEach((challenge) => {
+        const card = document.createElement("div");
+        card.className = "challenge-card";
+        card.innerHTML = `
+            <div class="challenge-top">
+                <div>
+                    <p class="fighter-name">${challenge.fromProfile.displayName}</p>
+                    <p class="meta-line">${challenge.fromProfile.title}</p>
+                </div>
+                <span class="badge">pending</span>
+            </div>
+            <p class="meta-line">Damage ${challenge.fromProfile.damage} | Health ${challenge.fromProfile.maxHealth}</p>
+            <p class="meta-line">Sent ${formatTimeAgo(challenge.createdAt)}</p>
+        `;
+
+        const buttonRow = document.createElement("div");
+        buttonRow.className = "button-row";
+
+        const acceptBtn = document.createElement("button");
+        acceptBtn.type = "button";
+        acceptBtn.textContent = "Accept";
+        acceptBtn.addEventListener("click", () => respondToChallenge(challenge.id, true));
+
+        const declineBtn = document.createElement("button");
+        declineBtn.type = "button";
+        declineBtn.textContent = "Decline";
+        declineBtn.className = "secondary";
+        declineBtn.addEventListener("click", () => respondToChallenge(challenge.id, false));
+
+        buttonRow.appendChild(acceptBtn);
+        buttonRow.appendChild(declineBtn);
+        card.appendChild(buttonRow);
+        incomingListEl.appendChild(card);
+    });
+}
+
+function renderOutgoingChallenges(challenges) {
+    outgoingListEl.innerHTML = "";
+    if (!challenges.length) {
+        outgoingListEl.appendChild(createEmptyState("You have not challenged anyone yet."));
+        return;
+    }
+
+    challenges.forEach((challenge) => {
+        const card = document.createElement("div");
+        card.className = "challenge-card";
+        card.innerHTML = `
+            <div class="challenge-top">
+                <div>
+                    <p class="fighter-name">${challenge.toProfile.displayName}</p>
+                    <p class="meta-line">${challenge.toProfile.title}</p>
+                </div>
+                <span class="badge">${challenge.status}</span>
+            </div>
+            <p class="meta-line">Damage ${challenge.toProfile.damage} | Health ${challenge.toProfile.maxHealth}</p>
+            <p class="meta-line">Waiting ${formatTimeAgo(challenge.createdAt)}</p>
+        `;
+        outgoingListEl.appendChild(card);
+    });
+}
+
+function renderBattle(match, profile) {
+    battleStageEl.innerHTML = "";
+    battleLogEl.innerHTML = "";
+
+    if (!match) {
+        battleStageEl.className = "battle-stage empty-stage";
+        battleStageEl.textContent = "Accept a challenge or send one to start fighting.";
+        turnBadgeEl.textContent = "No active match";
+        turnBadgeEl.className = "badge muted";
+        attackBtn.disabled = true;
+        forfeitBtn.disabled = true;
+        battleLogEl.appendChild(createEmptyState("No swings yet."));
+        arenaState.activeMatchId = null;
+        return;
+    }
+
+    arenaState.activeMatchId = match.id;
+    battleStageEl.className = "battle-stage";
+
+    const fighters = [match.players.one, match.players.two];
+    fighters.forEach((fighter) => {
+        const currentPercent = Math.max(0, Math.min(100, (fighter.currentHealth / fighter.maxHealth) * 100));
+        const fighterCard = document.createElement("div");
+        fighterCard.className = "fighter-card";
+        fighterCard.innerHTML = `
+            <div class="fighter-top">
+                <img class="fighter-art" src="${fighter.avatar}" alt="${fighter.displayName}">
+                <div class="fighter-info">
+                    <p class="fighter-name">${fighter.displayName}</p>
+                    <p class="meta-line">${fighter.title}</p>
+                    <p class="meta-line">Damage ${fighter.damage}</p>
+                </div>
+            </div>
+            <div class="health-track">
+                <div class="health-bar" style="width:${currentPercent}%"></div>
+            </div>
+            <p class="meta-line">${fighter.currentHealth} / ${fighter.maxHealth} HP</p>
+        `;
+        battleStageEl.appendChild(fighterCard);
+    });
+
+    const yourTurn = match.canAttack;
+    const yourDisplayName = profile && profile.displayName ? profile.displayName : arenaState.username;
+    const badgeText = match.status === "finished"
+        ? (match.winner === arenaState.username ? "You won" : `${yourDisplayName} finished the match`)
+        : yourTurn
+            ? "Your turn"
+            : "Enemy turn";
+    turnBadgeEl.textContent = badgeText;
+    turnBadgeEl.className = yourTurn ? "badge" : "badge muted";
+
+    attackBtn.disabled = !yourTurn;
+    forfeitBtn.disabled = match.status !== "active";
+
+    if (Array.isArray(match.log) && match.log.length) {
+        match.log.slice().reverse().forEach((entry) => {
+            const line = document.createElement("div");
+            line.className = `log-entry ${entry.type === "system" ? "system" : ""}`.trim();
+            line.textContent = entry.text;
+            battleLogEl.appendChild(line);
+        });
+    } else {
+        battleLogEl.appendChild(createEmptyState("No swings yet."));
+    }
+}
+
+function renderRecentMatches(matches) {
+    recentMatchesEl.innerHTML = "";
+    if (!matches.length) {
+        recentMatchesEl.appendChild(createEmptyState("Your recent arena results will appear here."));
+        return;
+    }
+
+    matches.forEach((match) => {
+        const opponent = match.players.one.username === arenaState.username ? match.players.two : match.players.one;
+        const didWin = match.winner === arenaState.username;
+        const card = document.createElement("div");
+        card.className = "recent-match-card";
+        card.innerHTML = `
+            <p class="fighter-name">${didWin ? "Victory" : "Defeat"} vs ${opponent.displayName}</p>
+            <p class="meta-line">Finished ${formatTimeAgo(match.updatedAt)}</p>
+        `;
+        recentMatchesEl.appendChild(card);
+    });
+}
+
+function renderOverview(data) {
+    arenaState.overview = data;
+    playersOnlineEl.textContent = `${data.server.playersOnline} online`;
+    setConnectionStatus(`Connected to ${serverBase} on ${data.server.name}. Last sync ${new Date(data.server.now).toLocaleTimeString()}.`, false);
+
+    renderPlayers(data.players || []);
+    renderIncomingChallenges(data.incomingChallenges || []);
+    renderOutgoingChallenges(data.outgoingChallenges || []);
+    renderBattle(data.activeMatch || null, arenaState.profile);
+    renderRecentMatches(data.recentMatches || []);
+}
+
+async function refreshArena(manual) {
+    if (arenaState.refreshInFlight) return;
+    arenaState.username = getCurrentUsername();
+    arenaState.profile = buildProfile();
+    renderSelf(arenaState.profile);
+
+    if (!arenaState.username) {
+        setConnectionStatus("Log in first so the arena can announce you to the LAN server.", true);
+        playersListEl.innerHTML = "";
+        playersListEl.appendChild(createEmptyState("Login is required before you can search for nearby players."));
+        incomingListEl.innerHTML = "";
+        incomingListEl.appendChild(createEmptyState("Login is required before you can receive challenges."));
+        outgoingListEl.innerHTML = "";
+        outgoingListEl.appendChild(createEmptyState("Login is required before you can send challenges."));
+        renderBattle(null, null);
+        renderRecentMatches([]);
+        playersOnlineEl.textContent = "0 online";
+        return;
+    }
+
+    arenaState.refreshInFlight = true;
+    refreshBtn.disabled = true;
+    if (manual) setConnectionStatus("Searching the local network arena server...", false);
+
+    try {
+        const data = await api("/api/arena/presence", {
+            method: "POST",
+            body: {
+                username: arenaState.username,
+                profile: arenaState.profile,
+            },
+        });
+        renderOverview(data);
+    } catch (error) {
+        setConnectionStatus(`Arena server unavailable at ${serverBase}. ${error.message}`, true);
+    } finally {
+        arenaState.refreshInFlight = false;
+        refreshBtn.disabled = false;
+    }
+}
+
+async function sendChallenge(targetUsername) {
+    try {
+        await api("/api/arena/challenge", {
+            method: "POST",
+            body: {
+                from: arenaState.username,
+                to: targetUsername,
+                profile: arenaState.profile,
+            },
+        });
+        setConnectionStatus(`Challenge sent to ${targetUsername}.`, false);
+        await refreshArena(false);
+    } catch (error) {
+        setConnectionStatus(error.message, true);
+    }
+}
+
+async function respondToChallenge(challengeId, accept) {
+    try {
+        const data = await api(`/api/arena/challenge/${challengeId}/respond`, {
+            method: "POST",
+            body: {
+                username: arenaState.username,
+                accept,
+                profile: arenaState.profile,
+            },
+        });
+        if (accept && data.match) {
+            renderBattle(data.match, arenaState.profile);
+        }
+        await refreshArena(false);
+    } catch (error) {
+        setConnectionStatus(error.message, true);
+    }
+}
+
+async function attack() {
+    if (!arenaState.activeMatchId) return;
+    try {
+        const data = await api(`/api/arena/match/${arenaState.activeMatchId}/attack`, {
+            method: "POST",
+            body: {
+                username: arenaState.username,
+            },
+        });
+        renderBattle(data.match, arenaState.profile);
+        await refreshArena(false);
+    } catch (error) {
+        setConnectionStatus(error.message, true);
+    }
+}
+
+async function forfeitMatch() {
+    if (!arenaState.activeMatchId) return;
+    try {
+        const data = await api(`/api/arena/match/${arenaState.activeMatchId}/forfeit`, {
+            method: "POST",
+            body: {
+                username: arenaState.username,
+            },
+        });
+        renderBattle(data.match, arenaState.profile);
+        await refreshArena(false);
+    } catch (error) {
+        setConnectionStatus(error.message, true);
+    }
+}
+
+function startAutoRefresh() {
+    if (arenaState.refreshTimer) window.clearInterval(arenaState.refreshTimer);
+    arenaState.refreshTimer = window.setInterval(() => {
+        refreshArena(false);
+    }, 4000);
+}
+
+refreshBtn.addEventListener("click", () => refreshArena(true));
+attackBtn.addEventListener("click", attack);
+forfeitBtn.addEventListener("click", forfeitMatch);
+
+window.addEventListener("DOMContentLoaded", () => {
+    arenaState.username = getCurrentUsername();
+    arenaState.profile = buildProfile();
+    renderSelf(arenaState.profile);
+    refreshArena(true);
+    startAutoRefresh();
+});

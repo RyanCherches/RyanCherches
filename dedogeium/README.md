@@ -23,6 +23,13 @@ Configuration:
 - Edit `server_config.js` on each client to point `window.SERVER_URL` to `http://<server-ip>:3000`.
 - You can set environment variables in a `.env` or system env: `PORT` and `DATA_DIR`.
 
+LAN combat arena:
+
+- Start the Dedogeium server on one machine in the local network with `npm start`.
+- Edit `server_config.js` on every client so `window.SERVER_URL` points to that machine, for example `http://192.168.1.100:3000`.
+- Each player should log in, open `/arena/`, and press `Search LAN Players`.
+- Active players will appear in the arena list, where they can challenge each other and fight in a turn-based PvP match.
+
 Optional Basic auth:
 
 - To require a username/password for the admin endpoints, set `ADMIN_USER` and `ADMIN_PASS` as environment variables for the server process. Example (PowerShell):

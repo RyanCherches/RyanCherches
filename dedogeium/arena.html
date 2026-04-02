@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Combat Arena</title>
+    <link rel="stylesheet" href="arena.css">
+    <script src="server_config.js"></script>
+</head>
+<body>
+    <div class="arena-shell">
+        <header class="arena-header">
+            <div class="brand">
+                <img src="Im just a chill guy no background.png" alt="Doge fighter" class="brand-image">
+                <div>
+                    <p class="eyebrow">Dedogeium LAN</p>
+                    <h1>Combat Arena</h1>
+                </div>
+            </div>
+            <nav class="arena-nav">
+                <a href="home/">Home</a>
+                <a href="customize/">Customize</a>
+                <a href="adventure/">Adventure</a>
+                <a href="settings/">Settings</a>
+            </nav>
+        </header>
+
+        <main class="arena-grid">
+            <section class="panel player-panel">
+                <div class="panel-title-row">
+                    <div>
+                        <p class="eyebrow">Your Fighter</p>
+                        <h2 id="player-name">Not logged in</h2>
+                    </div>
+                    <button id="refresh-btn" type="button">Search LAN Players</button>
+                </div>
+                <div class="player-card">
+                    <img id="player-avatar" src="Im just a chill guy no background.png" alt="Your fighter">
+                    <div class="player-stats">
+                        <p id="player-title">Arena Fighter</p>
+                        <div class="stat-pill-row">
+                            <span class="stat-pill">Damage <strong id="player-damage">20</strong></span>
+                            <span class="stat-pill">Health <strong id="player-health">500</strong></span>
+                            <span class="stat-pill">Equipped <strong id="player-equipped">0</strong></span>
+                        </div>
+                    </div>
+                </div>
+                <p id="connection-status" class="status-text">Waiting for server...</p>
+                <p class="helper-text">
+                    Everyone on the local network should point <code>server_config.js</code> at the same Dedogeium server IP, then open this arena page.
+                </p>
+            </section>
+
+            <section class="panel players-panel">
+                <div class="panel-title-row">
+                    <div>
+                        <p class="eyebrow">Players Nearby</p>
+                        <h2>LAN Search Results</h2>
+                    </div>
+                    <span id="players-online" class="badge">0 online</span>
+                </div>
+                <div id="players-list" class="list-stack empty-state">
+                    Search the LAN to look for active fighters.
+                </div>
+            </section>
+
+            <section class="panel inbox-panel">
+                <div class="panel-title-row">
+                    <div>
+                        <p class="eyebrow">Incoming</p>
+                        <h2>Challenges</h2>
+                    </div>
+                </div>
+                <div id="incoming-list" class="list-stack empty-state">
+                    No one is challenging you right now.
+                </div>
+                <div class="subsection">
+                    <p class="eyebrow">Outgoing</p>
+                    <div id="outgoing-list" class="list-stack empty-state">
+                        You have not challenged anyone yet.
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel battle-panel">
+                <div class="panel-title-row">
+                    <div>
+                        <p class="eyebrow">Arena Floor</p>
+                        <h2>Battle</h2>
+                    </div>
+                    <span id="turn-badge" class="badge muted">No active match</span>
+                </div>
+                <div id="battle-stage" class="battle-stage empty-stage">
+                    Accept a challenge or send one to start fighting.
+                </div>
+                <div class="battle-actions">
+                    <button id="attack-btn" type="button" disabled>Attack</button>
+                    <button id="forfeit-btn" type="button" class="secondary" disabled>Forfeit</button>
+                </div>
+                <div class="subsection">
+                    <p class="eyebrow">Battle Log</p>
+                    <div id="battle-log" class="battle-log empty-state">
+                        No swings yet.
+                    </div>
+                </div>
+                <div class="subsection">
+                    <p class="eyebrow">Recent Matches</p>
+                    <div id="recent-matches" class="list-stack empty-state">
+                        Your recent arena results will appear here.
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="arena.js"></script>
+</body>
+</html>

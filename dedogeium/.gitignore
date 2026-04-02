@@ -1,0 +1,4 @@
+node_modules/
+arena-server.err.txt
+arena-server.out.txt
+.arena-test-data/

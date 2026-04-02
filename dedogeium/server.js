@@ -7,7 +7,9 @@ const app = express();
 
 // Store server data in a machine-wide location so all local accounts share it.
 const PROGRAM_DATA = process.env.PROGRAMDATA || (process.platform === 'win32' ? 'C:\\ProgramData' : '/var/local');
-const DATA_DIR = process.env.DATA_DIR || path.join(PROGRAM_DATA, 'dedogeium_server_data');
+const DEFAULT_DATA_DIR = path.join(PROGRAM_DATA, 'dedogeium_server_data');
+const LOCAL_FALLBACK_DATA_DIR = path.join(__dirname, 'data');
+const DATA_DIR = resolveWritableDataDir();
 const PLAYERS_FILE = path.join(DATA_DIR, 'players.json');
 const ARENA_FILE = path.join(DATA_DIR, 'arena.json');
 const port = process.env.PORT || 3000;
@@ -29,6 +31,28 @@ app.use((req, res, next) => {
 // Optional Basic auth: set ADMIN_USER and ADMIN_PASS env vars to enable.
 const ADMIN_USER = process.env.ADMIN_USER || null;
 const ADMIN_PASS = process.env.ADMIN_PASS || null;
+
+function resolveWritableDataDir() {
+  const candidates = [];
+  if (process.env.DATA_DIR) candidates.push(process.env.DATA_DIR);
+  candidates.push(DEFAULT_DATA_DIR);
+  candidates.push(LOCAL_FALLBACK_DATA_DIR);
+
+  let lastError = null;
+  for (const candidate of candidates) {
+    try {
+      fs.mkdirSync(candidate, { recursive: true });
+      const probeFile = path.join(candidate, '.dedogeium-write-test');
+      fs.writeFileSync(probeFile, 'ok', 'utf8');
+      fs.unlinkSync(probeFile);
+      return candidate;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error('Could not find a writable data directory for Dedogeium.');
+}
 
 function requireAuth(req, res, next) {
   if (!ADMIN_USER || !ADMIN_PASS) return next(); // auth disabled

@@ -217,7 +217,7 @@ function createEmptyState(message) {
 function renderPlayers(players) {
     playersListEl.innerHTML = "";
     if (!players.length) {
-        playersListEl.appendChild(createEmptyState("No other fighters are active on this LAN server yet."));
+        playersListEl.appendChild(createEmptyState("No opponents are online yet. If another device is open, make sure it is on the arena page and logged in with a different username."));
         return;
     }
 
@@ -412,7 +412,15 @@ function renderRecentMatches(matches) {
 
 function renderOverview(data) {
     arenaState.overview = data;
-    playersOnlineEl.textContent = `${data.server.playersOnline} online`;
+    const opponentCount = Array.isArray(data.players) ? data.players.length : 0;
+    const totalOnline = Number(data.server.playersOnline) || 0;
+    if (opponentCount > 0) {
+        playersOnlineEl.textContent = `${opponentCount} opponents | ${totalOnline} total`;
+    } else if (totalOnline > 0) {
+        playersOnlineEl.textContent = `0 opponents | ${totalOnline} total`;
+    } else {
+        playersOnlineEl.textContent = "0 online";
+    }
     setConnectionStatus(`Connected to ${serverBase} on ${data.server.name}. Last sync ${new Date(data.server.now).toLocaleTimeString()}.`, false);
 
     renderPlayers(data.players || []);

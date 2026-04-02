@@ -21,7 +21,9 @@ const saveServerBtn = document.getElementById("save-server-btn");
 
 const pageOrigin = window.location.origin && window.location.origin !== "null" ? window.location.origin : "";
 const serverStorageKey = window.DEDOGEIUM_SERVER_STORAGE_KEY || "dedogeiumServerUrl";
-let serverBase = (window.SERVER_URL || pageOrigin || "").replace(/\/$/, "");
+const attackEffectDurationMs = 820;
+let serverBase = "";
+
 const arenaState = {
     username: null,
     profile: null,
@@ -29,6 +31,11 @@ const arenaState = {
     activeMatchId: null,
     refreshInFlight: false,
     refreshTimer: null,
+    lastMatchId: null,
+    lastAnimatedAttackKey: null,
+    lastWinnerKey: null,
+    audioContext: null,
+    battleMusic: null,
 };
 
 const rarityBonuses = {
@@ -53,6 +60,27 @@ const rarityBonuses = {
     },
 };
 
+function normalizeServerUrl(value) {
+    const trimmed = String(value || "").trim();
+    if (!trimmed) return "";
+    const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
+    try {
+        const parsed = new URL(withProtocol);
+        return `${parsed.protocol}//${parsed.host}`;
+    } catch (error) {
+        return "";
+    }
+}
+
+function initializeServerBase() {
+    const resolved = normalizeServerUrl(window.SERVER_URL) || normalizeServerUrl(pageOrigin);
+    serverBase = resolved;
+    if (serverBase) {
+        window.SERVER_URL = serverBase;
+        localStorage.setItem(serverStorageKey, serverBase);
+    }
+}
+
 function getCurrentUsername() {
     const keys = ["Username", "Uabcd", "username", "playerName"];
     for (const key of keys) {
@@ -66,9 +94,7 @@ function assetUrl(fileName) {
     if (!fileName) return "";
     if (/^https?:\/\//i.test(fileName)) return fileName;
     const clean = String(fileName).replace(/^\/+/, "");
-    if (/^https?:\/\//i.test(serverBase)) {
-        return `${serverBase}/${encodeURI(clean)}`;
-    }
+    if (serverBase) return `${serverBase}/${encodeURI(clean)}`;
     const routeBase = window.location.pathname.includes("/arena/") ? "../" : "";
     return `${routeBase}${clean}`;
 }
@@ -134,15 +160,6 @@ function setConnectionStatus(message, isError) {
     connectionStatusEl.style.color = isError ? "#b91c1c" : "#124559";
 }
 
-function normalizeServerUrl(value) {
-    const trimmed = String(value || "").trim().replace(/\/$/, "");
-    if (!trimmed) return "";
-    if (!/^https?:\/\//i.test(trimmed)) {
-        return `http://${trimmed}`;
-    }
-    return trimmed;
-}
-
 function syncServerInput() {
     if (!serverUrlInput) return;
     serverUrlInput.value = serverBase;
@@ -170,6 +187,7 @@ async function api(path, options = {}) {
     if (!hasConfiguredServer()) {
         throw new Error("Set the Arena Server URL first.");
     }
+
     const response = await fetch(`${serverBase}${path}`, {
         method: options.method || "GET",
         headers: {
@@ -212,6 +230,73 @@ function createEmptyState(message) {
     wrapper.className = "empty-state";
     wrapper.textContent = message;
     return wrapper;
+}
+
+function getAudioContext() {
+    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextCtor) return null;
+    if (!arenaState.audioContext) {
+        arenaState.audioContext = new AudioContextCtor();
+    }
+    if (arenaState.audioContext.state === "suspended") {
+        arenaState.audioContext.resume().catch(() => {});
+    }
+    return arenaState.audioContext;
+}
+
+function playTone(frequency, startAt, duration, volume, type) {
+    const context = getAudioContext();
+    if (!context) return;
+
+    const oscillator = context.createOscillator();
+    const gainNode = context.createGain();
+    oscillator.type = type || "sine";
+    oscillator.frequency.setValueAtTime(frequency, startAt);
+    gainNode.gain.setValueAtTime(0.0001, startAt);
+    gainNode.gain.exponentialRampToValueAtTime(volume, startAt + 0.01);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+    oscillator.connect(gainNode);
+    gainNode.connect(context.destination);
+    oscillator.start(startAt);
+    oscillator.stop(startAt + duration + 0.02);
+}
+
+function playAttackSound(damage) {
+    const context = getAudioContext();
+    if (!context) return;
+    const now = context.currentTime;
+    playTone(220, now, 0.12, 0.08, "square");
+    playTone(Math.min(880, 320 + damage), now + 0.05, 0.16, 0.05, "sawtooth");
+}
+
+function playVictorySound() {
+    const context = getAudioContext();
+    if (!context) return;
+    const now = context.currentTime;
+    playTone(392, now, 0.16, 0.06, "triangle");
+    playTone(523.25, now + 0.12, 0.18, 0.06, "triangle");
+    playTone(659.25, now + 0.24, 0.24, 0.07, "triangle");
+}
+
+function ensureBattleMusicPlaying() {
+    if (!hasConfiguredServer()) return;
+    if (!arenaState.battleMusic) {
+        arenaState.battleMusic = new Audio(assetUrl("during fight.mp3"));
+        arenaState.battleMusic.loop = true;
+    }
+    const nextSrc = assetUrl("during fight.mp3");
+    if (arenaState.battleMusic.src !== nextSrc) {
+        arenaState.battleMusic.src = nextSrc;
+        arenaState.battleMusic.loop = true;
+    }
+    const volume = Math.min(1, Math.max(0, (Number(localStorage.getItem("musicVolume")) || 45) / 100));
+    arenaState.battleMusic.volume = volume * 0.35;
+    arenaState.battleMusic.play().catch(() => {});
+}
+
+function stopBattleMusic() {
+    if (!arenaState.battleMusic) return;
+    arenaState.battleMusic.pause();
 }
 
 function renderPlayers(players) {
@@ -324,51 +409,165 @@ function renderOutgoingChallenges(challenges) {
     });
 }
 
+function createFighterCard(fighter, options) {
+    const isTurn = options.isTurn;
+    const isSelf = options.isSelf;
+    const isWinner = options.isWinner;
+    const isLoser = options.isLoser;
+    const currentPercent = Math.max(0, Math.min(100, (fighter.currentHealth / fighter.maxHealth) * 100));
+    const card = document.createElement("article");
+    card.className = "fighter-card stage-fighter";
+    if (isTurn) card.classList.add("turn-focus");
+    if (isSelf) card.classList.add("self-fighter");
+    if (isWinner) card.classList.add("is-victorious");
+    if (isLoser) card.classList.add("is-defeated");
+    card.dataset.username = fighter.username;
+    card.dataset.side = options.side;
+    card.innerHTML = `
+        <div class="fighter-aura"></div>
+        <div class="fighter-top">
+            <img class="fighter-art" src="${fighter.avatar}" alt="${fighter.displayName}">
+            <div class="fighter-info">
+                <p class="fighter-name">${fighter.displayName}</p>
+                <p class="meta-line">${fighter.title}</p>
+                <p class="meta-line">Damage ${fighter.damage}</p>
+                <p class="stance-line">${isTurn ? "Charging attack" : "Holding position"}</p>
+            </div>
+        </div>
+        <div class="health-track">
+            <div class="health-bar" style="width:${currentPercent}%"></div>
+        </div>
+        <div class="fighter-footer">
+            <p class="meta-line">${fighter.currentHealth} / ${fighter.maxHealth} HP</p>
+            <span class="badge ${isTurn ? "" : "muted"}">${isSelf ? "You" : "Opponent"}</span>
+        </div>
+    `;
+    return card;
+}
+
+function renderBattleLog(log) {
+    battleLogEl.innerHTML = "";
+    if (!Array.isArray(log) || !log.length) {
+        battleLogEl.appendChild(createEmptyState("No swings yet."));
+        return;
+    }
+
+    log.slice().reverse().forEach((entry) => {
+        const line = document.createElement("div");
+        line.className = `log-entry ${entry.type === "system" ? "system" : "attack"}`.trim();
+        line.textContent = entry.text;
+        battleLogEl.appendChild(line);
+    });
+}
+
+function findFighterNode(username) {
+    return Array.from(battleStageEl.querySelectorAll(".stage-fighter")).find((node) => node.dataset.username === username) || null;
+}
+
+function clearStageFxClasses() {
+    battleStageEl.classList.remove("is-striking", "fx-left-to-right", "fx-right-to-left", "victory-flash");
+}
+
+function triggerAttackEffect(match, attackEntry) {
+    if (!attackEntry) return;
+    const attackerNode = findFighterNode(attackEntry.attacker);
+    const defenderNode = findFighterNode(attackEntry.defender);
+    const damageBurst = battleStageEl.querySelector(".damage-burst");
+    const directionClass = match.players.one.username === attackEntry.attacker ? "fx-left-to-right" : "fx-right-to-left";
+
+    clearStageFxClasses();
+    void battleStageEl.offsetWidth;
+    battleStageEl.classList.add("is-striking", directionClass);
+    if (attackerNode) attackerNode.classList.add("is-attacking");
+    if (defenderNode) defenderNode.classList.add("is-hit");
+    if (damageBurst) damageBurst.textContent = `-${attackEntry.damage}`;
+
+    playAttackSound(attackEntry.damage);
+
+    window.setTimeout(() => {
+        battleStageEl.classList.remove("is-striking", directionClass);
+        if (attackerNode) attackerNode.classList.remove("is-attacking");
+        if (defenderNode) defenderNode.classList.remove("is-hit");
+    }, attackEffectDurationMs);
+}
+
+function triggerVictoryEffect(match) {
+    const winnerNode = findFighterNode(match.winner);
+    const loserUsername = match.players.one.username === match.winner ? match.players.two.username : match.players.one.username;
+    const loserNode = findFighterNode(loserUsername);
+    battleStageEl.classList.add("victory-flash");
+    if (winnerNode) winnerNode.classList.add("is-victorious");
+    if (loserNode) loserNode.classList.add("is-defeated");
+    playVictorySound();
+}
+
 function renderBattle(match, profile) {
     battleStageEl.innerHTML = "";
-    battleLogEl.innerHTML = "";
 
     if (!match) {
+        stopBattleMusic();
         battleStageEl.className = "battle-stage empty-stage";
         battleStageEl.textContent = "Accept a challenge or send one to start fighting.";
         turnBadgeEl.textContent = "No active match";
         turnBadgeEl.className = "badge muted";
         attackBtn.disabled = true;
         forfeitBtn.disabled = true;
-        battleLogEl.appendChild(createEmptyState("No swings yet."));
+        renderBattleLog([]);
         arenaState.activeMatchId = null;
+        arenaState.lastMatchId = null;
+        arenaState.lastAnimatedAttackKey = null;
+        arenaState.lastWinnerKey = null;
         return;
     }
 
     arenaState.activeMatchId = match.id;
-    battleStageEl.className = "battle-stage";
+    if (arenaState.lastMatchId !== match.id) {
+        arenaState.lastMatchId = match.id;
+        arenaState.lastAnimatedAttackKey = null;
+        arenaState.lastWinnerKey = null;
+    }
+
+    if (match.status === "active") {
+        ensureBattleMusicPlaying();
+    } else {
+        stopBattleMusic();
+    }
+
+    battleStageEl.className = `battle-stage live-stage ${match.status === "finished" ? "battle-finished" : ""}`;
+    battleStageEl.innerHTML = `
+        <div class="stage-atmosphere"></div>
+        <div class="stage-gridlines"></div>
+        <div class="center-emblem">
+            <span>${match.status === "finished" ? "KO" : "VS"}</span>
+            <small>${match.status === "finished" ? "Match over" : "Arena clash"}</small>
+        </div>
+        <div class="attack-fx" aria-hidden="true">
+            <div class="attack-slash"></div>
+            <div class="impact-ring"></div>
+            <div class="damage-burst"></div>
+        </div>
+    `;
 
     const fighters = [match.players.one, match.players.two];
-    fighters.forEach((fighter) => {
-        const currentPercent = Math.max(0, Math.min(100, (fighter.currentHealth / fighter.maxHealth) * 100));
-        const fighterCard = document.createElement("div");
-        fighterCard.className = "fighter-card";
-        fighterCard.innerHTML = `
-            <div class="fighter-top">
-                <img class="fighter-art" src="${fighter.avatar}" alt="${fighter.displayName}">
-                <div class="fighter-info">
-                    <p class="fighter-name">${fighter.displayName}</p>
-                    <p class="meta-line">${fighter.title}</p>
-                    <p class="meta-line">Damage ${fighter.damage}</p>
-                </div>
-            </div>
-            <div class="health-track">
-                <div class="health-bar" style="width:${currentPercent}%"></div>
-            </div>
-            <p class="meta-line">${fighter.currentHealth} / ${fighter.maxHealth} HP</p>
-        `;
-        battleStageEl.appendChild(fighterCard);
+    fighters.forEach((fighter, index) => {
+        const isSelf = fighter.username === arenaState.username;
+        const isTurn = match.status === "active" && match.currentTurn === fighter.username;
+        const isWinner = match.status === "finished" && match.winner === fighter.username;
+        const isLoser = match.status === "finished" && match.winner && match.winner !== fighter.username;
+        battleStageEl.appendChild(createFighterCard(fighter, {
+            side: index === 0 ? "left" : "right",
+            isTurn,
+            isSelf,
+            isWinner,
+            isLoser,
+        }));
     });
 
     const yourTurn = match.canAttack;
     const yourDisplayName = profile && profile.displayName ? profile.displayName : arenaState.username;
+    const opponent = match.players.one.username === arenaState.username ? match.players.two : match.players.one;
     const badgeText = match.status === "finished"
-        ? (match.winner === arenaState.username ? "You won" : `${yourDisplayName} finished the match`)
+        ? (match.winner === arenaState.username ? `Victory over ${opponent.displayName}` : `Defeat vs ${opponent.displayName}`)
         : yourTurn
             ? "Your turn"
             : "Enemy turn";
@@ -378,15 +577,19 @@ function renderBattle(match, profile) {
     attackBtn.disabled = !yourTurn;
     forfeitBtn.disabled = match.status !== "active";
 
-    if (Array.isArray(match.log) && match.log.length) {
-        match.log.slice().reverse().forEach((entry) => {
-            const line = document.createElement("div");
-            line.className = `log-entry ${entry.type === "system" ? "system" : ""}`.trim();
-            line.textContent = entry.text;
-            battleLogEl.appendChild(line);
-        });
-    } else {
-        battleLogEl.appendChild(createEmptyState("No swings yet."));
+    renderBattleLog(match.log || []);
+
+    const latestAttack = (match.log || []).filter((entry) => entry.type === "attack").slice(-1)[0] || null;
+    const attackKey = latestAttack ? `${match.id}:${latestAttack.at}:${latestAttack.damage}` : null;
+    if (attackKey && arenaState.lastAnimatedAttackKey !== attackKey) {
+        arenaState.lastAnimatedAttackKey = attackKey;
+        triggerAttackEffect(match, latestAttack);
+    }
+
+    const winnerKey = match.status === "finished" ? `${match.id}:${match.winner}:${match.updatedAt}` : null;
+    if (winnerKey && arenaState.lastWinnerKey !== winnerKey) {
+        arenaState.lastWinnerKey = winnerKey;
+        triggerVictoryEffect(match);
     }
 }
 
@@ -421,8 +624,8 @@ function renderOverview(data) {
     } else {
         playersOnlineEl.textContent = "0 online";
     }
-    setConnectionStatus(`Connected to ${serverBase} on ${data.server.name}. Last sync ${new Date(data.server.now).toLocaleTimeString()}.`, false);
 
+    setConnectionStatus(`Connected to ${serverBase} on ${data.server.name}. Last sync ${new Date(data.server.now).toLocaleTimeString()}.`, false);
     renderPlayers(data.players || []);
     renderIncomingChallenges(data.incomingChallenges || []);
     renderOutgoingChallenges(data.outgoingChallenges || []);
@@ -466,7 +669,7 @@ async function refreshArena(manual) {
 
     arenaState.refreshInFlight = true;
     refreshBtn.disabled = true;
-    if (manual) setConnectionStatus("Searching the local network arena server...", false);
+    if (manual) setConnectionStatus("Scanning the arena server and locking in your fighter profile...", false);
 
     try {
         const data = await api("/api/arena/presence", {
@@ -486,6 +689,7 @@ async function refreshArena(manual) {
 }
 
 async function sendChallenge(targetUsername) {
+    getAudioContext();
     try {
         await api("/api/arena/challenge", {
             method: "POST",
@@ -503,6 +707,7 @@ async function sendChallenge(targetUsername) {
 }
 
 async function respondToChallenge(challengeId, accept) {
+    getAudioContext();
     try {
         const data = await api(`/api/arena/challenge/${challengeId}/respond`, {
             method: "POST",
@@ -513,6 +718,7 @@ async function respondToChallenge(challengeId, accept) {
             },
         });
         if (accept && data.match) {
+            ensureBattleMusicPlaying();
             renderBattle(data.match, arenaState.profile);
         }
         await refreshArena(false);
@@ -523,6 +729,7 @@ async function respondToChallenge(challengeId, accept) {
 
 async function attack() {
     if (!arenaState.activeMatchId) return;
+    getAudioContext();
     try {
         const data = await api(`/api/arena/match/${arenaState.activeMatchId}/attack`, {
             method: "POST",
@@ -539,6 +746,7 @@ async function attack() {
 
 async function forfeitMatch() {
     if (!arenaState.activeMatchId) return;
+    getAudioContext();
     try {
         const data = await api(`/api/arena/match/${arenaState.activeMatchId}/forfeit`, {
             method: "POST",
@@ -575,7 +783,10 @@ if (serverUrlInput) {
     });
 }
 
+window.addEventListener("beforeunload", stopBattleMusic);
+
 window.addEventListener("DOMContentLoaded", () => {
+    initializeServerBase();
     arenaState.username = getCurrentUsername();
     arenaState.profile = buildProfile();
     renderSelf(arenaState.profile);

@@ -4,6 +4,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "tunnel:quick": "powershell -ExecutionPolicy Bypass -File start_cloudflare_tunnel.ps1",
+    "arena:public": "powershell -ExecutionPolicy Bypass -File start_public_arena.ps1",
     "docker-build": "docker build -t dedogeium .",
     "docker-up": "docker compose up -d",
     "backup": "powershell -ExecutionPolicy Bypass -File backup_players.ps1"

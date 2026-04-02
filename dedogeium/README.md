@@ -20,15 +20,31 @@ npm start
 The server listens on `PORT` (default `3000`) and stores data in `DATA_DIR` (default `%PROGRAMDATA%\dedogeium_server_data`).
 
 Configuration:
-- Edit `server_config.js` on each client to point `window.SERVER_URL` to `http://<server-ip>:3000`.
+- The browser now prefers the same origin you opened the page from, then falls back to a saved server URL if needed.
 - You can set environment variables in a `.env` or system env: `PORT` and `DATA_DIR`.
 
-LAN combat arena:
+Arena combat:
 
 - Start the Dedogeium server on one machine in the local network with `npm start`.
-- Edit `server_config.js` on every client so `window.SERVER_URL` points to that machine, for example `http://192.168.1.100:3000`.
 - Each player should log in, open `/arena/`, and press `Search LAN Players`.
 - Active players will appear in the arena list, where they can challenge each other and fight in a turn-based PvP match.
+- For free cross-network play, the easiest option is to open Dedogeium through a free Tailscale address or another tunnel/public URL. When the arena page is opened from that address, it will automatically try to use the same server.
+
+Free Cloudflare Quick Tunnel:
+
+- Start Dedogeium with `npm start`.
+- In a second terminal, run `npm run tunnel:quick`.
+- The script will create a temporary public `trycloudflare.com` link that forwards to your local Dedogeium server.
+- The tunnel script will print a clear `Arena URL` line that you can copy and share.
+- Share that public link with other players and have them open `/arena/` from the same address.
+- Keep both terminals open while you play. The Quick Tunnel is temporary and meant for testing.
+
+One-command public arena shortcut:
+
+- Run `npm run arena:public`.
+- This shortcut starts Dedogeium on port `3000` if it is not already running, then opens a Cloudflare Quick Tunnel for it.
+- It prints the public Dedogeium URL and the exact `Arena URL` to share.
+- When you stop the tunnel with `Ctrl+C`, the shortcut also stops the Dedogeium server if it started it for you.
 
 Optional Basic auth:
 

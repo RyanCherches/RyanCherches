@@ -1,0 +1,6 @@
+Dedogeium server running on port 3051
+Local: http://127.0.0.1:3051
+LAN:   http://192.168.1.163:3051
+Arena: http://127.0.0.1:3051/arena/
+Arena: http://192.168.1.163:3051/arena/
+Data:  C:\ProgramData\dedogeium_server_data

@@ -3,6 +3,8 @@
   "private": true,
   "scripts": {
     "start": "npm --prefix dedogeium start",
-    "install:dedogeium": "npm --prefix dedogeium install"
+    "install:dedogeium": "npm --prefix dedogeium install",
+    "tunnel:quick": "powershell -ExecutionPolicy Bypass -File dedogeium\\start_cloudflare_tunnel.ps1",
+    "arena:public": "powershell -ExecutionPolicy Bypass -File dedogeium\\start_public_arena.ps1"
   }
 }

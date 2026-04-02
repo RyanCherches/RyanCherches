@@ -24,6 +24,7 @@ const pageOrigin = window.location.origin && window.location.origin !== "null" ?
 const serverStorageKey = window.DEDOGEIUM_SERVER_STORAGE_KEY || "dedogeiumServerUrl";
 const attackEffectDurationMs = 820;
 let serverBase = "";
+let serverCandidates = [];
 
 const arenaState = {
     username: null,
@@ -73,13 +74,39 @@ function normalizeServerUrl(value) {
     }
 }
 
-function initializeServerBase() {
-    const resolved = normalizeServerUrl(window.SERVER_URL) || normalizeServerUrl(pageOrigin);
-    serverBase = resolved;
-    if (serverBase) {
-        window.SERVER_URL = serverBase;
-        localStorage.setItem(serverStorageKey, serverBase);
+function buildServerCandidates(extraValues) {
+    const values = [
+        ...(Array.isArray(extraValues) ? extraValues : []),
+        window.SERVER_URL,
+        ...(Array.isArray(window.DEDOGEIUM_SERVER_CANDIDATES) ? window.DEDOGEIUM_SERVER_CANDIDATES : []),
+        localStorage.getItem(serverStorageKey),
+        pageOrigin,
+    ];
+    return Array.from(new Set(values.map(normalizeServerUrl).filter(Boolean)));
+}
+
+function applyServerBase(nextUrl, persist) {
+    const normalized = normalizeServerUrl(nextUrl);
+    if (!normalized) return "";
+    serverBase = normalized;
+    serverCandidates = buildServerCandidates([normalized]);
+    window.SERVER_URL = normalized;
+    window.DEDOGEIUM_SERVER_CANDIDATES = serverCandidates;
+    if (persist !== false) {
+        localStorage.setItem(serverStorageKey, normalized);
     }
+    syncServerInput();
+    return normalized;
+}
+
+function initializeServerBase() {
+    const resolved = buildServerCandidates()[0] || "";
+    if (resolved) {
+        applyServerBase(resolved, true);
+        return;
+    }
+    serverCandidates = [];
+    syncServerInput();
 }
 
 function getCurrentUsername() {
@@ -163,19 +190,16 @@ function setConnectionStatus(message, isError) {
 
 function syncServerInput() {
     if (!serverUrlInput) return;
-    serverUrlInput.value = serverBase;
+    serverUrlInput.value = serverBase || "";
 }
 
 function saveServerUrl() {
     const nextUrl = normalizeServerUrl(serverUrlInput ? serverUrlInput.value : "");
     if (!nextUrl) {
-        setConnectionStatus("Enter a server URL like http://192.168.1.100:3000 first.", true);
+        setConnectionStatus("Enter a server URL like https://your-server.example or http://192.168.1.100:3000 first.", true);
         return;
     }
-    serverBase = nextUrl;
-    localStorage.setItem(serverStorageKey, nextUrl);
-    window.SERVER_URL = nextUrl;
-    syncServerInput();
+    applyServerBase(nextUrl, true);
     setConnectionStatus(`Arena server saved as ${nextUrl}.`, false);
     refreshArena(true);
 }
@@ -189,21 +213,47 @@ async function api(path, options = {}) {
         throw new Error("Set the Arena Server URL first.");
     }
 
-    const response = await fetch(`${serverBase}${path}`, {
-        method: options.method || "GET",
-        headers: {
-            "Content-Type": "application/json",
-            ...(options.headers || {}),
-        },
-        body: options.body ? JSON.stringify(options.body) : undefined,
-    });
+    const candidates = buildServerCandidates([serverBase]);
+    let lastError = null;
 
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-        const message = data && data.error ? data.error : "The arena server request failed.";
-        throw new Error(message);
+    for (const candidate of candidates) {
+        const isLastCandidate = candidate === candidates[candidates.length - 1];
+        try {
+            const response = await fetch(`${candidate}${path}`, {
+                method: options.method || "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(options.headers || {}),
+                },
+                body: options.body ? JSON.stringify(options.body) : undefined,
+            });
+
+            const data = await response.json().catch(() => ({}));
+            if (response.ok) {
+                if (candidate !== serverBase) {
+                    applyServerBase(candidate, true);
+                }
+                return data;
+            }
+
+            const message = data && data.error ? data.error : "The arena server request failed.";
+            const shouldFallback = [404, 502, 503, 504].includes(response.status) && !isLastCandidate;
+            if (shouldFallback) {
+                const retryableError = new Error(message);
+                retryableError.retryable = true;
+                throw retryableError;
+            }
+            throw new Error(message);
+        } catch (error) {
+            lastError = error;
+            const shouldRetry = !isLastCandidate && (error && error.retryable === true || error && error.name === "TypeError");
+            if (!shouldRetry) {
+                throw error;
+            }
+        }
     }
-    return data;
+
+    throw lastError || new Error("The arena server request failed.");
 }
 
 function formatTimeAgo(timestamp) {
@@ -677,13 +727,13 @@ async function refreshArena(manual) {
     }
 
     if (!hasConfiguredServer()) {
-        setConnectionStatus("Enter the Arena Server URL first, like http://192.168.1.100:3000.", true);
+        setConnectionStatus("Open the arena from your server link, or enter one manually first.", true);
         playersListEl.innerHTML = "";
-        playersListEl.appendChild(createEmptyState("No server is configured yet. Enter the LAN server URL above."));
+        playersListEl.appendChild(createEmptyState("No server is configured yet. Open the arena from the server you want to use, or paste its URL above."));
         incomingListEl.innerHTML = "";
-        incomingListEl.appendChild(createEmptyState("Challenges will appear after you connect to a LAN server."));
+        incomingListEl.appendChild(createEmptyState("Challenges will appear after you connect to an arena server."));
         outgoingListEl.innerHTML = "";
-        outgoingListEl.appendChild(createEmptyState("Connect to a LAN server before sending challenges."));
+        outgoingListEl.appendChild(createEmptyState("Connect to an arena server before sending challenges."));
         renderBattle(null, arenaState.profile);
         renderRecentMatches([]);
         playersOnlineEl.textContent = "0 online";

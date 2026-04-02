@@ -174,7 +174,8 @@
                     // try central server first (configurable)
                     let players = {};
                     try {
-                        const server = (window.SERVER_URL || 'http://localhost:3000').replace(/\/$/, '');
+                        const server = (window.SERVER_URL || (window.location.origin && window.location.origin !== "null" ? window.location.origin : "") || '').replace(/\/$/, '');
+                        if (!server) throw new Error('No server configured');
                         const res = await fetch(server + '/api/players');
                         if (res.ok) players = await res.json();
                     } catch (e) {

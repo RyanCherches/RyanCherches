@@ -189,7 +189,8 @@ function registerCurrentPlayer(inventory) {
     // also try to POST to central server (non-blocking)
     (async function(){
         try {
-            const server = (window.SERVER_URL || 'http://localhost:3000').replace(/\/$/, '');
+            const server = (window.SERVER_URL || (window.location.origin && window.location.origin !== "null" ? window.location.origin : "") || '').replace(/\/$/, '');
+            if (!server) return;
             await fetch(server + '/api/player', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

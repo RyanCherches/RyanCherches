@@ -21,7 +21,7 @@ const saveServerBtn = document.getElementById("save-server-btn");
 
 const pageOrigin = window.location.origin && window.location.origin !== "null" ? window.location.origin : "";
 const serverStorageKey = window.DEDOGEIUM_SERVER_STORAGE_KEY || "dedogeiumServerUrl";
-let serverBase = (window.SERVER_URL || pageOrigin || "http://localhost:3000").replace(/\/$/, "");
+let serverBase = (window.SERVER_URL || pageOrigin || "").replace(/\/$/, "");
 const arenaState = {
     username: null,
     profile: null,
@@ -162,7 +162,14 @@ function saveServerUrl() {
     refreshArena(true);
 }
 
+function hasConfiguredServer() {
+    return Boolean(serverBase);
+}
+
 async function api(path, options = {}) {
+    if (!hasConfiguredServer()) {
+        throw new Error("Set the Arena Server URL first.");
+    }
     const response = await fetch(`${serverBase}${path}`, {
         method: options.method || "GET",
         headers: {
@@ -430,6 +437,20 @@ async function refreshArena(manual) {
         outgoingListEl.innerHTML = "";
         outgoingListEl.appendChild(createEmptyState("Login is required before you can send challenges."));
         renderBattle(null, null);
+        renderRecentMatches([]);
+        playersOnlineEl.textContent = "0 online";
+        return;
+    }
+
+    if (!hasConfiguredServer()) {
+        setConnectionStatus("Enter the Arena Server URL first, like http://192.168.1.100:3000.", true);
+        playersListEl.innerHTML = "";
+        playersListEl.appendChild(createEmptyState("No server is configured yet. Enter the LAN server URL above."));
+        incomingListEl.innerHTML = "";
+        incomingListEl.appendChild(createEmptyState("Challenges will appear after you connect to a LAN server."));
+        outgoingListEl.innerHTML = "";
+        outgoingListEl.appendChild(createEmptyState("Connect to a LAN server before sending challenges."));
+        renderBattle(null, arenaState.profile);
         renderRecentMatches([]);
         playersOnlineEl.textContent = "0 online";
         return;

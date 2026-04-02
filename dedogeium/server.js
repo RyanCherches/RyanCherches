@@ -18,6 +18,8 @@ const PRESENCE_TTL_MS = 30 * 1000;
 const CHALLENGE_TTL_MS = 2 * 60 * 1000;
 const RESOLVED_CHALLENGE_TTL_MS = 10 * 60 * 1000;
 const MATCH_RETENTION_MS = 6 * 60 * 60 * 1000;
+const SPECIAL_METER_MAX = 100;
+const NORMAL_ATTACK_SPECIAL_GAIN = 40;
 
 app.use(express.json());
 app.use((req, res, next) => {
@@ -255,6 +257,10 @@ function publicChallenge(challenge) {
 }
 
 function publicMatch(match, viewer) {
+  const viewerKey = viewer
+    ? match.players.one.username === viewer ? 'one' : match.players.two.username === viewer ? 'two' : null
+    : null;
+  const viewerPlayer = viewerKey ? match.players[viewerKey] : null;
   return {
     id: match.id,
     status: match.status,
@@ -265,6 +271,13 @@ function publicMatch(match, viewer) {
     winner: match.winner || null,
     players: match.players,
     canAttack: viewer ? match.status === 'active' && match.currentTurn === viewer : false,
+    canSpecial: Boolean(
+      viewer &&
+      match.status === 'active' &&
+      match.currentTurn === viewer &&
+      viewerPlayer &&
+      (viewerPlayer.specialMeter || 0) >= SPECIAL_METER_MAX
+    ),
     log: Array.isArray(match.log) ? match.log.slice(-12) : [],
   };
 }
@@ -316,6 +329,7 @@ function buildMatchPlayers(fromProfile, toProfile) {
       damage: fromProfile.damage,
       maxHealth: fromProfile.maxHealth,
       currentHealth: fromProfile.maxHealth,
+      specialMeter: SPECIAL_METER_MAX,
     },
     two: {
       username: toProfile.username,
@@ -325,6 +339,7 @@ function buildMatchPlayers(fromProfile, toProfile) {
       damage: toProfile.damage,
       maxHealth: toProfile.maxHealth,
       currentHealth: toProfile.maxHealth,
+      specialMeter: SPECIAL_METER_MAX,
     },
   };
 }
@@ -340,6 +355,62 @@ function rollAttackDamage(baseDamage) {
   const spread = Math.max(3, Math.round(baseDamage * 0.25));
   const variance = Math.floor(Math.random() * (spread * 2 + 1)) - spread;
   return Math.max(1, Math.round(baseDamage + variance));
+}
+
+function rollSpecialDamage(baseDamage) {
+  const minDamage = Math.round(baseDamage * 1.7);
+  const maxDamage = Math.round(baseDamage * 2.35);
+  const spread = Math.max(6, maxDamage - minDamage);
+  return minDamage + Math.floor(Math.random() * (spread + 1));
+}
+
+function applyArenaAttack(match, safeUser, kind) {
+  if (match.status !== 'active') return { error: 'Match is already over' };
+  if (match.currentTurn !== safeUser) return { error: 'It is not your turn' };
+
+  const attackerKey = match.players.one.username === safeUser ? 'one' : match.players.two.username === safeUser ? 'two' : null;
+  if (!attackerKey) return { error: 'You are not part of this match', status: 403 };
+  const defenderKey = attackerKey === 'one' ? 'two' : 'one';
+  const attacker = match.players[attackerKey];
+  const defender = match.players[defenderKey];
+  const isSpecial = kind === 'special';
+
+  if (isSpecial && (attacker.specialMeter || 0) < SPECIAL_METER_MAX) {
+    return { error: 'Your special attack is not ready yet' };
+  }
+
+  const damage = isSpecial ? rollSpecialDamage(attacker.damage) : rollAttackDamage(attacker.damage);
+  defender.currentHealth = Math.max(0, defender.currentHealth - damage);
+  attacker.specialMeter = isSpecial
+    ? 0
+    : Math.min(SPECIAL_METER_MAX, (attacker.specialMeter || 0) + NORMAL_ATTACK_SPECIAL_GAIN);
+  match.updatedAt = Date.now();
+  match.log.push({
+    type: 'attack',
+    kind: isSpecial ? 'special' : 'normal',
+    attacker: attacker.username,
+    defender: defender.username,
+    damage,
+    text: isSpecial
+      ? `${attacker.displayName} unleashed a special attack on ${defender.displayName} for ${damage}.`
+      : `${attacker.displayName} hit ${defender.displayName} for ${damage}.`,
+    at: match.updatedAt,
+  });
+
+  if (defender.currentHealth <= 0) {
+    match.status = 'finished';
+    match.winner = attacker.username;
+    match.currentTurn = null;
+    match.log.push({
+      type: 'system',
+      text: `${attacker.displayName} won the arena fight.`,
+      at: match.updatedAt,
+    });
+  } else {
+    match.currentTurn = defender.username;
+  }
+
+  return { match };
 }
 
 function updatePresence(state, username, profile, req) {
@@ -581,39 +652,23 @@ app.post('/api/arena/match/:id/attack', (req, res) => {
   const state = readArenaState();
   const match = state.matches[req.params.id];
   if (!match) return res.status(404).json({ error: 'Match not found' });
-  if (match.status !== 'active') return res.status(400).json({ error: 'Match is already over' });
-  if (match.currentTurn !== safeUser) return res.status(400).json({ error: 'It is not your turn' });
+  const result = applyArenaAttack(match, safeUser, 'normal');
+  if (result.error) return res.status(result.status || 400).json({ error: result.error });
 
-  const attackerKey = match.players.one.username === safeUser ? 'one' : match.players.two.username === safeUser ? 'two' : null;
-  if (!attackerKey) return res.status(403).json({ error: 'You are not part of this match' });
-  const defenderKey = attackerKey === 'one' ? 'two' : 'one';
-  const attacker = match.players[attackerKey];
-  const defender = match.players[defenderKey];
+  writeArenaState(state);
+  res.json({ ok: true, match: publicMatch(match, safeUser) });
+});
 
-  const damage = rollAttackDamage(attacker.damage);
-  defender.currentHealth = Math.max(0, defender.currentHealth - damage);
-  match.updatedAt = Date.now();
-  match.log.push({
-    type: 'attack',
-    attacker: attacker.username,
-    defender: defender.username,
-    damage,
-    text: `${attacker.displayName} hit ${defender.displayName} for ${damage}.`,
-    at: match.updatedAt,
-  });
+app.post('/api/arena/match/:id/special', (req, res) => {
+  const { username } = req.body || {};
+  const safeUser = normalizeUsername(username);
+  if (!safeUser) return res.status(400).json({ error: 'username required' });
 
-  if (defender.currentHealth <= 0) {
-    match.status = 'finished';
-    match.winner = attacker.username;
-    match.currentTurn = null;
-    match.log.push({
-      type: 'system',
-      text: `${attacker.displayName} won the arena fight.`,
-      at: match.updatedAt,
-    });
-  } else {
-    match.currentTurn = defender.username;
-  }
+  const state = readArenaState();
+  const match = state.matches[req.params.id];
+  if (!match) return res.status(404).json({ error: 'Match not found' });
+  const result = applyArenaAttack(match, safeUser, 'special');
+  if (result.error) return res.status(result.status || 400).json({ error: result.error });
 
   writeArenaState(state);
   res.json({ ok: true, match: publicMatch(match, safeUser) });

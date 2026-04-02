@@ -13,6 +13,7 @@ const outgoingListEl = document.getElementById("outgoing-list");
 const battleStageEl = document.getElementById("battle-stage");
 const turnBadgeEl = document.getElementById("turn-badge");
 const attackBtn = document.getElementById("attack-btn");
+const specialBtn = document.getElementById("special-btn");
 const forfeitBtn = document.getElementById("forfeit-btn");
 const battleLogEl = document.getElementById("battle-log");
 const recentMatchesEl = document.getElementById("recent-matches");
@@ -269,6 +270,15 @@ function playAttackSound(damage) {
     playTone(Math.min(880, 320 + damage), now + 0.05, 0.16, 0.05, "sawtooth");
 }
 
+function playSpecialSound(damage) {
+    const context = getAudioContext();
+    if (!context) return;
+    const now = context.currentTime;
+    playTone(180, now, 0.18, 0.07, "sawtooth");
+    playTone(360, now + 0.06, 0.18, 0.06, "square");
+    playTone(Math.min(1200, 500 + damage), now + 0.12, 0.28, 0.08, "triangle");
+}
+
 function playVictorySound() {
     const context = getAudioContext();
     if (!context) return;
@@ -437,9 +447,13 @@ function createFighterCard(fighter, options) {
         <div class="health-track">
             <div class="health-bar" style="width:${currentPercent}%"></div>
         </div>
+        <div class="special-track">
+            <div class="special-bar" style="width:${Math.max(0, Math.min(100, fighter.specialMeter || 0))}%"></div>
+        </div>
         <div class="fighter-footer">
             <p class="meta-line">${fighter.currentHealth} / ${fighter.maxHealth} HP</p>
             <span class="badge ${isTurn ? "" : "muted"}">${isSelf ? "You" : "Opponent"}</span>
+            <span class="badge ${(fighter.specialMeter || 0) >= 100 ? "" : "muted"}">Special ${fighter.specialMeter || 0}%</span>
         </div>
     `;
     return card;
@@ -465,7 +479,7 @@ function findFighterNode(username) {
 }
 
 function clearStageFxClasses() {
-    battleStageEl.classList.remove("is-striking", "fx-left-to-right", "fx-right-to-left", "victory-flash");
+    battleStageEl.classList.remove("is-striking", "is-special-striking", "fx-left-to-right", "fx-right-to-left", "victory-flash");
 }
 
 function triggerAttackEffect(match, attackEntry) {
@@ -474,18 +488,23 @@ function triggerAttackEffect(match, attackEntry) {
     const defenderNode = findFighterNode(attackEntry.defender);
     const damageBurst = battleStageEl.querySelector(".damage-burst");
     const directionClass = match.players.one.username === attackEntry.attacker ? "fx-left-to-right" : "fx-right-to-left";
+    const isSpecial = attackEntry.kind === "special";
 
     clearStageFxClasses();
     void battleStageEl.offsetWidth;
-    battleStageEl.classList.add("is-striking", directionClass);
+    battleStageEl.classList.add(isSpecial ? "is-special-striking" : "is-striking", directionClass);
     if (attackerNode) attackerNode.classList.add("is-attacking");
     if (defenderNode) defenderNode.classList.add("is-hit");
-    if (damageBurst) damageBurst.textContent = `-${attackEntry.damage}`;
+    if (damageBurst) damageBurst.textContent = `${isSpecial ? "SPECIAL " : ""}-${attackEntry.damage}`;
 
-    playAttackSound(attackEntry.damage);
+    if (isSpecial) {
+        playSpecialSound(attackEntry.damage);
+    } else {
+        playAttackSound(attackEntry.damage);
+    }
 
     window.setTimeout(() => {
-        battleStageEl.classList.remove("is-striking", directionClass);
+        battleStageEl.classList.remove("is-striking", "is-special-striking", directionClass);
         if (attackerNode) attackerNode.classList.remove("is-attacking");
         if (defenderNode) defenderNode.classList.remove("is-hit");
     }, attackEffectDurationMs);
@@ -511,6 +530,7 @@ function renderBattle(match, profile) {
         turnBadgeEl.textContent = "No active match";
         turnBadgeEl.className = "badge muted";
         attackBtn.disabled = true;
+        if (specialBtn) specialBtn.disabled = true;
         forfeitBtn.disabled = true;
         renderBattleLog([]);
         arenaState.activeMatchId = null;
@@ -543,6 +563,7 @@ function renderBattle(match, profile) {
         </div>
         <div class="attack-fx" aria-hidden="true">
             <div class="attack-slash"></div>
+            <div class="special-blast"></div>
             <div class="impact-ring"></div>
             <div class="damage-burst"></div>
         </div>
@@ -575,6 +596,7 @@ function renderBattle(match, profile) {
     turnBadgeEl.className = yourTurn ? "badge" : "badge muted";
 
     attackBtn.disabled = !yourTurn;
+    if (specialBtn) specialBtn.disabled = !match.canSpecial;
     forfeitBtn.disabled = match.status !== "active";
 
     renderBattleLog(match.log || []);
@@ -650,6 +672,7 @@ async function refreshArena(manual) {
         renderBattle(null, null);
         renderRecentMatches([]);
         playersOnlineEl.textContent = "0 online";
+        if (specialBtn) specialBtn.disabled = true;
         return;
     }
 
@@ -664,6 +687,7 @@ async function refreshArena(manual) {
         renderBattle(null, arenaState.profile);
         renderRecentMatches([]);
         playersOnlineEl.textContent = "0 online";
+        if (specialBtn) specialBtn.disabled = true;
         return;
     }
 
@@ -744,6 +768,23 @@ async function attack() {
     }
 }
 
+async function specialAttack() {
+    if (!arenaState.activeMatchId) return;
+    getAudioContext();
+    try {
+        const data = await api(`/api/arena/match/${arenaState.activeMatchId}/special`, {
+            method: "POST",
+            body: {
+                username: arenaState.username,
+            },
+        });
+        renderBattle(data.match, arenaState.profile);
+        await refreshArena(false);
+    } catch (error) {
+        setConnectionStatus(error.message, true);
+    }
+}
+
 async function forfeitMatch() {
     if (!arenaState.activeMatchId) return;
     getAudioContext();
@@ -770,6 +811,9 @@ function startAutoRefresh() {
 
 refreshBtn.addEventListener("click", () => refreshArena(true));
 attackBtn.addEventListener("click", attack);
+if (specialBtn) {
+    specialBtn.addEventListener("click", specialAttack);
+}
 forfeitBtn.addEventListener("click", forfeitMatch);
 if (saveServerBtn) {
     saveServerBtn.addEventListener("click", saveServerUrl);

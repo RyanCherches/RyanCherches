@@ -91,6 +91,11 @@ button.secondary {
     box-shadow: 0 10px 20px rgba(80, 58, 18, 0.18);
 }
 
+button.special {
+    background: linear-gradient(135deg, #7c3aed, #ec4899);
+    box-shadow: 0 10px 22px rgba(124, 58, 237, 0.28);
+}
+
 button:disabled {
     opacity: 0.45;
     cursor: not-allowed;
@@ -444,6 +449,21 @@ button:disabled {
     transition: width 0.25s ease;
 }
 
+.special-track {
+    width: 100%;
+    height: 12px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(78, 91, 126, 0.16);
+}
+
+.special-bar {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #7c3aed, #22d3ee, #facc15);
+    transition: width 0.25s ease;
+}
+
 .self-fighter {
     border-color: rgba(31, 143, 124, 0.28);
 }
@@ -474,6 +494,7 @@ button:disabled {
 }
 
 .attack-slash,
+.special-blast,
 .impact-ring,
 .damage-burst {
     position: absolute;
@@ -489,6 +510,19 @@ button:disabled {
     background: linear-gradient(90deg, rgba(108, 239, 255, 0), rgba(108, 239, 255, 0.9), rgba(255, 240, 176, 0.95), rgba(255, 86, 86, 0));
     box-shadow: 0 0 28px rgba(108, 239, 255, 0.72);
     transform-origin: center;
+}
+
+.special-blast {
+    top: 50%;
+    left: 50%;
+    width: 220px;
+    height: 220px;
+    margin-left: -110px;
+    margin-top: -110px;
+    border-radius: 50%;
+    background:
+        radial-gradient(circle, rgba(255, 245, 176, 0.98) 0%, rgba(88, 28, 135, 0.88) 38%, rgba(34, 211, 238, 0.22) 62%, rgba(34, 211, 238, 0) 100%);
+    box-shadow: 0 0 40px rgba(34, 211, 238, 0.45);
 }
 
 .impact-ring {
@@ -525,12 +559,28 @@ button:disabled {
     animation: slashRightToLeft 0.72s ease;
 }
 
+.battle-stage.is-special-striking .attack-slash {
+    animation-duration: 0.86s;
+}
+
+.battle-stage.is-special-striking .special-blast {
+    animation: specialBlast 0.9s ease;
+}
+
 .battle-stage.is-striking .impact-ring {
     animation: impactRing 0.72s ease;
 }
 
+.battle-stage.is-special-striking .impact-ring {
+    animation-duration: 0.9s;
+}
+
 .battle-stage.is-striking .damage-burst {
     animation: damageBurst 0.72s ease;
+}
+
+.battle-stage.is-special-striking .damage-burst {
+    animation-duration: 0.9s;
 }
 
 .battle-stage.victory-flash::after {
@@ -610,6 +660,12 @@ code {
     0% { opacity: 0; transform: scale(0.2); }
     30% { opacity: 1; }
     100% { opacity: 0; transform: scale(2.2); }
+}
+
+@keyframes specialBlast {
+    0% { opacity: 0; transform: scale(0.2) rotate(0deg); }
+    25% { opacity: 1; }
+    100% { opacity: 0; transform: scale(1.45) rotate(90deg); }
 }
 
 @keyframes damageBurst {

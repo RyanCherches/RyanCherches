@@ -1,5 +1,6 @@
 (function configureDedogeiumServer() {
     const STORAGE_KEY = "dedogeiumServerUrl";
+    const PREFERRED_SERVER_URL = "http://192.168.1.163:3000";
     const queryServer = new URLSearchParams(window.location.search).get("server");
     const routeOrigin = window.location.origin && window.location.origin !== "null"
         ? window.location.origin.replace(/\/$/, "")
@@ -19,7 +20,10 @@
     }
 
     const currentServer = normalizeServerUrl(routeOrigin);
-    const resolvedServer = normalizeServerUrl(queryServer) || currentServer || normalizeServerUrl(savedServer);
+    const resolvedServer = normalizeServerUrl(queryServer)
+        || normalizeServerUrl(savedServer)
+        || normalizeServerUrl(PREFERRED_SERVER_URL)
+        || currentServer;
 
     window.DEDOGEIUM_SERVER_STORAGE_KEY = STORAGE_KEY;
     if (resolvedServer) {

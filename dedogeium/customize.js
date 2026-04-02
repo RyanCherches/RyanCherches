@@ -1,5 +1,6 @@
 const aprilFoolsBox = document.getElementById('AprilFools-box');
-
+const currency = localStorage.getItem("currency") || 0;
+console.log("Player currency:", currency);
 // Load inventory from localStorage and display items
 window.addEventListener('DOMContentLoaded', function() {
     const inventory = JSON.parse(localStorage.getItem("inventory")) || [];

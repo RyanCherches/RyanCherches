@@ -16,9 +16,12 @@ const attackBtn = document.getElementById("attack-btn");
 const forfeitBtn = document.getElementById("forfeit-btn");
 const battleLogEl = document.getElementById("battle-log");
 const recentMatchesEl = document.getElementById("recent-matches");
+const serverUrlInput = document.getElementById("server-url");
+const saveServerBtn = document.getElementById("save-server-btn");
 
 const pageOrigin = window.location.origin && window.location.origin !== "null" ? window.location.origin : "";
-const serverBase = (window.SERVER_URL || pageOrigin || "http://localhost:3000").replace(/\/$/, "");
+const serverStorageKey = window.DEDOGEIUM_SERVER_STORAGE_KEY || "dedogeiumServerUrl";
+let serverBase = (window.SERVER_URL || pageOrigin || "http://localhost:3000").replace(/\/$/, "");
 const arenaState = {
     username: null,
     profile: null,
@@ -129,6 +132,34 @@ function buildProfile() {
 function setConnectionStatus(message, isError) {
     connectionStatusEl.textContent = message;
     connectionStatusEl.style.color = isError ? "#b91c1c" : "#124559";
+}
+
+function normalizeServerUrl(value) {
+    const trimmed = String(value || "").trim().replace(/\/$/, "");
+    if (!trimmed) return "";
+    if (!/^https?:\/\//i.test(trimmed)) {
+        return `http://${trimmed}`;
+    }
+    return trimmed;
+}
+
+function syncServerInput() {
+    if (!serverUrlInput) return;
+    serverUrlInput.value = serverBase;
+}
+
+function saveServerUrl() {
+    const nextUrl = normalizeServerUrl(serverUrlInput ? serverUrlInput.value : "");
+    if (!nextUrl) {
+        setConnectionStatus("Enter a server URL like http://192.168.1.100:3000 first.", true);
+        return;
+    }
+    serverBase = nextUrl;
+    localStorage.setItem(serverStorageKey, nextUrl);
+    window.SERVER_URL = nextUrl;
+    syncServerInput();
+    setConnectionStatus(`Arena server saved as ${nextUrl}.`, false);
+    refreshArena(true);
 }
 
 async function api(path, options = {}) {
@@ -503,11 +534,23 @@ function startAutoRefresh() {
 refreshBtn.addEventListener("click", () => refreshArena(true));
 attackBtn.addEventListener("click", attack);
 forfeitBtn.addEventListener("click", forfeitMatch);
+if (saveServerBtn) {
+    saveServerBtn.addEventListener("click", saveServerUrl);
+}
+if (serverUrlInput) {
+    serverUrlInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            saveServerUrl();
+        }
+    });
+}
 
 window.addEventListener("DOMContentLoaded", () => {
     arenaState.username = getCurrentUsername();
     arenaState.profile = buildProfile();
     renderSelf(arenaState.profile);
+    syncServerInput();
     refreshArena(true);
     startAutoRefresh();
 });

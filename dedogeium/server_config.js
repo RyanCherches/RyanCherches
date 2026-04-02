@@ -1,4 +1,11 @@
-// Set `SERVER_URL` to the reachable server address for centralized player storage.
-// Example: "http://192.168.1.100:3000" or a remote host.
-// Leave as "http://localhost:3000" to use the local machine.
-window.SERVER_URL = "http://localhost:3000";
+(function configureDedogeiumServer() {
+    const STORAGE_KEY = "dedogeiumServerUrl";
+    const routeOrigin = window.location.origin && window.location.origin !== "null"
+        ? window.location.origin.replace(/\/$/, "")
+        : "";
+    const savedServer = localStorage.getItem(STORAGE_KEY);
+    const fallbackServer = routeOrigin || "http://localhost:3000";
+
+    window.DEDOGEIUM_SERVER_STORAGE_KEY = STORAGE_KEY;
+    window.SERVER_URL = (savedServer || fallbackServer).replace(/\/$/, "");
+})();

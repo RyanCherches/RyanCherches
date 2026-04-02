@@ -199,6 +199,37 @@ button:disabled {
     line-height: 1.5;
 }
 
+.server-config {
+    margin-top: 16px;
+}
+
+.server-config label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+
+.server-config-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.server-config-row input {
+    flex: 1 1 260px;
+    min-width: 0;
+    padding: 12px 14px;
+    border: 1px solid rgba(20, 52, 64, 0.18);
+    border-radius: 16px;
+    font: inherit;
+    background: #fff;
+}
+
+.server-config-row input:focus {
+    outline: 2px solid rgba(31, 143, 124, 0.25);
+    border-color: #1f8f7c;
+}
+
 .helper-text {
     color: #44515f;
 }

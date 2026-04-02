@@ -19,7 +19,7 @@ const CHALLENGE_TTL_MS = 2 * 60 * 1000;
 const RESOLVED_CHALLENGE_TTL_MS = 10 * 60 * 1000;
 const MATCH_RETENTION_MS = 6 * 60 * 60 * 1000;
 const SPECIAL_METER_MAX = 100;
-const NORMAL_ATTACK_SPECIAL_GAIN = 40;
+const NORMAL_ATTACK_SPECIAL_GAIN = 25;
 
 app.use(express.json());
 app.use((req, res, next) => {
@@ -329,7 +329,7 @@ function buildMatchPlayers(fromProfile, toProfile) {
       damage: fromProfile.damage,
       maxHealth: fromProfile.maxHealth,
       currentHealth: fromProfile.maxHealth,
-      specialMeter: SPECIAL_METER_MAX,
+      specialMeter: 0,
     },
     two: {
       username: toProfile.username,
@@ -339,7 +339,7 @@ function buildMatchPlayers(fromProfile, toProfile) {
       damage: toProfile.damage,
       maxHealth: toProfile.maxHealth,
       currentHealth: toProfile.maxHealth,
-      specialMeter: SPECIAL_METER_MAX,
+      specialMeter: 0,
     },
   };
 }

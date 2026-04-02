@@ -54,6 +54,20 @@ function resolveWritableDataDir() {
   throw lastError || new Error('Could not find a writable data directory for Dedogeium.');
 }
 
+function getLanUrls(listenPort) {
+  const interfaces = os.networkInterfaces();
+  const urls = [];
+
+  Object.values(interfaces).forEach((entries) => {
+    (entries || []).forEach((entry) => {
+      if (!entry || entry.internal || entry.family !== 'IPv4') return;
+      urls.push(`http://${entry.address}:${listenPort}`);
+    });
+  });
+
+  return Array.from(new Set(urls)).sort();
+}
+
 function requireAuth(req, res, next) {
   if (!ADMIN_USER || !ADMIN_PASS) return next(); // auth disabled
   const auth = req.headers.authorization;
@@ -654,4 +668,14 @@ app.get('/:page', (req, res, next) => {
 });
 
 // Bind to all interfaces so other local user accounts and machines on the LAN can reach it.
-app.listen(port, '0.0.0.0', () => console.log(`Dedogeium server running on http://0.0.0.0:${port} (data: ${DATA_DIR})`));
+app.listen(port, '0.0.0.0', () => {
+  const lanUrls = getLanUrls(port);
+  console.log(`Dedogeium server running on port ${port}`);
+  console.log(`Local: http://127.0.0.1:${port}`);
+  lanUrls.forEach((url) => console.log(`LAN:   ${url}`));
+  console.log(`Arena: http://127.0.0.1:${port}/arena/`);
+  if (lanUrls.length) {
+    console.log(`Arena: ${lanUrls[0]}/arena/`);
+  }
+  console.log(`Data:  ${DATA_DIR}`);
+});

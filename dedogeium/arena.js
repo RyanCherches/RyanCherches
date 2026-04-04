@@ -6,6 +6,7 @@ const playerDamageEl = document.getElementById("player-damage");
 const playerHealthEl = document.getElementById("player-health");
 const playerEquippedEl = document.getElementById("player-equipped");
 const connectionStatusEl = document.getElementById("connection-status");
+const playerCurrencyEl = document.getElementById("player-currency");
 const playersOnlineEl = document.getElementById("players-online");
 const playersListEl = document.getElementById("players-list");
 const incomingListEl = document.getElementById("incoming-list");
@@ -61,6 +62,44 @@ const rarityBonuses = {
         "Mythic": { damage: 170, health: 1200 },
     },
 };
+
+function getArenaCurrency() {
+    return Number(localStorage.getItem("currency") || "0");
+}
+
+function setArenaCurrency(value) {
+    const normalized = Number(value) || 0;
+    localStorage.setItem("currency", String(Math.max(0, normalized)));
+    if (playerCurrencyEl) playerCurrencyEl.textContent = String(Math.max(0, normalized));
+}
+
+function addArenaCurrency(amount) {
+    setArenaCurrency(getArenaCurrency() + (Number(amount) || 0));
+}
+
+function showArenaRewardMessage(message, isError = false) {
+    if (!connectionStatusEl) return;
+    const prevText = connectionStatusEl.textContent;
+    const prevColor = connectionStatusEl.style.color;
+    connectionStatusEl.textContent = message;
+    connectionStatusEl.style.color = isError ? "#b91c1c" : "#124559";
+    setTimeout(() => {
+        if (connectionStatusEl.textContent === message) {
+            connectionStatusEl.textContent = prevText;
+            connectionStatusEl.style.color = prevColor;
+        }
+    }, 4000);
+}
+
+function awardArenaWinCurrency(winnerKey) {
+    if (!winnerKey) return;
+    const lastRewardedKey = localStorage.getItem("dedogeium_lastArenaRewardKey");
+    if (lastRewardedKey === winnerKey) return;
+    const reward = 20;
+    addArenaCurrency(reward);
+    localStorage.setItem("dedogeium_lastArenaRewardKey", winnerKey);
+    showArenaRewardMessage(`Victory +${reward} coins!`, false);
+}
 
 function normalizeServerUrl(value) {
     const trimmed = String(value || "").trim();
@@ -274,6 +313,7 @@ function renderSelf(profile) {
     playerDamageEl.textContent = String(profile.damage);
     playerHealthEl.textContent = String(profile.maxHealth);
     playerEquippedEl.textContent = String(profile.equippedCount);
+    if (playerCurrencyEl) playerCurrencyEl.textContent = String(getArenaCurrency());
 }
 
 function createEmptyState(message) {
@@ -662,6 +702,9 @@ function renderBattle(match, profile) {
     if (winnerKey && arenaState.lastWinnerKey !== winnerKey) {
         arenaState.lastWinnerKey = winnerKey;
         triggerVictoryEffect(match);
+        if (match.winner === arenaState.username) {
+            awardArenaWinCurrency(winnerKey);
+        }
     }
 }
 

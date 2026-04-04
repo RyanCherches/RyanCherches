@@ -5,6 +5,7 @@ const enemy_hlth_element = document.getElementById("enemy-hlth");
 const hlth_element = document.getElementById("hlth");
 const victory = document.getElementById("victory");
 const home = document.getElementById("bye-btn");
+const maybe_vic = document.getElementById("maybe-vic");
 const speech_good = document.getElementById("speech-good");
 const speech_bad = document.getElementById("speech-bad");
 const skipBtn = document.getElementById("skip-btn");
@@ -27,7 +28,7 @@ if (aprilFoolsEnabled) {
     duringFightAudio.src = "rick roll.mp3";
 }
     
-const routeBase = window.location.pathname.endsWith('.html') ? '' : '../';
+const routeBase = window.location.pathname.includes('/index.html') ? '../' : '';
 
 home.addEventListener("click", function() {
     window.location.href = routeBase + "adventure/";
@@ -44,6 +45,111 @@ const max_health = 500;
 let health = 500;
 let damage = 20;
 let enemy_damage = 20;
+
+function getLevelCurrency() {
+    return Number(localStorage.getItem("currency") || "0");
+}
+
+function addLevelCurrency(amount) {
+    const current = getLevelCurrency();
+    const newAmount = Math.max(0, current + Number(amount || 0));
+    localStorage.setItem("currency", String(newAmount));
+}
+
+const levelShopItems = [
+    { label: "Common Doge", cost: 10, item: { name: "Doge", rarity: "Common" } },
+    { label: "Uncommon Doge", cost: 20, item: { name: "Doge", rarity: "Uncommon" } },
+    { label: "Rare Fire Doge", cost: 50, item: { name: "Fire Doge", rarity: "Rare" } }
+];
+
+let levelShopMessage = "";
+let levelShopMessageIsError = false;
+
+function getLevelShopContainer() {
+    if (!victory) return null;
+    let shopContainer = document.getElementById("level-shop");
+    if (!shopContainer) {
+        shopContainer = document.createElement("div");
+        shopContainer.id = "level-shop";
+        shopContainer.className = "level-shop";
+        victory.insertBefore(shopContainer, home || null);
+    }
+    return shopContainer;
+}
+
+function setLevelShopMessage(message, isError = false) {
+    levelShopMessage = message;
+    levelShopMessageIsError = isError;
+}
+
+function addShopItemToInventory(itemTemplate) {
+    const inventory = JSON.parse(localStorage.getItem("inventory")) || [];
+    inventory.push({ ...itemTemplate, id: Date.now() + Math.floor(Math.random() * 1000) });
+    localStorage.setItem("inventory", JSON.stringify(inventory));
+}
+
+function buyLevelShopItem(shopItem) {
+    if (getLevelCurrency() < shopItem.cost) {
+        setLevelShopMessage("Not enough currency yet.", true);
+        renderLevelShop();
+        return;
+    }
+    addLevelCurrency(-shopItem.cost);
+    addShopItemToInventory(shopItem.item);
+    setLevelShopMessage(`Bought ${shopItem.label}!`);
+    renderLevelShop();
+}
+
+function renderLevelShop() {
+    const shopContainer = getLevelShopContainer();
+    if (!shopContainer) return;
+
+    const currency = getLevelCurrency();
+    shopContainer.style.display = "block";
+    shopContainer.innerHTML = "";
+
+    const title = document.createElement("p");
+    title.className = "level-shop-title";
+    title.textContent = "Victory Shop";
+
+    const currencyLine = document.createElement("p");
+    currencyLine.className = "level-shop-currency";
+    currencyLine.textContent = `Currency: ${currency}`;
+
+    const list = document.createElement("div");
+    list.className = "level-shop-list";
+
+    levelShopItems.forEach((shopItem) => {
+        const row = document.createElement("div");
+        row.className = "level-shop-row";
+
+        const label = document.createElement("div");
+        label.className = "level-shop-item";
+        label.textContent = `${shopItem.label} - ${shopItem.cost} currency`;
+
+        const buyBtn = document.createElement("button");
+        buyBtn.className = "level-shop-buy";
+        buyBtn.textContent = "Buy";
+        buyBtn.disabled = currency < shopItem.cost;
+        buyBtn.addEventListener("click", function() {
+            buyLevelShopItem(shopItem);
+        });
+
+        row.appendChild(label);
+        row.appendChild(buyBtn);
+        list.appendChild(row);
+    });
+
+    const message = document.createElement("p");
+    message.className = "level-shop-message";
+    message.style.color = levelShopMessageIsError ? "#c62828" : "#1b7f3a";
+    message.textContent = levelShopMessage;
+
+    shopContainer.appendChild(title);
+    shopContainer.appendChild(currencyLine);
+    shopContainer.appendChild(list);
+    shopContainer.appendChild(message);
+}
 
 cancel_btn.addEventListener("click", function() {
     window.location.href = routeBase + "adventure/";
@@ -205,12 +311,28 @@ async function battleLoop() {
         damage *= 2;
         enemy_damage *= 2;
     }
-    Number(localStorage.getItem("completedLevel"));
-    if (completedLevel < 2) {
-        localStorage.setItem("completedLevel", 2);
+    const playerWon = enemy_health <= 0;
+    if (playerWon) {
+        if (completedLevel < 2) {
+            localStorage.setItem("completedLevel", 2);
+        }
+        const reward = 10;
+        addLevelCurrency(reward);
+        if (maybe_vic) {
+            maybe_vic.innerHTML = `Victory! You earned ${reward} currency! Visit Customize to spend it.`;
+        }
+        renderLevelShop();
+        startPostDialogue();
+    } else {
+        if (maybe_vic) {
+            maybe_vic.textContent = "Defeated! Grind and try again.";
+        }
+        const shopContainer = document.getElementById("level-shop");
+        if (shopContainer) {
+            shopContainer.style.display = "none";
+        }
+        if (victory) victory.style.display = "block";
     }
-    // start post-battle dialogue that uses the same speaking placement
-    startPostDialogue();
     duringFightAudio.pause();
 }
 function loadhealth() {

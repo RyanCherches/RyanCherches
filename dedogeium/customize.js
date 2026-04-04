@@ -1,9 +1,52 @@
 const aprilFoolsBox = document.getElementById('AprilFools-box');
-const currency = localStorage.getItem("currency") || 0;
-console.log("Player currency:", currency);
+const SHOP_CATALOG = [
+    { label: 'Common Doge', cost: 250, item: { name: 'Doge', rarity: 'Common' } },
+    { label: 'Uncommon Doge', cost: 600, item: { name: 'Doge', rarity: 'Uncommon' } },
+    { label: 'Rare Doge', cost: 1400, item: { name: 'Doge', rarity: 'Rare' } },
+    { label: 'Epic Doge', cost: 3200, item: { name: 'Doge', rarity: 'Epic' } },
+    { label: 'Legendary Doge', cost: 7800, item: { name: 'Doge', rarity: 'Legendary' } },
+    { label: 'Godly Doge', cost: 18000, item: { name: 'Doge', rarity: 'Godly' } },
+    { label: 'Common Fire Doge', cost: 900, item: { name: 'Fire Doge', rarity: 'Common' } },
+    { label: 'Uncommon Fire Doge', cost: 1900, item: { name: 'Fire Doge', rarity: 'Uncommon' } },
+    { label: 'Rare Fire Doge', cost: 4200, item: { name: 'Fire Doge', rarity: 'Rare' } },
+    { label: 'Epic Fire Doge', cost: 9500, item: { name: 'Fire Doge', rarity: 'Epic' } },
+    { label: 'Legendary Fire Doge', cost: 22000, item: { name: 'Fire Doge', rarity: 'Legendary' } },
+    { label: 'Godly Fire Doge', cost: 48000, item: { name: 'Fire Doge', rarity: 'Godly' } },
+];
+
+function getCurrency() {
+    return Number(localStorage.getItem('currency') || 0);
+}
+
+function setCurrency(amount) {
+    const normalized = Math.max(0, Number(amount) || 0);
+    localStorage.setItem('currency', String(normalized));
+    const currencyEl = document.getElementById('currency-value');
+    if (currencyEl) currencyEl.textContent = String(normalized);
+}
+
+function addCurrency(amount) {
+    setCurrency(getCurrency() + Number(amount || 0));
+}
+
+function getStoredInventory() {
+    return JSON.parse(localStorage.getItem("inventory")) || [];
+}
+
+function setStoredInventory(inventory) {
+    localStorage.setItem("inventory", JSON.stringify(inventory));
+}
+
+function addStoredInventoryItem(item) {
+    const inventory = getStoredInventory();
+    inventory.push({ ...item, id: Date.now() + Math.floor(Math.random() * 1000) });
+    setStoredInventory(inventory);
+}
+
+console.log("Player currency:", getCurrency());
 // Load inventory from localStorage and display items
 window.addEventListener('DOMContentLoaded', function() {
-    const inventory = JSON.parse(localStorage.getItem("inventory")) || [];
+    let inventory = JSON.parse(localStorage.getItem("inventory")) || [];
     const equippedItems = JSON.parse(localStorage.getItem("equippedItems")) || [];
     const listItemsContainer = document.querySelector(".list-items");
     const aprilFoolsDone = localStorage.getItem("aprilFoolsDone") === "true";
@@ -120,12 +163,22 @@ window.addEventListener('DOMContentLoaded', function() {
 
     // Initial render
     renderInventoryList();
+    setCurrency(getCurrency());
+    window.refreshCustomizeInventoryUI = function() {
+        inventory = getStoredInventory();
+        renderInventoryList();
+        const equippedItemsNow = JSON.parse(localStorage.getItem("equippedItems")) || [];
+        displayEquippedItems(equippedItemsNow, getItemImage, getItemBonus);
+    };
 
     // Display equipped items in slots and update stats
     displayEquippedItems(equippedItems, getItemImage, getItemBonus);
 
     // Build exchange UI
     buildExchangeUI();
+
+    // Build shop UI
+    buildShopUI();
 
     // Register current player (so admin can see who accessed the game)
     try {
@@ -295,6 +348,81 @@ function performExchange(itemType, fromRarity, requiredCount, toRarity) {
     inventory.push(newItem);
     localStorage.setItem("inventory", JSON.stringify(inventory));
     return true;
+}
+
+function setShopMessage(message, isError = false) {
+    const shopMsg = document.getElementById('shop-msg');
+    if (!shopMsg) return;
+    shopMsg.style.color = isError ? 'red' : 'green';
+    shopMsg.textContent = message;
+}
+
+function buildShopUI() {
+    const shopList = document.getElementById('shop-list');
+    if (!shopList) return;
+    shopList.innerHTML = '';
+    const intro = document.createElement('p');
+    intro.className = 'shop-intro';
+    intro.textContent = 'Spend your battle currency here. Stronger doges cost a lot more.';
+    shopList.appendChild(intro);
+
+    const groups = [
+        { title: 'Doge', items: SHOP_CATALOG.filter((item) => item.item.name === 'Doge') },
+        { title: 'Fire Doge', items: SHOP_CATALOG.filter((item) => item.item.name === 'Fire Doge') }
+    ];
+
+    groups.forEach((group) => {
+        const groupEl = document.createElement('div');
+        groupEl.className = 'shop-group';
+
+        const title = document.createElement('h4');
+        title.className = 'shop-group-title';
+        title.textContent = group.title;
+        groupEl.appendChild(title);
+
+        group.items.forEach((shopItem) => {
+            const row = document.createElement('div');
+            row.className = 'shop-row';
+
+            const labelWrap = document.createElement('div');
+            labelWrap.className = 'shop-label-wrap';
+
+            const label = document.createElement('div');
+            label.className = 'shop-label';
+            label.textContent = shopItem.label;
+
+            const cost = document.createElement('div');
+            cost.className = 'shop-cost';
+            cost.textContent = `${shopItem.cost} currency`;
+
+            const buyBtn = document.createElement('button');
+            buyBtn.className = 'shop-buy-btn';
+            buyBtn.textContent = 'Buy';
+            buyBtn.disabled = getCurrency() < shopItem.cost;
+            buyBtn.addEventListener('click', function() {
+                if (getCurrency() < shopItem.cost) {
+                    setShopMessage('Not enough currency. Beat more levels first.', true);
+                    return;
+                }
+                addCurrency(-shopItem.cost);
+                addStoredInventoryItem(shopItem.item);
+                if (typeof window.refreshCustomizeInventoryUI === 'function') {
+                    window.refreshCustomizeInventoryUI();
+                }
+                buildExchangeUI();
+                setShopMessage(`Bought ${shopItem.label}!`, false);
+                buildShopUI();
+            });
+
+            labelWrap.appendChild(label);
+            labelWrap.appendChild(cost);
+            row.appendChild(labelWrap);
+            row.appendChild(buyBtn);
+            groupEl.appendChild(row);
+        });
+
+        shopList.appendChild(groupEl);
+    });
 }
 
 function displayEquippedItems(equippedItems, getItemImage, getItemBonus) {

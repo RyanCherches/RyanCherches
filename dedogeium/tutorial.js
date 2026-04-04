@@ -1,4 +1,4 @@
-const routeBase = window.location.pathname.endsWith('.html') ? '' : '../';
+const routeBase = window.location.pathname.includes('/index.html') ? '../' : '';
 
 document.addEventListener("DOMContentLoaded", function () {
     const CharacterMain = document.getElementById("main-character");

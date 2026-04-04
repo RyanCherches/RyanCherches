@@ -130,6 +130,21 @@ body {
 #exchange-list > div { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:6px 8px; background: rgba(255,255,255,0.02); border-radius:6px; }
 #exchange-list > div > div { font-size:14px; color:#fff; }
 
+#shop-panel { grid-column: 1 / -1; background: rgba(0,0,0,0.18); padding: 14px; border-radius:8px; border: 1px solid rgba(255,255,255,0.08); }
+#shop-panel h3 { margin: 0 0 10px 0; }
+#shop-list { display: flex; flex-direction: column; gap: 14px; }
+.shop-intro { margin: 0; color: rgba(255,255,255,0.82); }
+.shop-group { display: flex; flex-direction: column; gap: 8px; padding: 10px; background: rgba(255,255,255,0.04); border-radius: 8px; }
+.shop-group-title { margin: 0; color: #ffe08a; }
+.shop-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 10px; background: rgba(255,255,255,0.03); border-radius:6px; }
+.shop-label-wrap { display:flex; flex-direction:column; gap:2px; }
+.shop-label { font-weight:700; color:#fff; }
+.shop-cost { font-size:13px; color: rgba(255,255,255,0.75); }
+.shop-buy-btn { background: linear-gradient(180deg,#ffb347,#ff8f1f); color:#101010; border:none; padding:7px 12px; border-radius:6px; cursor:pointer; font-weight:700; }
+.shop-buy-btn:hover { filter: brightness(1.05); }
+.shop-buy-btn:disabled { opacity:0.45; cursor:not-allowed; }
+#shop-msg { min-height: 20px; margin-top: 8px; }
+
 button.exchange-btn { background: linear-gradient(180deg,#4a7bf0,#315ad6); color:#fff; border: none; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:700; }
 button.exchange-btn:hover { filter:brightness(1.05); }
 button.exchange-btn:disabled { opacity:0.45; cursor:not-allowed; }
@@ -152,6 +167,7 @@ button.exchange-btn:disabled { opacity:0.45; cursor:not-allowed; }
     .item { padding:8px; }
     #exchange-list > div { flex-direction:column; align-items:flex-start; }
     #exchange-panel { padding:8px; }
+    #shop-panel { padding:8px; }
 }
 
 /* Responsive: adapt layout for smaller screens */
@@ -179,6 +195,8 @@ button.exchange-btn:disabled { opacity:0.45; cursor:not-allowed; }
     #exchange-panel { padding:8px; }
     #exchange-list div { flex-direction: column; align-items: flex-start; gap:6px; }
     #exchange-list button { padding:6px 8px; font-size:14px; }
+    .shop-row { flex-direction: column; align-items: flex-start; }
+    .shop-buy-btn { width: 100%; }
 }
 #AprilFools-box {
     margin-top: 12px;

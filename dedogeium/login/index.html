@@ -228,7 +228,7 @@
             }
             
         }*/
-        const routeBase = window.location.pathname.endsWith('.html') ? '' : '../';
+        const routeBase = window.location.pathname.includes('/index.html') ? '../' : '';
 
         function login() {
             const Username = document.getElementById("Username").value.trim().toLowerCase();

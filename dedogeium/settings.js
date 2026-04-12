@@ -2,6 +2,12 @@ const volumeSlider = document.getElementById("music-volume");
 const volumeValue = document.getElementById("music-volume-value");
 const testMusicBtn = document.getElementById("test-music-btn");
 const testSoundBtn = document.getElementById("test-sound-btn");
+const skipAllDialogueCheckbox = document.getElementById("skip-all-dialogue");
+const skipAllDialogueStatus = document.getElementById("skip-all-dialogue-status");
+const spokenDialogueCheckbox = document.getElementById("spoken-dialogue");
+const spokenDialogueStatus = document.getElementById("spoken-dialogue-status");
+const SKIP_ALL_DIALOGUE_KEY = "skipAllDialogueEnabled";
+const SPOKEN_DIALOGUE_KEY = "spokenDialogueEnabled";
 
 const musicPreview = new Audio("rick roll.mp3");
 musicPreview.loop = true;
@@ -19,12 +25,38 @@ function updateVolumeDisplay(value) {
     }
 }
 
+function updateSkipAllDialogueStatus(enabled) {
+    if (!skipAllDialogueStatus) return;
+    skipAllDialogueStatus.textContent = enabled
+        ? "All level dialogue will be skipped automatically."
+        : "Level dialogue will play normally unless you tap Next.";
+}
+
+function updateSpokenDialogueStatus(enabled) {
+    if (!spokenDialogueStatus) return;
+    spokenDialogueStatus.textContent = enabled
+        ? "Dialogue speech is on. The player keeps one voice, and enemies rotate voices."
+        : "Dialogue speech is off.";
+}
+
 const savedVolume = clampVolume(localStorage.getItem("musicVolume") ?? 50);
 if (volumeSlider) {
     volumeSlider.value = savedVolume;
 }
 updateVolumeDisplay(savedVolume);
 musicPreview.volume = savedVolume / 100;
+
+const skipAllDialogueEnabled = localStorage.getItem(SKIP_ALL_DIALOGUE_KEY) === "true";
+if (skipAllDialogueCheckbox) {
+    skipAllDialogueCheckbox.checked = skipAllDialogueEnabled;
+}
+updateSkipAllDialogueStatus(skipAllDialogueEnabled);
+
+const spokenDialogueEnabled = localStorage.getItem(SPOKEN_DIALOGUE_KEY) !== "false";
+if (spokenDialogueCheckbox) {
+    spokenDialogueCheckbox.checked = spokenDialogueEnabled;
+}
+updateSpokenDialogueStatus(spokenDialogueEnabled);
 
 if (volumeSlider) {
     volumeSlider.addEventListener("input", () => {
@@ -67,5 +99,21 @@ if (testSoundBtn) {
         osc.start();
         osc.stop(ctx.currentTime + 0.2);
         osc.onended = () => ctx.close();
+    });
+}
+
+if (skipAllDialogueCheckbox) {
+    skipAllDialogueCheckbox.addEventListener("change", () => {
+        const enabled = skipAllDialogueCheckbox.checked;
+        localStorage.setItem(SKIP_ALL_DIALOGUE_KEY, String(enabled));
+        updateSkipAllDialogueStatus(enabled);
+    });
+}
+
+if (spokenDialogueCheckbox) {
+    spokenDialogueCheckbox.addEventListener("change", () => {
+        const enabled = spokenDialogueCheckbox.checked;
+        localStorage.setItem(SPOKEN_DIALOGUE_KEY, String(enabled));
+        updateSpokenDialogueStatus(enabled);
     });
 }

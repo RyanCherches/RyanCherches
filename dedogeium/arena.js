@@ -74,7 +74,12 @@ function setArenaCurrency(value) {
 }
 
 function addArenaCurrency(amount) {
-    setArenaCurrency(getArenaCurrency() + (Number(amount) || 0));
+    const numericAmount = Number(amount) || 0;
+    const appliedAmount = window.DedogeiumSystems && typeof window.DedogeiumSystems.getAdjustedCurrencyReward === "function"
+        ? window.DedogeiumSystems.getAdjustedCurrencyReward(numericAmount)
+        : numericAmount;
+    setArenaCurrency(getArenaCurrency() + appliedAmount);
+    return appliedAmount;
 }
 
 function showArenaRewardMessage(message, isError = false) {
@@ -96,9 +101,9 @@ function awardArenaWinCurrency(winnerKey) {
     const lastRewardedKey = localStorage.getItem("dedogeium_lastArenaRewardKey");
     if (lastRewardedKey === winnerKey) return;
     const reward = 20;
-    addArenaCurrency(reward);
+    const actualReward = addArenaCurrency(reward);
     localStorage.setItem("dedogeium_lastArenaRewardKey", winnerKey);
-    showArenaRewardMessage(`Victory +${reward} coins!`, false);
+    showArenaRewardMessage(`Victory +${actualReward} coins!`, false);
 }
 
 function normalizeServerUrl(value) {

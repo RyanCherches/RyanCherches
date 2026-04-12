@@ -22,7 +22,24 @@ const maybe_vic = document.getElementById("maybe-vic");
 const completedLevel = Number(localStorage.getItem("completedLevel"));
 const currentLevel = 8;
 const aprilFoolsEnabled = localStorage.getItem("aprilFoolsEnabled") === "true";
+const skipAllDialogueEnabled = localStorage.getItem("skipAllDialogueEnabled") === "true";
 const playerImg = document.querySelector(".character-container.player img");
+const dialogueVoice = window.DedogeiumDialogueVoice || null;
+const dialogueVoiceMap = {
+    good: { characterKey: "dedogeium-player", team: "player" },
+    bad: { characterKey: "level8-enemy", team: "enemy" },
+};
+
+function speakDialogueLine(line) {
+    if (!line || !dialogueVoice) return;
+    const voiceOptions = dialogueVoiceMap[line.speaker] || dialogueVoiceMap.good;
+    dialogueVoice.speak(line.text, voiceOptions);
+}
+
+function stopDialogueVoice() {
+    if (!dialogueVoice) return;
+    dialogueVoice.stop();
+}
 
 if (aprilFoolsEnabled) {
     // April 1 only: swap main character + music to Rick Astley.
@@ -37,6 +54,7 @@ const rarityWeights = [15, 10, 25, 44.9, 10, 0.1];
 const routeBase = window.location.pathname.includes('/index.html') ? '../' : '';
 
 home.addEventListener("click", function() {
+    stopDialogueVoice();
     window.location.href = routeBase + "adventure/";
 });
 
@@ -101,8 +119,13 @@ function getLevelCurrency() {
 
 function addLevelCurrency(amount) {
     const current = getLevelCurrency();
-    const newAmount = Math.max(0, current + Number(amount || 0));
+    const numericAmount = Number(amount || 0);
+    const appliedAmount = window.DedogeiumSystems && typeof window.DedogeiumSystems.getAdjustedCurrencyReward === "function"
+        ? window.DedogeiumSystems.getAdjustedCurrencyReward(numericAmount)
+        : numericAmount;
+    const newAmount = Math.max(0, current + appliedAmount);
     localStorage.setItem("currency", String(newAmount));
+    return appliedAmount;
 }
 
 const levelShopItems = [
@@ -216,6 +239,7 @@ function showDefeatMessage(message) {
 }
 
 cancel_btn.addEventListener("click", function() {
+    stopDialogueVoice();
     window.location.href = routeBase + "adventure/";
 });
 
@@ -237,7 +261,7 @@ const dialogue = [
     { speaker: 'good', text: "Jeez, thats a lot of doges..." },
     { speaker: 'bad', text: "Stop delaying your enevitable end." },
     { speaker: 'good', text: "Fine lets fight." },
-    { speaker: 'bad', text: "You'll need some luck and karma, so you can have some." },
+    { speaker: 'bad', text: "You'll need some luck, so you can have some." },
     { speaker: 'good', text: "Sure." },
 ];
 const activeDialogue = aprilFoolsEnabled ? rickdialogue : dialogue;
@@ -258,6 +282,11 @@ const postDialogueWin = [
     { speaker: 'bad', text: "You know what. Good job. It was a good fight." },
 ];
 
+function setDialogueButtonsVisible(visible) {
+    const display = visible ? "inline-block" : "none";
+    if (skipBtn) skipBtn.style.display = display;
+}
+
 function speech() {
     // clear any ongoing cutscene state and pending timeouts
     inCutscene = false;
@@ -266,9 +295,10 @@ function speech() {
         clearTimeout(speechTimeoutId);
         speechTimeoutId = null;
     }
+    stopDialogueVoice();
     speech_good.innerHTML = "";
     speech_bad.innerHTML = "";
-    if (skipBtn) skipBtn.style.display = 'none';
+    setDialogueButtonsVisible(false);
 }
 
 function showLine(index) {
@@ -278,6 +308,7 @@ function showLine(index) {
     if (!line) return;
     if (line.speaker === 'good') speech_good.innerText = line.text;
     else speech_bad.innerText = line.text;
+    speakDialogueLine(line);
 }
 
 function showPostLine(index) {
@@ -287,6 +318,7 @@ function showPostLine(index) {
     if (!line) return;
     if (line.speaker === 'good') speech_good.innerText = line.text;
     else speech_bad.innerText = line.text;
+    speakDialogueLine(line);
 }
 
 function showPostWinLine(index) {
@@ -296,6 +328,7 @@ function showPostWinLine(index) {
     if (!line) return;
     if (line.speaker === 'good') speech_good.innerText = line.text;
     else speech_bad.innerText = line.text;
+    speakDialogueLine(line);
 }
 
 
@@ -333,22 +366,31 @@ function showNextPostWinLine() {
 function startPostDialogue() {
     inPostDialogue = true;
     postIndex = 0;
+    if (skipAllDialogueEnabled) {
+        endPostDialogue();
+        return;
+    }
     showPostLine(0);
-    if (skipBtn) skipBtn.style.display = 'inline-block';
+    setDialogueButtonsVisible(true);
 }
 
 function startPostDialogueWin() {
     inPostDialogue = true;
     postIndex = 0;
+    if (skipAllDialogueEnabled) {
+        endPostDialogue();
+        return;
+    }
     showPostWinLine(0);
-    if (skipBtn) skipBtn.style.display = 'inline-block';
+    setDialogueButtonsVisible(true);
     postDialogueWinAudio.loop = false;
     postDialogueWinAudio.play();
 }
 
 function endPostDialogue() {
     inPostDialogue = false;
-    if (skipBtn) skipBtn.style.display = 'none';
+    stopDialogueVoice();
+    setDialogueButtonsVisible(false);
     // show victory UI after post-dialogue finishes
     if (victory) victory.style.display = "block";
 }
@@ -356,13 +398,18 @@ function endPostDialogue() {
 function startCutscene() {
     inCutscene = true;
     dialogueIndex = 0;
+    if (skipAllDialogueEnabled) {
+        endCutsceneAndStartBattle();
+        return;
+    }
     showLine(0);
-    if (skipBtn) skipBtn.style.display = 'inline-block';
+    setDialogueButtonsVisible(true);
 }
 
 function endCutsceneAndStartBattle() {
     inCutscene = false;
-    if (skipBtn) skipBtn.style.display = 'none';
+    stopDialogueVoice();
+    setDialogueButtonsVisible(false);
     speech_good.innerHTML = "";
     speech_bad.innerHTML = "";
     // begin the fight
@@ -403,6 +450,7 @@ if (skipBtn) {
     });
 }
 
+
 async function battleLoop() {
     while (enemy_health > 0 && health > 0) {
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -424,7 +472,7 @@ async function battleLoop() {
     let reward = 0;
     if (hasWon) {
         reward = 15 + (currentLevel - 2) * 10;
-        addLevelCurrency(reward);
+        reward = addLevelCurrency(reward);
     }
     // start post-battle dialogue (win or loss)
     duringFightAudio.pause();
@@ -470,10 +518,13 @@ function enemy_attack() {
 }
 
 function generateRandomRarity() {
+    const weights = window.DedogeiumSystems && typeof window.DedogeiumSystems.getAdjustedRarityWeights === "function"
+        ? window.DedogeiumSystems.getAdjustedRarityWeights(rarityWeights)
+        : rarityWeights;
     const roll = Math.random() * 100;
     let cumulative = 0;
     for (let i = 0; i < rarities.length; i++) {
-        cumulative += rarityWeights[i];
+        cumulative += Number(weights[i]) || 0;
         if (roll <= cumulative) return rarities[i];
     }
     return rarities[rarities.length - 1];
@@ -562,10 +613,12 @@ function startPlayerTurn() {
 }
 
 function calculatePlayerAccuracy() {
-    if (combat.maxX <= 0) return 0;
-    const center = combat.maxX / 2;
-    const dist = Math.abs(combat.pointerPos - center);
-    const ratio = Math.min(1, dist / center);
+    if (combat.barWidth <= 0) return 0;
+    const sweetSpotCenter = combat.barWidth * (904 / 1920);
+    const pointerCenter = combat.pointerPos + (combat.pointerWidth / 2);
+    const dist = Math.abs(pointerCenter - sweetSpotCenter);
+    const maxDistance = Math.max(sweetSpotCenter, combat.barWidth - sweetSpotCenter);
+    const ratio = Math.min(1, dist / maxDistance);
     return Math.max(0, 1 - ratio);
 }
 
@@ -635,10 +688,10 @@ function finishBattle(playerWon) {
         const currentCompletedLevel = Number(localStorage.getItem("completedLevel")) || 0;
         if (currentCompletedLevel < 9) localStorage.setItem("completedLevel", "9");
         const reward = 15 + (currentLevel - 2) * 10;
-        addLevelCurrency(reward);
+        const actualReward = addLevelCurrency(reward);
         const rewardItem = generateRewardItem();
         addItemToInventory(rewardItem);
-        showVictoryReward(reward, rewardItem);
+        showVictoryReward(actualReward, rewardItem);
     } else {
         showDefeatMessage("Defeated! Grind and try again.");
     }

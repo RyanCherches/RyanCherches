@@ -122,6 +122,121 @@ body {
 .item img { width:72px; height:72px; object-fit:contain; background:#dcdcdc; padding:6px; border-radius:6px; }
 .item p { margin:0; font-weight:700; font-size:14px; color:#fff; }
 .item.equipped { border: 2px solid gold; background: linear-gradient(180deg, rgba(255,215,0,0.06), rgba(255,215,0,0.02)); }
+.item.selected { border: 2px solid #8ad8ff; box-shadow: 0 0 0 2px rgba(138, 216, 255, 0.2); }
+.item-mini-stats { font-size: 12px; color: rgba(255,255,255,0.72); }
+.item-sell-btn {
+    width: 100%;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: linear-gradient(180deg, #ffd37a, #ff9c2a);
+    color: #4b2200;
+    font-weight: 800;
+    cursor: pointer;
+}
+.item-sell-btn:hover { filter: brightness(1.04); }
+
+#equip-slot-line small {
+    color: rgba(255,255,255,0.72);
+}
+
+#selected-doge-panel {
+    grid-column: 1 / -1;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+#selected-doge-panel h3 {
+    margin: 0 0 10px 0;
+}
+
+.selected-doge-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.selected-doge-image {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    background: rgba(255,255,255,0.88);
+    padding: 10px;
+    border-radius: 10px;
+}
+
+.selected-doge-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+.selected-doge-name {
+    font-size: 22px;
+    font-weight: 800;
+}
+
+.selected-doge-rarity {
+    color: #ffe08a;
+    font-size: 15px;
+}
+
+.selected-doge-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.selected-doge-stats span {
+    background: rgba(255,255,255,0.08);
+    padding: 7px 10px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.selected-doge-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.inventory-btn {
+    border: none;
+    border-radius: 8px;
+    padding: 9px 14px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.equip-btn {
+    background: linear-gradient(180deg, #7edb9a, #2ead63);
+    color: #0d2e19;
+}
+
+.sell-btn {
+    background: linear-gradient(180deg, #ffd37a, #ff9c2a);
+    color: #4b2200;
+}
+
+.inventory-action-msg {
+    min-height: 20px;
+    margin: 0;
+    color: #9ff3a6;
+    font-weight: 700;
+}
+
+.inventory-action-msg.error {
+    color: #ffb6b6;
+}
+
+.selected-doge-empty {
+    margin: 0 0 8px 0;
+    color: rgba(255,255,255,0.84);
+}
 
 /* Exchange panel -- span full width of grid */
 #exchange-panel { grid-column: 1 / -1; background: rgba(0,0,0,0.12); padding: 12px; border-radius:8px; border: 1px solid rgba(255,255,255,0.06); }
@@ -145,6 +260,96 @@ body {
 .shop-buy-btn:disabled { opacity:0.45; cursor:not-allowed; }
 #shop-msg { min-height: 20px; margin-top: 8px; }
 
+#boost-control-panel {
+    grid-column: 1 / -1;
+    background: rgba(0,0,0,0.18);
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+#boost-control-panel h3 {
+    margin: 0 0 10px 0;
+}
+
+.boost-intro {
+    margin: 0 0 12px 0;
+    color: rgba(255,255,255,0.82);
+}
+
+.boost-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.boost-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 10px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 8px;
+}
+
+.boost-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.boost-name {
+    font-weight: 800;
+    color: #ffe08a;
+}
+
+.boost-description {
+    color: rgba(255,255,255,0.82);
+    font-size: 13px;
+}
+
+.boost-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.boost-meta span {
+    background: rgba(255,255,255,0.08);
+    padding: 6px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.boost-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.boost-start-btn {
+    background: linear-gradient(180deg, #7edb9a, #2ead63);
+    color: #0d2e19;
+}
+
+.boost-stop-btn {
+    background: linear-gradient(180deg, #ffcf75, #ff9a2d);
+    color: #4b2200;
+}
+
+.boost-msg {
+    min-height: 20px;
+    margin: 10px 0 0 0;
+    color: #9ff3a6;
+    font-weight: 700;
+}
+
+.boost-msg.error {
+    color: #ffb6b6;
+}
+
 button.exchange-btn { background: linear-gradient(180deg,#4a7bf0,#315ad6); color:#fff; border: none; padding:6px 10px; border-radius:6px; cursor:pointer; font-weight:700; }
 button.exchange-btn:hover { filter:brightness(1.05); }
 button.exchange-btn:disabled { opacity:0.45; cursor:not-allowed; }
@@ -158,6 +363,7 @@ button.exchange-btn:disabled { opacity:0.45; cursor:not-allowed; }
     .display { width:100%; }
     .list-items { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
     #exchange-list > div { flex-wrap:wrap; }
+    .boost-row { flex-wrap: wrap; }
 }
 
 @media (max-width: 480px) {
@@ -165,9 +371,16 @@ button.exchange-btn:disabled { opacity:0.45; cursor:not-allowed; }
     header a { font-size:16px; }
     .item img { width:56px; height:56px; }
     .item { padding:8px; }
+    .item-sell-btn { font-size: 13px; }
+    .selected-doge-card { flex-direction: column; align-items: flex-start; }
+    .selected-doge-image { width: 96px; height: 96px; }
+    .selected-doge-actions { width: 100%; }
+    .inventory-btn { width: 100%; }
+    .boost-actions { width: 100%; }
     #exchange-list > div { flex-direction:column; align-items:flex-start; }
     #exchange-panel { padding:8px; }
     #shop-panel { padding:8px; }
+    #boost-control-panel { padding:8px; }
 }
 
 /* Responsive: adapt layout for smaller screens */
@@ -178,8 +391,8 @@ button.exchange-btn:disabled { opacity:0.45; cursor:not-allowed; }
     .main { flex-direction: column; align-items: stretch; gap:12px; padding: 12px; }
     .display { width: 100%; height: auto; padding: 12px; }
     .display-character { padding-left:8px; padding-right:8px; }
-    .list-items { width: 100%; display: flex; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; gap:8px; padding:8px; }
-    .item { min-width: 80px; max-width: 120px; }
+    .list-items { width: 100%; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap:8px; padding:8px; overflow: visible; }
+    .item { min-width: 0; max-width: none; }
     .character-items { flex-wrap: wrap; justify-content: center; }
     .border { min-width: 48px; min-height: 48px; }
 }
@@ -197,6 +410,9 @@ button.exchange-btn:disabled { opacity:0.45; cursor:not-allowed; }
     #exchange-list button { padding:6px 8px; font-size:14px; }
     .shop-row { flex-direction: column; align-items: flex-start; }
     .shop-buy-btn { width: 100%; }
+    .selected-doge-stats span { width: 100%; box-sizing: border-box; }
+    .boost-row { flex-direction: column; align-items: flex-start; }
+    .boost-meta span { width: 100%; box-sizing: border-box; }
 }
 #AprilFools-box {
     margin-top: 12px;

@@ -14,7 +14,10 @@ main {
     flex-direction:column;
     justify-content:center;
     align-items:center;
-    height:calc(100vh - 120px);
+    min-height:calc(100vh - 120px);
+    gap: 28px;
+    padding: 24px 20px 40px;
+    box-sizing: border-box;
 }
 #customize {
     max-width:50px;
@@ -28,12 +31,98 @@ main {
     justify-content: center;
     align-items:center;
 }
+.hero-panel {
+    width: min(100%, 1020px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    padding: 28px;
+    border-radius: 28px;
+    background: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
+    backdrop-filter: blur(10px);
+}
 #pages {
     display:flex;
     flex-direction:row;
     justify-content: center;
     align-items:center;
     gap:40px;
+}
+.daily-reward-card {
+    width: min(100%, 1020px);
+    display: grid;
+    grid-template-columns: 1.4fr 1fr auto;
+    gap: 22px;
+    align-items: center;
+    padding: 24px 28px;
+    border-radius: 26px;
+    background: linear-gradient(135deg, rgba(17, 24, 39, 0.9), rgba(30, 41, 59, 0.88));
+    color: #f8fafc;
+    box-shadow: 0 22px 42px rgba(15, 23, 42, 0.28);
+}
+.daily-reward-copy h2 {
+    margin: 0 0 8px;
+    font-size: 2rem;
+}
+.daily-reward-copy p:last-child {
+    margin: 0;
+    color: #cbd5e1;
+    line-height: 1.5;
+}
+.daily-reward-kicker {
+    margin: 0 0 8px;
+    color: #facc15;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+.daily-reward-stats {
+    display: grid;
+    gap: 14px;
+}
+.daily-stat {
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.08);
+}
+.daily-stat span {
+    display: block;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #94a3b8;
+}
+.daily-stat strong {
+    display: block;
+    margin-top: 6px;
+    font-size: 1.1rem;
+}
+.daily-reward-status {
+    margin: 0;
+    color: #e2e8f0;
+    line-height: 1.5;
+}
+#daily-reward-btn {
+    padding: 14px 20px;
+    border: none;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #facc15, #fb7185);
+    color: #111827;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 12px 24px rgba(250, 204, 21, 0.25);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+#daily-reward-btn:hover {
+    transform: translateY(-1px);
+}
+#daily-reward-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+    transform: none;
 }
 body {
     background: radial-gradient(rgb(255, 251, 8) 10%, rgb(25, 0, 255) 100%);
@@ -192,7 +281,22 @@ input {
         gap: 28px;
     }
 
+    .daily-reward-card {
+        grid-template-columns: 1fr;
+    }
+
     a {
         font-size: 24px;
+    }
+}
+
+@media (max-width: 600px) {
+    .hero-panel,
+    .daily-reward-card {
+        padding: 20px;
+    }
+
+    .daily-reward-copy h2 {
+        font-size: 1.5rem;
     }
 }

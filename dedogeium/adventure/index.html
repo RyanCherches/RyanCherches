@@ -21,37 +21,57 @@
     <main>
         <br><br><br><br><br><br><br>
         <div class="background">
+            <div class="levels tutorial-level">
+                <a href="tutorial/" class="level-link tutorial-link" data-required-level="0">
+                    <span class="tutorial-title">Tutorial World</span>
+                    <div class="tutorial-battle" aria-label="Tutorial world battle preview">
+                        <div class="tutorial-fighter tutorial-fighter-player">
+                            <span class="tutorial-fighter-tag">You</span>
+                            <img src="Im just a chill guy no background.png" class="tutorial-battle-doge tutorial-battle-player" alt="Player doge">
+                        </div>
+                        <div class="tutorial-battle-impact" aria-hidden="true">
+                            <span class="tutorial-battle-burst">VS</span>
+                            <span class="tutorial-battle-slash"></span>
+                        </div>
+                        <div class="tutorial-fighter tutorial-fighter-enemy">
+                            <span class="tutorial-fighter-tag enemy-tag">Enemy</span>
+                            <img src="first boss doge.png" class="tutorial-battle-doge tutorial-battle-enemy" alt="Enemy doge">
+                        </div>
+                    </div>
+                    <span class="level-caption tutorial-caption">Learn the basics</span>
+                </a>
+            </div>
             <div class="levels">
                 <p>Level 1</p>
-                <a href="level1/"><img src="Im just a chill guy no background.png" id="green-doge"></a>
+                <a href="level1/" class="level-link" data-required-level="1" data-lock-message="Complete the tutorial to unlock Level 1!"><img src="Im just a chill guy no background.png" id="green-doge" alt="Level 1"></a>
             </div>
             <div class="levels">
-                <p>level 2</p>
-                <a href="level2/"><img src="first boss doge.png" id="red-doge"></a>
+                <p>Level 2</p>
+                <a href="level2/" class="level-link" data-required-level="2" data-lock-message="Complete Level 1 to unlock Level 2!"><img src="first boss doge.png" id="red-doge" alt="Level 2"></a>
             </div>
             <div class="levels">
-                <p>level 3</p>
-                <a href="level3/"><img src="second boss doge.png" id="spooky-doge"></a>
+                <p>Level 3</p>
+                <a href="level3/" class="level-link" data-required-level="3" data-lock-message="Complete Level 2 to unlock Level 3!"><img src="second boss doge.png" id="spooky-doge" alt="Level 3"></a>
             </div>
             <div class="levels">
-                <p>level 4</p>
-                <a href="level4/"><img src="final boss doge.png" id="rainbow-doge"></a>
+                <p>Level 4</p>
+                <a href="level4/" class="level-link" data-required-level="4" data-lock-message="Complete Level 3 to unlock Level 4!"><img src="final boss doge.png" id="rainbow-doge" alt="Level 4"></a>
             </div>
             <div class="levels">
                 <p>Level 5</p>
-                <a href="level5/"><img src="Im just a chill guy no background.png" id="second-cousin-doge"></a>
+                <a href="level5/" class="level-link" data-required-level="5" data-lock-message="Complete Level 4 to unlock Level 5!"><img src="Im just a chill guy no background.png" id="second-cousin-doge" alt="Level 5"></a>
             </div>
             <div class="levels">
                 <p>Level 6</p>
-                <a href="level6/"><img src="fire doge.png" id="first-red-doge"></a>
+                <a href="level6/" class="level-link" data-required-level="6" data-lock-message="Complete Level 5 to unlock Level 6!"><img src="fire doge.png" id="first-red-doge" alt="Level 6"></a>
             </div>
             <div class="levels">
                 <p>Level 7</p>
-                <a href="level7/"><img src="fire doge first boss.png" id="firstboss-red-doge"></a>
+                <a href="level7/" class="level-link" data-required-level="7" data-lock-message="Complete Level 6 to unlock Level 7!"><img src="fire doge first boss.png" id="firstboss-red-doge" alt="Level 7"></a>
             </div>
             <div class="levels">
                 <p>Level 8</p>
-                <a href="level8/"><img src="fire doge final boss.png" id="finalboss-red-doge"></a>
+                <a href="level8/" class="level-link" data-required-level="8" data-lock-message="Complete Level 7 to unlock Level 8!"><img src="fire doge final boss.png" id="finalboss-red-doge" alt="Level 8"></a>
             </div>
             <!-- <img src="water bottle loser.png" height="100px" id="water-attack"> -->
         </div>
@@ -66,5 +86,3 @@
 <script src="adventure.js"></script>
 </body>
 </html>
-
-

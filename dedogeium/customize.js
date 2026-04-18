@@ -24,6 +24,20 @@ const BOOST_SHOP_ITEMS = [
     { key: "luck", cost: 500 },
 ];
 
+function getCurrentExtraSlotCost() {
+    if (window.DedogeiumSystems && typeof window.DedogeiumSystems.getExtraSlotCost === "function") {
+        return window.DedogeiumSystems.getExtraSlotCost();
+    }
+    return EXTRA_SLOT_COST;
+}
+
+function getCurrentBoostCost(boostKey, fallbackCost) {
+    if (window.DedogeiumSystems && typeof window.DedogeiumSystems.getBoostChargeCost === "function") {
+        return window.DedogeiumSystems.getBoostChargeCost(boostKey);
+    }
+    return fallbackCost;
+}
+
 function getCurrency() {
     return Number(localStorage.getItem('currency') || 0);
 }
@@ -271,7 +285,8 @@ window.addEventListener('DOMContentLoaded', function() {
     }
 
     function handleBuyExtraSlot() {
-        if (getCurrency() < EXTRA_SLOT_COST) {
+        const extraSlotCost = getCurrentExtraSlotCost();
+        if (getCurrency() < extraSlotCost) {
             setShopMessage("Not enough currency for an extra slot yet.", true);
             return;
         }
@@ -284,22 +299,23 @@ window.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        addCurrency(-EXTRA_SLOT_COST);
+        addCurrency(-extraSlotCost);
         setShopMessage(`Bought an extra equip slot. You can now equip ${getMaxEquipSlots()} doges.`, false);
         if (typeof window.refreshCustomizeInventoryUI === "function") {
             window.refreshCustomizeInventoryUI();
         }
     }
 
-    function handleBuyBoost(boostKey, cost) {
+    function handleBuyBoost(boostKey, fallbackCost) {
         const definition = window.DedogeiumSystems && window.DedogeiumSystems.BOOST_DEFINITIONS
             ? window.DedogeiumSystems.BOOST_DEFINITIONS[boostKey]
             : null;
+        const boostCost = getCurrentBoostCost(boostKey, fallbackCost);
         if (!definition) {
             setShopMessage("That boost is unavailable right now.", true);
             return;
         }
-        if (getCurrency() < cost) {
+        if (getCurrency() < boostCost) {
             setShopMessage(`Not enough currency for ${definition.label}.`, true);
             return;
         }
@@ -310,7 +326,7 @@ window.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        addCurrency(-cost);
+        addCurrency(-boostCost);
         setShopMessage(`Bought 1 ${definition.label} charge. Start it from the boost controls whenever you want.`, false);
         buildBoostControlUI();
         buildShopUI();
@@ -812,17 +828,18 @@ function buildShopUI() {
 
         const slotRow = document.createElement("div");
         slotRow.className = "shop-row";
+        const extraSlotCost = getCurrentExtraSlotCost();
         slotRow.innerHTML = `
             <div class="shop-label-wrap">
                 <div class="shop-label">Extra Equip Slot</div>
-                <div class="shop-cost">${EXTRA_SLOT_COST} currency | Slots: ${getCustomizeMaxEquipSlots()} / ${snapshot.baseEquipSlots + snapshot.maxExtraSlots}</div>
+                <div class="shop-cost">${extraSlotCost} currency | Slots: ${getCustomizeMaxEquipSlots()} / ${snapshot.baseEquipSlots + snapshot.maxExtraSlots}</div>
             </div>
         `;
 
         const slotBtn = document.createElement("button");
         slotBtn.className = "shop-buy-btn";
         slotBtn.textContent = snapshot.state.extraSlots >= snapshot.maxExtraSlots ? "Maxed" : "Buy";
-        slotBtn.disabled = getCurrency() < EXTRA_SLOT_COST || snapshot.state.extraSlots >= snapshot.maxExtraSlots;
+        slotBtn.disabled = getCurrency() < extraSlotCost || snapshot.state.extraSlots >= snapshot.maxExtraSlots;
         slotBtn.addEventListener("click", function () {
             if (window.customizeShopActions && typeof window.customizeShopActions.handleBuyExtraSlot === "function") {
                 window.customizeShopActions.handleBuyExtraSlot();
@@ -833,19 +850,20 @@ function buildShopUI() {
 
         BOOST_SHOP_ITEMS.forEach((boostItem) => {
             const definition = snapshot.boostDefinitions[boostItem.key];
+            const boostCost = getCurrentBoostCost(boostItem.key, boostItem.cost);
             const boostRow = document.createElement("div");
             boostRow.className = "shop-row";
             boostRow.innerHTML = `
                 <div class="shop-label-wrap">
                     <div class="shop-label">${definition.label}</div>
-                    <div class="shop-cost">${boostItem.cost} currency | ${window.DedogeiumSystems.formatDuration(definition.durationMs)} per charge | Owned: ${snapshot.state.boostInventory[boostItem.key] || 0}</div>
+                    <div class="shop-cost">${boostCost} currency | ${window.DedogeiumSystems.formatDuration(definition.durationMs)} per charge | Owned: ${snapshot.state.boostInventory[boostItem.key] || 0}</div>
                 </div>
             `;
 
             const boostBtn = document.createElement("button");
             boostBtn.className = "shop-buy-btn";
             boostBtn.textContent = "Buy";
-            boostBtn.disabled = getCurrency() < boostItem.cost;
+            boostBtn.disabled = getCurrency() < boostCost;
             boostBtn.addEventListener("click", function () {
                 if (window.customizeShopActions && typeof window.customizeShopActions.handleBuyBoost === "function") {
                     window.customizeShopActions.handleBuyBoost(boostItem.key, boostItem.cost);

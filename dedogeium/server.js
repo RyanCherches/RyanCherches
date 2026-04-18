@@ -441,7 +441,7 @@ app.post('/api/player', requireAuth, (req, res) => {
 
   ep.firstSeen = ep.firstSeen ? Math.min(ep.firstSeen, np.firstSeen || ep.firstSeen) : (np.firstSeen || ep.firstSeen);
   ep.lastSeen = ep.lastSeen ? Math.max(ep.lastSeen, np.lastSeen || ep.lastSeen) : (np.lastSeen || ep.lastSeen);
-  ep.visits = (ep.visits || 0) + (np.visits || 0);
+  ep.visits = Math.max(ep.visits || 0, np.visits || 0);
   if (!ep.password && np.password) ep.password = np.password;
 
   const existingInv = ep.inventory || [];
@@ -451,6 +451,20 @@ app.post('/api/player', requireAuth, (req, res) => {
     if (it && it.id) map[it.id] = it;
   });
   ep.inventory = Object.values(map);
+  if (np.profileStats && typeof np.profileStats === 'object') {
+    const existingUpdated = Number(ep.profileStats && ep.profileStats.updatedAt) || 0;
+    const incomingUpdated = Number(np.profileStats.updatedAt) || 0;
+    if (!ep.profileStats || incomingUpdated >= existingUpdated) {
+      ep.profileStats = np.profileStats;
+    }
+  }
+  if (np.leaderboard && typeof np.leaderboard === 'object') {
+    const existingUpdated = Number(ep.leaderboard && ep.leaderboard.updatedAt) || 0;
+    const incomingUpdated = Number(np.leaderboard.updatedAt) || 0;
+    if (!ep.leaderboard || incomingUpdated >= existingUpdated) {
+      ep.leaderboard = np.leaderboard;
+    }
+  }
 
   players[name] = ep;
   writePlayers(players);
@@ -465,7 +479,7 @@ app.post('/api/merge', requireAuth, (req, res) => {
     const ep = players[name] || { firstSeen: null, lastSeen: null, visits: 0, inventory: [] };
     ep.firstSeen = ep.firstSeen ? Math.min(ep.firstSeen, np.firstSeen || ep.firstSeen) : (np.firstSeen || ep.firstSeen);
     ep.lastSeen = ep.lastSeen ? Math.max(ep.lastSeen, np.lastSeen || ep.lastSeen) : (np.lastSeen || ep.lastSeen);
-    ep.visits = (ep.visits || 0) + (np.visits || 0);
+    ep.visits = Math.max(ep.visits || 0, np.visits || 0);
     if (!ep.password && np.password) ep.password = np.password;
     const existingInv = ep.inventory || [];
     const newInv = np.inventory || [];
@@ -474,6 +488,20 @@ app.post('/api/merge', requireAuth, (req, res) => {
       if (it && it.id) map[it.id] = it;
     });
     ep.inventory = Object.values(map);
+    if (np.profileStats && typeof np.profileStats === 'object') {
+      const existingUpdated = Number(ep.profileStats && ep.profileStats.updatedAt) || 0;
+      const incomingUpdated = Number(np.profileStats.updatedAt) || 0;
+      if (!ep.profileStats || incomingUpdated >= existingUpdated) {
+        ep.profileStats = np.profileStats;
+      }
+    }
+    if (np.leaderboard && typeof np.leaderboard === 'object') {
+      const existingUpdated = Number(ep.leaderboard && ep.leaderboard.updatedAt) || 0;
+      const incomingUpdated = Number(np.leaderboard.updatedAt) || 0;
+      if (!ep.leaderboard || incomingUpdated >= existingUpdated) {
+        ep.leaderboard = np.leaderboard;
+      }
+    }
     players[name] = ep;
   });
   writePlayers(players);

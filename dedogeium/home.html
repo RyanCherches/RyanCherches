@@ -63,6 +63,56 @@
             <p id="daily-reward-status" class="daily-reward-status"></p>
             <button id="daily-reward-btn" type="button">Claim Daily Reward</button>
         </section>
+        <section class="leaderboard-panel">
+            <div class="leaderboard-head">
+                <div class="leaderboard-copy">
+                    <p class="leaderboard-kicker">Leaderboards</p>
+                    <h2>Daily, weekly, monthly, and all-time races</h2>
+                    <p id="leaderboard-description">Compete in attack, health, PvP wins, computer wins, and time played on the shared server leaderboard. Daily, weekly, and monthly rewards pay out after each period ends.</p>
+                </div>
+                <div class="leaderboard-controls">
+                    <div class="leaderboard-tabs" role="tablist" aria-label="Leaderboard scopes">
+                        <button type="button" class="leaderboard-tab is-active" data-leaderboard-scope="daily">Daily</button>
+                        <button type="button" class="leaderboard-tab" data-leaderboard-scope="weekly">Weekly</button>
+                        <button type="button" class="leaderboard-tab" data-leaderboard-scope="monthly">Monthly</button>
+                        <button type="button" class="leaderboard-tab" data-leaderboard-scope="all_time">All Time</button>
+                    </div>
+                    <label class="leaderboard-select-wrap" for="leaderboard-category">
+                        <span>Category</span>
+                        <select id="leaderboard-category">
+                            <option value="attack">Attack</option>
+                            <option value="health">Health</option>
+                            <option value="pvp_wins">Victories vs People</option>
+                            <option value="computer_wins">Victories vs Computer</option>
+                            <option value="time_played">Time Played</option>
+                        </select>
+                    </label>
+                </div>
+            </div>
+            <div class="leaderboard-grid">
+                <article class="leaderboard-card leaderboard-card-summary">
+                    <p class="leaderboard-card-kicker">Your Placement</p>
+                    <h3 id="leaderboard-player-rank">Sign in to compete</h3>
+                    <p id="leaderboard-player-value" class="leaderboard-player-value">No tracked stat yet.</p>
+                    <div class="leaderboard-reward-box">
+                        <p class="leaderboard-reward-label">Finished-Period Reward</p>
+                        <strong id="leaderboard-reward-preview">No reward available</strong>
+                        <p id="leaderboard-claim-status" class="leaderboard-claim-status"></p>
+                    </div>
+                    <button id="leaderboard-claim-btn" type="button">Claim Finished Reward</button>
+                </article>
+                <article class="leaderboard-card leaderboard-card-table">
+                    <div class="leaderboard-table-head">
+                        <div>
+                            <p class="leaderboard-card-kicker">Top Players</p>
+                            <h3 id="leaderboard-table-title">Daily Attack</h3>
+                        </div>
+                        <p id="leaderboard-source" class="leaderboard-source">Loading leaderboard...</p>
+                    </div>
+                    <div id="leaderboard-list" class="leaderboard-list"></div>
+                </article>
+            </div>
+        </section>
         <div id="popup">
             <div class="popup-card">
                 <h2>Congratulations!</h2>
@@ -76,6 +126,7 @@
             </div>
     </div>
     </main>
+    <script src="server_config.js"></script>
     <script src="game_systems.js"></script>
     <script src="home.js"></script>
 </body>

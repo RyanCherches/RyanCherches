@@ -687,6 +687,9 @@ function finishBattle(playerWon) {
     if (playerWon) {
         const currentCompletedLevel = Number(localStorage.getItem("completedLevel")) || 0;
         if (currentCompletedLevel < 9) localStorage.setItem("completedLevel", "9");
+        if (window.DedogeiumSystems && typeof window.DedogeiumSystems.recordComputerVictory === "function") {
+            window.DedogeiumSystems.recordComputerVictory();
+        }
         const reward = 15 + (currentLevel - 2) * 10;
         const actualReward = addLevelCurrency(reward);
         const rewardItem = generateRewardItem();

@@ -103,8 +103,7 @@ main {
     background-repeat: no-repeat;
     background-position: center;
     width:100%;
-    aspect-ratio: 16 / 9;
-    /* min-height: 100vh; */
+    min-height: 100vh;
     position: relative;
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -114,8 +113,8 @@ main {
     /* align-items:top; */
     /* padding-top:40px; */
     margin: 0;
-    padding: 0;
-    line-height: 0;
+    padding: 24px 16px 40px;
+    line-height: normal;
     height: auto;
 }
 #red-doge {
@@ -156,6 +155,155 @@ main {
     height: 220px; /* match width so background fits predictably */
     box-sizing: border-box;
     padding: 12px;
+    text-align: center;
+}
+
+.tutorial-level {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: 320px;
+    height: 260px;
+    background-size: 100% 100%;
+}
+
+.level-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tutorial-link {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    flex-direction: column;
+    justify-content: center;
+    padding: 18px 20px 24px;
+    box-sizing: border-box;
+    text-decoration: none;
+    color: #17314f;
+    overflow: hidden;
+}
+
+.tutorial-title {
+    position: absolute;
+    top: 20px;
+    left: 22px;
+    right: 22px;
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 800;
+    line-height: 1.1;
+    text-align: center;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    z-index: 2;
+}
+
+.tutorial-battle {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: 104px;
+    margin: 4px 0 2px;
+}
+
+.tutorial-fighter {
+    position: relative;
+    width: 76px;
+    height: 88px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    border-radius: 999px;
+    background: radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.96), rgba(190, 255, 94, 0.78) 60%, rgba(137, 220, 44, 0.46) 100%);
+    box-shadow: inset 0 -6px 12px rgba(78, 118, 20, 0.14);
+}
+
+.tutorial-fighter-enemy {
+    background: radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.96), rgba(255, 210, 96, 0.78) 60%, rgba(255, 142, 48, 0.44) 100%);
+}
+
+.tutorial-battle-doge {
+    width: 56px;
+    max-width: none;
+    max-height: none;
+    flex: 0 0 auto;
+    position: relative;
+    z-index: 1;
+}
+
+.tutorial-battle-player {
+    transform: translateY(1px);
+}
+
+.tutorial-battle-enemy {
+    width: 60px;
+    transform: scaleX(-1) translateY(2px);
+}
+
+.tutorial-fighter-tag {
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #1c6fff;
+    color: #fff;
+    font-size: 0.63rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    z-index: 2;
+}
+
+.enemy-tag {
+    background: #ff6b35;
+}
+
+.tutorial-battle-impact {
+    position: relative;
+    width: 42px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tutorial-battle-burst {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 999px;
+    background: radial-gradient(circle at 35% 30%, #ffcf71, #ff7a00 65%, #d94d00 100%);
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+    position: relative;
+    z-index: 2;
+    text-decoration: none;
+}
+
+.tutorial-battle-slash {
+    position: absolute;
+    width: 56px;
+    height: 6px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(255, 105, 0, 0), rgba(255, 105, 0, 0.95), rgba(255, 210, 120, 1), rgba(255, 105, 0, 0.95), rgba(255, 105, 0, 0));
+    transform: rotate(-24deg);
+    box-shadow: 0 0 10px rgba(255, 127, 17, 0.45);
+}
+
+.level-link.locked img {
+    filter: grayscale(0.9);
+    opacity: 0.7;
 }
 
 /* ensure the doge images fit inside their level boxes */
@@ -180,9 +328,83 @@ main {
     text-align: center;
 }
 
+.level-caption {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.9rem;
+    color: #1f3554;
+    font-weight: 600;
+}
+
+.tutorial-caption {
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 18px;
+    margin-top: 0;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    text-decoration: none;
+    z-index: 2;
+}
+
+.tutorial-link *,
+.tutorial-link:hover,
+.tutorial-link:hover * {
+    text-decoration: none;
+}
+
 /* responsive: scale down level boxes on small screens */
 @media (max-width: 520px) {
     .background { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .levels { width: 140px; height: 140px; padding: 8px; }
     #green-doge { width: 70%; }
+    .tutorial-level {
+        grid-column: 1 / -1;
+        width: 210px;
+        height: 180px;
+    }
+    .tutorial-link {
+        padding: 14px 14px 18px;
+    }
+    .tutorial-title {
+        top: 14px;
+        left: 12px;
+        right: 12px;
+        font-size: 1rem;
+    }
+    .tutorial-battle {
+        height: 70px;
+    }
+    .tutorial-fighter {
+        width: 48px;
+        height: 54px;
+    }
+    .tutorial-battle-doge {
+        width: 36px;
+    }
+    .tutorial-battle-enemy {
+        width: 39px;
+    }
+    .tutorial-battle-burst {
+        width: 28px;
+        height: 28px;
+        font-size: 0.68rem;
+    }
+    .tutorial-battle-slash {
+        width: 38px;
+        height: 4px;
+    }
+    .tutorial-fighter-tag {
+        top: -8px;
+        font-size: 0.5rem;
+        padding: 2px 6px;
+    }
+    .tutorial-caption {
+        left: 10px;
+        right: 10px;
+        bottom: 12px;
+        font-size: 0.68rem;
+    }
 }

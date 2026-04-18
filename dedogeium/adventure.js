@@ -1,149 +1,87 @@
 const dogeAttack = document.getElementById("doge-attack");
 const dogeAttack2 = document.getElementById("doge-attack2");
 const dogeAttack3 = document.getElementById("doge-attack3");
+const greenDoge = document.getElementById("green-doge");
 const redDoge = document.getElementById("red-doge");
 const blueDoge = document.getElementById("spooky-doge");
 const rainbowDoge = document.getElementById("rainbow-doge");
-const secondGreen = document.getElementById("2green-doge")
-const secondCousin = document.getElementById("second-green-doge")
-const firstRed = document.getElementById("first-red-doge")
-const firstBossRed = document.getElementById("firstboss-red-doge")
-const finalBossRed = document.getElementById("finalboss-red-doge")
-const completedLevel = Number(localStorage.getItem("completedLevel"));
-const routeBase = window.location.pathname.includes('/index.html') ? '../' : '';
+const secondCousin = document.getElementById("second-cousin-doge");
+const firstRed = document.getElementById("first-red-doge");
+const firstBossRed = document.getElementById("firstboss-red-doge");
+const finalBossRed = document.getElementById("finalboss-red-doge");
 const music = new Audio("rick roll.mp3");
-music.loop = true;
 const storedMusicVolume = Number(localStorage.getItem("musicVolume"));
 const musicVolume = Number.isFinite(storedMusicVolume) ? storedMusicVolume : 50;
+
+music.loop = true;
 music.volume = Math.min(1, Math.max(0, musicVolume / 100));
-music.play();
+music.play().catch(() => {});
+
 let isHovering = false;
 let offsetX = 0;
 let offsetY3 = 0;
-console.log("Completed Level:", localStorage.getItem("completedLevel"));
-if (completedLevel >= 2) {
-  redDoge.src = "first boss doge.png";
-} else {
-  redDoge.src = "first boss doge locked.png";
+
+function getCompletedLevel() {
+  return Number(localStorage.getItem("completedLevel") || "0");
 }
 
-if (completedLevel >= 3) {
-  blueDoge.src = "second boss doge.png";
-} else {
-  blueDoge.src = "second boss doge locked.png";
+function ensureAdventureSave() {
+  if (localStorage.getItem("completedLevel") === null) {
+    localStorage.setItem("completedLevel", "0");
+  }
+  if (localStorage.getItem("inventory") === null) {
+    localStorage.setItem("inventory", JSON.stringify([]));
+  }
 }
 
-if (completedLevel >= 4) {
-  rainbowDoge.src = "final boss doge.png";
-} else {
-  rainbowDoge.src = "final boss doge locked.png";
+function setLevelImage(element, unlockedSrc, lockedSrc, isUnlocked) {
+  if (!element) return;
+  element.src = isUnlocked ? unlockedSrc : lockedSrc;
 }
-if (completedLevel >= 5) {
-  secondGreen.src = "im just a chill guy.png";
-} else {
-  secondGreen.src = "im just a chill guy locked.png";
-}
-if (completedLevel >= 6) {
-  secondGreen.src = "im just a chill guy.png";
-} else {
-  secondGreen.src = "im just a chill guy locked.png";
+
+function updateAdventureMap() {
+  const completedLevel = getCompletedLevel();
+
+  setLevelImage(greenDoge, "Im just a chill guy no background.png", "green doge locked.png", completedLevel >= 1);
+  setLevelImage(redDoge, "first boss doge.png", "first boss doge locked.png", completedLevel >= 2);
+  setLevelImage(blueDoge, "second boss doge.png", "second boss doge locked.png", completedLevel >= 3);
+  setLevelImage(rainbowDoge, "final boss doge.png", "final boss doge locked.png", completedLevel >= 4);
+  setLevelImage(secondCousin, "Im just a chill guy no background.png", "locked Im just a chill guy no background.png", completedLevel >= 5);
+  setLevelImage(firstRed, "fire doge.png", "fire doge locked.png", completedLevel >= 6);
+  setLevelImage(firstBossRed, "fire doge first boss.png", "first boss doge locked.png", completedLevel >= 7);
+  setLevelImage(finalBossRed, "fire doge final boss.png", "final boss doge locked.png", completedLevel >= 8);
+
+  document.querySelectorAll(".level-link").forEach((link) => {
+    const requiredLevel = Number(link.dataset.requiredLevel || "0");
+    link.classList.toggle("locked", completedLevel < requiredLevel);
+  });
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-  if (localStorage.getItem("completedLevel") === null) {
-    localStorage.setItem("completedLevel", "1");
-    localStorage.setItem("inventory", JSON.stringify([]));
-  }
-  if (localStorage.getItem("seenTutorialPrompt") === null) {
-    localStorage.setItem("seenTutorialPrompt", "true");
-    const goToTutorial = confirm("First time here? Want to start the tutorial?");
-    if (goToTutorial) {
-      window.location.href = routeBase + "tutorial/";
-      return;
-    }
-  }
-  // else {
-  //   if (localStorage.getItem("completedLevel") >= 2) {
-  //     redDoge.src="red doge.png";
-  //   }
-  //   if (localStorage.getItem("completedLevel") >= 3) {
-  //     blueDoge.src="spooky doge.png";
-  //   }
-  //   if (localStorage.getItem("completedLevel") >= 3) {
-  //     rainbowDoge.src="rainbow doge.png";
-  //   }
-  // }
-});
-redDoge.addEventListener("click", function() {
-  if (localStorage.getItem("completedLevel") >= 2) {
-    window.location.href = routeBase + "level2/";
-  }
-  else {
-    alert("Complete Level 1 to unlock level 2!");
-  }
-});
-blueDoge.addEventListener("click", function() {
-  if (localStorage.getItem("completedLevel") >= 3) {
-    window.location.href = routeBase + "level3/";
-  }
-  else {
-    alert("Complete Level 2 to unlock level 3!");
-  }
-});
-rainbowDoge.addEventListener("click", function() {
-  if (localStorage.getItem("completedLevel") >= 4) {
-    window.location.href = routeBase + "level4/";
-  }
-  else {
-    alert("Complete Level 3 to unlock level 4!");
-  }
-});
-secondCousin.addEventListener("click", function() {
-  if (localStorage.getItem("completedLevel") >= 5) {
-    window.location.href = routeBase + "level5/";
-    
-  }
-  else{
-    alert("Complete level 4 to unlock level 5!");
-  }
-});
-firstRed.addEventListener("click", function() {
-  if (localStorage.getItem("completedLevel") >= 6) {
-    window.location.href = routeBase + "level6/";
-    
-  }
-  else{
-    alert("Complete level 5 to unlock level 6!");
-  }
-});
-firstBossRed.addEventListener("click", function() {
-  if (localStorage.getItem("completedLevel") >= 7) {
-    window.location.href = routeBase + "level7/";
-    
-  }
-  else{
-    alert("Complete level 6 to unlock level 7!");
-  }
-});
-finalBossRed.addEventListener("click", function() {
-  if (localStorage.getItem("completedLevel") >= 8) {
-    window.location.href = routeBase + "level8/";
-    
-  }
-  else{
-    alert("Complete level 7 to unlock level 8!");
-  }
+  ensureAdventureSave();
+  updateAdventureMap();
+
+  document.querySelectorAll(".level-link").forEach((link) => {
+    link.addEventListener("click", function (event) {
+      const requiredLevel = Number(link.dataset.requiredLevel || "0");
+      if (getCompletedLevel() >= requiredLevel) {
+        return;
+      }
+
+      event.preventDefault();
+      alert(link.dataset.lockMessage || "That level is still locked.");
+    });
+  });
 });
 
 dogeAttack.addEventListener("mouseenter", () => {
   dogeAttack.src = "doge attack.png";
   dogeAttack2.src = "doge attack.png";
-  dogeAttack2.style.display="block";
+  dogeAttack2.style.display = "block";
   dogeAttack3.src = "doge attack.png";
-  dogeAttack3.style.display="block";
+  dogeAttack3.style.display = "block";
   isHovering = true;
 
-  
   const moveInterval = setInterval(() => {
     if (!isHovering) {
       clearInterval(moveInterval);
@@ -160,14 +98,13 @@ dogeAttack.addEventListener("mouseenter", () => {
 dogeAttack.addEventListener("mouseleave", () => {
   dogeAttack.src = "Im just a chill guy no background.png";
   dogeAttack2.src = "Im just a chill guy no background.png";
-  dogeAttack2.style.display="none";
+  dogeAttack2.style.display = "none";
   dogeAttack3.src = "Im just a chill guy no background.png";
-  dogeAttack3.style.display="none";
+  dogeAttack3.style.display = "none";
   isHovering = false;
   offsetX = 0;
   offsetY3 = 0;
-  dogeAttack.style.transform = `translate(0, 0)`;
-  dogeAttack2.style.transform = `translate(0, 0)`;
-  dogeAttack3.style.transform = `translate(0, 0)`;
+  dogeAttack.style.transform = "translate(0, 0)";
+  dogeAttack2.style.transform = "translate(0, 0)";
+  dogeAttack3.style.transform = "translate(0, 0)";
 });
-

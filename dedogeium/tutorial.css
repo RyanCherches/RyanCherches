@@ -1,124 +1,180 @@
-.character-wrap {
-    position: relative;
-    display: inline-block;
-}
-#spotlight {
-    position: absolute;
-    bottom: 0;
-    left: -40px;
-    z-index: 0;
-    width: 250px;
-}
-#spotlight2 {
-    position: absolute;
-    bottom: 0;
-    right: -40px;
-    z-index: 0;
-    width: 250px;
-}
-#main-character {
-    position: relative;
-    z-index: 1;
-}
-
-#game {
-    display:flex;
-    justify-content:space-around;
-    align-items:center;
-    flex-direction:row;
-}
-#yes-no {
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:space-around;
-    background-color:white;
-    padding:20px;
-}
-#btns {
-    gap:40px;
-}
-body {
-    height:100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    background-image:url("cool fight scene.jpg");
-    background-size: cover;
-    background-attachment: fixed;
+html, body {
     margin: 0;
-    padding: 0;
-}
-#ok-btn {
-    background-color:blue;
-    border-radius:5px;
-    border: 1px solid red;
-    padding:10px;
-    cursor:pointer;
-}
-#cancel-btn {
-    cursor:pointer;
-}
-#enemy-hlth {
-    display:none;
-    color:white;
-}
-#hlth {
-    display:none;
-    color:white;
-}
-#victory {
-    display:none;
-    background:white;
-    padding:10px;
-}
-#bye-btn {
-    color:white;
-    background-color:blue;
-    padding:5px;
-    border-radius:5px;
-    cursor:pointer;
+    min-height: 100%;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #14243c;
 }
 
-/* skip button for cutscene control */
-#skip-btn {
-    display: none;
-    position: fixed;
-    right: 20px;
-    bottom: 20px;
-    padding: 8px 12px;
-    background: rgba(0,0,0,0.6);
-    color: white;
-    border: none;
-    border-radius: 6px;
+body {
+    background:
+        linear-gradient(135deg, rgba(255, 244, 204, 0.92), rgba(189, 225, 255, 0.92)),
+        url("cool fight scene.jpg") center/cover fixed;
+}
+
+.tutorial-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 18px;
+    padding: 20px 16px 0;
+}
+
+.tutorial-header a {
+    color: #14314f;
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.tutorial-shell {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 28px 16px 48px;
+}
+
+.tutorial-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.9fr);
+    gap: 24px;
+    align-items: stretch;
+    margin-bottom: 24px;
+}
+
+.hero-copy,
+.hero-card,
+.tutorial-card {
+    background: rgba(255, 255, 255, 0.86);
+    border: 2px solid rgba(20, 49, 79, 0.12);
+    border-radius: 24px;
+    box-shadow: 0 18px 40px rgba(20, 49, 79, 0.12);
+}
+
+.hero-copy {
+    padding: 28px;
+}
+
+.eyebrow {
+    margin: 0 0 10px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #2d6899;
+}
+
+.hero-copy h1 {
+    margin: 0 0 12px;
+    font-size: clamp(2rem, 4vw, 3.4rem);
+    line-height: 1.05;
+}
+
+.hero-text {
+    margin: 0;
+    font-size: 1.05rem;
+    line-height: 1.6;
+    max-width: 58ch;
+}
+
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 22px;
+}
+
+#complete-tutorial-btn,
+.secondary-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    padding: 0 18px;
+    border-radius: 999px;
+    font-weight: 700;
+    text-decoration: none;
     cursor: pointer;
 }
 
-.white {
-    color:white;
+#complete-tutorial-btn {
+    border: none;
+    background: #1b6fff;
+    color: #fff;
 }
-#crystal_attack {
-    position: absolute;
-    top: 30%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100px;
-    height: auto;
-    z-index: 10;
-    display: none;
+
+.secondary-action {
+    border: 2px solid #1b6fff;
+    color: #1b6fff;
+    background: transparent;
 }
-#crystal_attack.attack-strike {
-    animation: strikeDown 0.6s ease-in-out forwards;
+
+.tutorial-status {
+    margin: 16px 0 0;
+    font-weight: 600;
+    color: #1e5f37;
 }
-@keyframes strikeDown {
-    0% {
-        bottom: 10%;
-        right: 100%;
-        opacity: 1;
-    }
-    100% {
-        top: 85%;
-        left: 86%;
-        opacity: 1;
+
+.hero-card {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 18px;
+}
+
+.hero-doge {
+    width: min(100%, 220px);
+    align-self: center;
+}
+
+.progress-panel {
+    display: grid;
+    gap: 12px;
+}
+
+.panel-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+
+.progress-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(20, 49, 79, 0.12);
+}
+
+.progress-row span {
+    color: #47627f;
+}
+
+.tutorial-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.tutorial-card {
+    padding: 22px;
+}
+
+.tutorial-card h2 {
+    margin: 0 0 10px;
+    font-size: 1.2rem;
+}
+
+.tutorial-card p {
+    margin: 0 0 12px;
+    line-height: 1.6;
+}
+
+.tutorial-card p:last-child {
+    margin-bottom: 0;
+}
+
+@media (max-width: 900px) {
+    .tutorial-hero,
+    .tutorial-grid {
+        grid-template-columns: 1fr;
     }
 }

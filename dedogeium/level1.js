@@ -359,6 +359,9 @@ async function battleLoop() {
         if (completedLevel < 2) {
             localStorage.setItem("completedLevel", 2);
         }
+        if (window.DedogeiumSystems && typeof window.DedogeiumSystems.recordComputerVictory === "function") {
+            window.DedogeiumSystems.recordComputerVictory();
+        }
         const reward = 10;
         const actualReward = addLevelCurrency(reward);
         if (maybe_vic) {

@@ -3,43 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tutorial</title>
+    <title>Tutorial World</title>
     <link rel="stylesheet" href="tutorial.css">
 </head>
 <body>
-    <div id="game" width="100vw">
-        <img src="crystal attack.png"  id="crystal_attack" width="100px" style="display:none;">
-        <div class="character-wrap">
-            <img src="spotlight.png" style="display:none;" id="spotlight">
-            <img src="Im just a chill guy no background.png" style="display:none;" id="main-character">
-            <p id="hlth" style="display:none;">sdfgf</p>
-        </div>
-        <p class="white" id="speech-good" style="display:none;"></p>
-        <div id="yes-no" style="display:none;">
-            <div>
-                <p style="display:none;">Do you want to play?</p>
+    <header class="tutorial-header">
+        <a href="home/">Home</a>
+        <a href="customize/">Customize</a>
+        <a href="adventure/">Adventure</a>
+        <a href="arena/">Arena</a>
+        <a href="settings/">Settings</a>
+    </header>
+    <main class="tutorial-shell">
+        <section class="tutorial-hero">
+            <div class="hero-copy">
+                <p class="eyebrow">Tutorial World</p>
+                <h1>Everything important in Dedogeium, in one place.</h1>
+                <p class="hero-text">This world is now the first stop in adventure mode. Read through the systems below, then unlock Level 1 when you are ready to fight.</p>
+                <div class="hero-actions">
+                    <button id="complete-tutorial-btn" type="button">Finish Tutorial and Unlock Level 1</button>
+                    <a href="adventure/" class="secondary-action">Back to Adventure</a>
+                </div>
+                <p id="tutorial-status" class="tutorial-status"></p>
             </div>
-            <div id="btns">
-                <button id="ok-btn" style="display:none;">OK</button>
-                <button id="cancel-btn" style="display:none;">Cancel</button>
+            <div class="hero-card">
+                <img src="Im just a chill guy no background.png" alt="Dedogeium hero" class="hero-doge">
+                <div class="progress-panel">
+                    <p class="panel-title">Save Snapshot</p>
+                    <div class="progress-row">
+                        <span>Tutorial</span>
+                        <strong id="tutorial-progress-label">Locked</strong>
+                    </div>
+                    <div class="progress-row">
+                        <span>Highest Unlocked Level</span>
+                        <strong id="highest-level-label">Tutorial</strong>
+                    </div>
+                    <div class="progress-row">
+                        <span>Currency</span>
+                        <strong id="tutorial-currency">0</strong>
+                    </div>
+                    <div class="progress-row">
+                        <span>Inventory</span>
+                        <strong id="tutorial-inventory-count">0 doges</strong>
+                    </div>
+                    <div class="progress-row">
+                        <span>Equipped</span>
+                        <strong id="tutorial-equipped-count">0 doges</strong>
+                    </div>
+                </div>
             </div>
-        </div>
-        <!-- skip button shown during the cutscene to advance lines -->
-        <button id="skip-btn" style="display:none;">Next</button>
-        <div id="victory">
-            <p id="maybe-vic" style="display:none;"></p>
-            <button id="bye-btn" style="display:none;">Go back</button>
-        </div>
-        <p class="white" id="speech-bad" style="display:none;"></p>
-        <div class="character-wrap">
-            <img src="Im just a chill guy no background.png" width="102px" style="display:none;" id="enemy-character">
-            <img src="spotlight.png" style="display:none;" id="spotlight2">
-            <p id="enemy-hlth" style="display:none;">dfsg</p>
-        </div>
-    </div>
+        </section>
+
+        <section class="tutorial-grid">
+            <article class="tutorial-card">
+                <h2>Home Base</h2>
+                <p>The home page is your hub. From there you can jump into Customize, Adventure, Arena, Updates, promo codes, and daily rewards.</p>
+                <p>Claim daily rewards whenever they are ready. Streaks give bigger currency drops and sometimes boost charges too.</p>
+            </article>
+            <article class="tutorial-card">
+                <h2>Adventure Progress</h2>
+                <p>Adventure mode is your main progression path. Clear each world to unlock the next one and earn currency for upgrades.</p>
+                <p>This tutorial now unlocks Level 1, so the normal campaign starts after you finish this page.</p>
+            </article>
+            <article class="tutorial-card">
+                <h2>Battle Flow</h2>
+                <p>Levels open with dialogue, then your doge and the enemy trade attacks until one side drops. Wins move progression forward.</p>
+                <p>Level victories also pay currency, and some levels open a victory shop so you can buy new doges right away.</p>
+            </article>
+            <article class="tutorial-card">
+                <h2>Customize</h2>
+                <p>Your inventory lives in Customize. Doges have rarities, and stronger rarities give better damage and health bonuses.</p>
+                <p>Equip the best doges you have to raise your stats before tougher levels or arena fights.</p>
+            </article>
+            <article class="tutorial-card">
+                <h2>Shop, Selling, Exchange</h2>
+                <p>Currency buys new doges, extra equip slots, and boosts. You can also sell doges you do not want.</p>
+                <p>The exchange system lets you trade several lower-rarity doges for a stronger one, so duplicates still matter.</p>
+            </article>
+            <article class="tutorial-card">
+                <h2>Boosts</h2>
+                <p>Boosts are bought or earned as charges. They do not start automatically, so open Customize and turn them on when you want them.</p>
+                <p>Currency Boost increases reward income, and Luck Boost helps push drops toward better rarities.</p>
+            </article>
+            <article class="tutorial-card">
+                <h2>Arena</h2>
+                <p>Arena is multiplayer combat. Your equipped doges define your arena stats, so gearing up in Customize helps here too.</p>
+                <p>You can fight nearby players on the same server link and earn extra rewards from wins.</p>
+            </article>
+            <article class="tutorial-card">
+                <h2>Settings and Extras</h2>
+                <p>Settings lets you control music volume, skip level dialogue, and turn spoken dialogue voices on or off.</p>
+                <p>Promo codes and seasonal stuff like April Fools mode can also change what shows up in your save.</p>
+            </article>
+        </section>
+    </main>
 <script src="tutorial.js"></script>
 </body>
 </html>
-</body>
-</html>
-

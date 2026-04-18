@@ -301,16 +301,30 @@ async function api(path, options = {}) {
                 body: options.body ? JSON.stringify(options.body) : undefined,
             });
 
-            const data = await response.json().catch(() => ({}));
-            if (response.ok) {
+            const rawText = await response.text();
+            let data = {};
+            if (rawText) {
+                try {
+                    data = JSON.parse(rawText);
+                } catch (error) {
+                    data = {};
+                }
+            }
+            const hasArenaPayload = data && typeof data === "object" && data.ok === true;
+            if (response.ok && hasArenaPayload) {
                 if (candidate !== serverBase) {
                     applyServerBase(candidate, true);
                 }
                 return data;
             }
 
-            attemptNotes.push(`${requestUrl} -> ${response.status}`);
-            const message = data && data.error ? data.error : "The arena server request failed.";
+            const invalidSuccess = response.ok && !hasArenaPayload;
+            attemptNotes.push(`${requestUrl} -> ${response.status}${invalidSuccess ? " invalid Dedogeium response" : ""}`);
+            const message = data && data.error
+                ? data.error
+                : (invalidSuccess
+                    ? "The server answered, but it is not exposing the Dedogeium arena API on that URL."
+                    : "The arena server request failed.");
             const shouldFallback = [404, 502, 503, 504].includes(response.status) && !isLastCandidate;
             if (shouldFallback) {
                 const retryableError = new Error(message);

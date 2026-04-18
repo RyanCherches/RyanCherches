@@ -115,13 +115,18 @@ function normalizeServerUrl(value) {
     const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
     try {
         const parsed = new URL(withProtocol);
-        return `${parsed.protocol}//${parsed.host}`;
+        const normalizedPath = parsed.pathname && parsed.pathname !== "/"
+            ? parsed.pathname.replace(/\/+$/, "")
+            : "";
+        return `${parsed.protocol}//${parsed.host}${normalizedPath}`;
     } catch (error) {
         return "";
     }
 }
 
-function getOriginServerCandidate() {
+function getSiteServerCandidate() {
+    const configuredSiteBase = normalizeServerUrl(window.DEDOGEIUM_SITE_SERVER_BASE || "");
+    if (configuredSiteBase) return configuredSiteBase;
     const allowOriginServer = typeof window.DEDOGEIUM_ALLOW_ORIGIN_SERVER === "boolean"
         ? window.DEDOGEIUM_ALLOW_ORIGIN_SERVER
         : true;
@@ -134,7 +139,7 @@ function buildServerCandidates(extraValues) {
         window.SERVER_URL,
         ...(Array.isArray(window.DEDOGEIUM_SERVER_CANDIDATES) ? window.DEDOGEIUM_SERVER_CANDIDATES : []),
         localStorage.getItem(serverStorageKey),
-        getOriginServerCandidate(),
+        getSiteServerCandidate(),
     ];
     return Array.from(new Set(values.map(normalizeServerUrl).filter(Boolean)));
 }

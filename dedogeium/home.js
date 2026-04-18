@@ -167,13 +167,18 @@ function normalizeServerUrl(value) {
     const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
     try {
         const parsed = new URL(withProtocol);
-        return `${parsed.protocol}//${parsed.host}`;
+        const normalizedPath = parsed.pathname && parsed.pathname !== "/"
+            ? parsed.pathname.replace(/\/+$/, "")
+            : "";
+        return `${parsed.protocol}//${parsed.host}${normalizedPath}`;
     } catch (error) {
         return "";
     }
 }
 
-function getOriginServerCandidate() {
+function getSiteServerCandidate() {
+    const configuredSiteBase = normalizeServerUrl(window.DEDOGEIUM_SITE_SERVER_BASE || "");
+    if (configuredSiteBase) return configuredSiteBase;
     const allowOriginServer = typeof window.DEDOGEIUM_ALLOW_ORIGIN_SERVER === "boolean"
         ? window.DEDOGEIUM_ALLOW_ORIGIN_SERVER
         : true;
@@ -191,7 +196,7 @@ function getCurrentUsername() {
 
 async function fetchServerPlayers() {
     const storageKey = window.DEDOGEIUM_SERVER_STORAGE_KEY || "dedogeiumServerUrl";
-    const serverBase = normalizeServerUrl(window.SERVER_URL || localStorage.getItem(storageKey) || getOriginServerCandidate());
+    const serverBase = normalizeServerUrl(window.SERVER_URL || localStorage.getItem(storageKey) || getSiteServerCandidate());
     if (!serverBase) {
         return {
             players: {},

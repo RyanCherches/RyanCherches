@@ -719,7 +719,10 @@
         const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
         try {
             const parsed = new URL(withProtocol);
-            return `${parsed.protocol}//${parsed.host}`;
+            const normalizedPath = parsed.pathname && parsed.pathname !== "/"
+                ? parsed.pathname.replace(/\/+$/, "")
+                : "";
+            return `${parsed.protocol}//${parsed.host}${normalizedPath}`;
         } catch (error) {
             return "";
         }
@@ -727,12 +730,14 @@
 
     function getSyncServerBase() {
         const storageKey = window.DEDOGEIUM_SERVER_STORAGE_KEY || "dedogeiumServerUrl";
+        const siteServerBase = normalizeServerUrl(window.DEDOGEIUM_SITE_SERVER_BASE || "");
         const allowOriginServer = typeof window.DEDOGEIUM_ALLOW_ORIGIN_SERVER === "boolean"
             ? window.DEDOGEIUM_ALLOW_ORIGIN_SERVER
             : true;
         const candidates = [
             window.SERVER_URL,
             localStorage.getItem(storageKey),
+            siteServerBase,
             allowOriginServer && window.location && window.location.origin && window.location.origin !== "null"
                 ? window.location.origin
                 : "",

@@ -6,6 +6,7 @@
         : "";
     const savedServer = localStorage.getItem(STORAGE_KEY);
     const defaultServer = window.DEDOGEIUM_DEFAULT_SERVER_URL || "";
+    const scriptSrc = document.currentScript && document.currentScript.src ? document.currentScript.src : "";
 
     function normalizeServerUrl(value) {
         const trimmed = String(value || "").trim();
@@ -13,7 +14,21 @@
         const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
         try {
             const parsed = new URL(withProtocol);
-            return `${parsed.protocol}//${parsed.host}`;
+            const normalizedPath = parsed.pathname && parsed.pathname !== "/"
+                ? parsed.pathname.replace(/\/+$/, "")
+                : "";
+            return `${parsed.protocol}//${parsed.host}${normalizedPath}`;
+        } catch (error) {
+            return "";
+        }
+    }
+
+    function getScriptBaseUrl() {
+        if (!scriptSrc) return "";
+        try {
+            const parsed = new URL(scriptSrc, window.location.href);
+            const path = parsed.pathname.replace(/\/[^/]*$/, "").replace(/\/+$/, "");
+            return `${parsed.protocol}//${parsed.host}${path}`;
         } catch (error) {
             return "";
         }
@@ -46,17 +61,19 @@
         }
     }
 
-    const currentServer = normalizeServerUrl(routeOrigin);
+    const currentServer = normalizeServerUrl(getScriptBaseUrl() || routeOrigin);
+    const originServer = normalizeServerUrl(routeOrigin);
     const normalizedSavedServer = normalizeServerUrl(savedServer);
     const allowOriginServer = shouldUseCurrentOriginAsServer(currentServer);
-    const effectiveSavedServer = !allowOriginServer && normalizedSavedServer === currentServer
+    const effectiveSavedServer = !allowOriginServer && (normalizedSavedServer === currentServer || normalizedSavedServer === originServer)
         ? ""
         : normalizedSavedServer;
     const candidates = [
         normalizeServerUrl(queryServer),
         effectiveSavedServer,
         normalizeServerUrl(defaultServer),
-        allowOriginServer ? currentServer : "",
+        currentServer,
+        allowOriginServer ? originServer : "",
     ].filter(Boolean);
     const uniqueCandidates = Array.from(new Set(candidates));
     const resolvedServer = uniqueCandidates[0] || "";
@@ -65,9 +82,10 @@
     window.DEDOGEIUM_SERVER_CANDIDATES = uniqueCandidates;
     window.DEDOGEIUM_ALLOW_ORIGIN_SERVER = allowOriginServer;
     window.DEDOGEIUM_SITE_ORIGIN = routeOrigin;
+    window.DEDOGEIUM_SITE_SERVER_BASE = currentServer;
     if (resolvedServer) {
         localStorage.setItem(STORAGE_KEY, resolvedServer);
-    } else if (!allowOriginServer && normalizedSavedServer === currentServer) {
+    } else if (!allowOriginServer && (normalizedSavedServer === currentServer || normalizedSavedServer === originServer)) {
         localStorage.removeItem(STORAGE_KEY);
     }
     window.SERVER_URL = resolvedServer || "";

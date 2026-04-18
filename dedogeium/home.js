@@ -176,6 +176,24 @@ function normalizeServerUrl(value) {
     }
 }
 
+function buildApiBaseCandidates(serverBase) {
+    const normalized = normalizeServerUrl(serverBase);
+    if (!normalized) return [];
+    try {
+        const parsed = new URL(normalized);
+        const path = parsed.pathname && parsed.pathname !== "/"
+            ? parsed.pathname.replace(/\/+$/, "")
+            : "";
+        const candidates = [
+            `${parsed.origin}${path}/api`,
+            `${parsed.origin}/api`,
+        ];
+        return Array.from(new Set(candidates));
+    } catch (error) {
+        return [`${normalized}/api`];
+    }
+}
+
 function getSiteServerCandidate() {
     const configuredSiteBase = normalizeServerUrl(window.DEDOGEIUM_SITE_SERVER_BASE || "");
     if (configuredSiteBase) return configuredSiteBase;
@@ -207,21 +225,26 @@ async function fetchServerPlayers() {
     }
 
     try {
-        const response = await fetch(`${serverBase}/api/players`);
-        if (!response.ok) {
+        const apiCandidates = buildApiBaseCandidates(serverBase);
+        for (const apiBase of apiCandidates) {
+            const response = await fetch(`${apiBase}/players`);
+            if (!response.ok) {
+                continue;
+            }
+            const players = await response.json();
             return {
-                players: {},
-                sourceLabel: "Shared leaderboard unavailable",
-                serverAvailable: false,
-                emptyMessage: "The shared Dedogeium server did not return leaderboard data.",
+                players: players && typeof players === "object" ? players : {},
+                sourceLabel: "Shared server leaderboard",
+                serverAvailable: true,
+                emptyMessage: "No shared leaderboard stats have been recorded for this category yet.",
             };
         }
-        const players = await response.json();
+
         return {
-            players: players && typeof players === "object" ? players : {},
-            sourceLabel: "Shared server leaderboard",
-            serverAvailable: true,
-            emptyMessage: "No shared leaderboard stats have been recorded for this category yet.",
+            players: {},
+            sourceLabel: "Shared leaderboard unavailable",
+            serverAvailable: false,
+            emptyMessage: "The shared Dedogeium server did not return leaderboard data.",
         };
     } catch (error) {
         return {

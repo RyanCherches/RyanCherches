@@ -728,6 +728,23 @@
         }
     }
 
+    function buildApiBaseCandidates(serverBase) {
+        const normalized = normalizeServerUrl(serverBase);
+        if (!normalized) return [];
+        try {
+            const parsed = new URL(normalized);
+            const path = parsed.pathname && parsed.pathname !== "/"
+                ? parsed.pathname.replace(/\/+$/, "")
+                : "";
+            return Array.from(new Set([
+                `${parsed.origin}${path}/api`,
+                `${parsed.origin}/api`,
+            ]));
+        } catch (error) {
+            return [`${normalized}/api`];
+        }
+    }
+
     function getSyncServerBase() {
         const storageKey = window.DEDOGEIUM_SERVER_STORAGE_KEY || "dedogeiumServerUrl";
         const siteServerBase = normalizeServerUrl(window.DEDOGEIUM_SITE_SERVER_BASE || "");
@@ -754,16 +771,19 @@
         const serverBase = getSyncServerBase();
         if (!safeUsername || !serverBase || typeof fetch !== "function") return false;
 
-        try {
-            const response = await fetch(`${serverBase}/api/player`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username: safeUsername, player: record }),
-            });
-            return response.ok;
-        } catch (error) {
-            return false;
+        for (const apiBase of buildApiBaseCandidates(serverBase)) {
+            try {
+                const response = await fetch(`${apiBase}/player`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username: safeUsername, player: record }),
+                });
+                if (response.ok) return true;
+            } catch (error) {
+                // Try the next API base candidate.
+            }
         }
+        return false;
     }
 
     function schedulePlayerRecordSync(username, record) {

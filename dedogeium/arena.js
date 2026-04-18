@@ -134,14 +134,26 @@ function getSiteServerCandidate() {
 }
 
 function buildServerCandidates(extraValues) {
-    const values = [
+    const directValues = [
         ...(Array.isArray(extraValues) ? extraValues : []),
         window.SERVER_URL,
         ...(Array.isArray(window.DEDOGEIUM_SERVER_CANDIDATES) ? window.DEDOGEIUM_SERVER_CANDIDATES : []),
         localStorage.getItem(serverStorageKey),
         getSiteServerCandidate(),
     ];
-    return Array.from(new Set(values.map(normalizeServerUrl).filter(Boolean)));
+    const normalizedValues = directValues.map(normalizeServerUrl).filter(Boolean);
+    const expandedValues = normalizedValues.slice();
+
+    normalizedValues.forEach((value) => {
+        try {
+            const parsed = new URL(value);
+            expandedValues.push(parsed.origin);
+        } catch (error) {
+            // Ignore malformed values after normalization.
+        }
+    });
+
+    return Array.from(new Set(expandedValues.map(normalizeServerUrl).filter(Boolean)));
 }
 
 function applyServerBase(nextUrl, persist) {

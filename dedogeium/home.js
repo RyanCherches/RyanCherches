@@ -173,6 +173,15 @@ function normalizeServerUrl(value) {
     }
 }
 
+function getOriginServerCandidate() {
+    const allowOriginServer = typeof window.DEDOGEIUM_ALLOW_ORIGIN_SERVER === "boolean"
+        ? window.DEDOGEIUM_ALLOW_ORIGIN_SERVER
+        : true;
+    return allowOriginServer && window.location.origin && window.location.origin !== "null"
+        ? window.location.origin
+        : "";
+}
+
 function getCurrentUsername() {
     if (window.DedogeiumSystems && typeof window.DedogeiumSystems.getCurrentUsername === "function") {
         return window.DedogeiumSystems.getCurrentUsername();
@@ -182,7 +191,7 @@ function getCurrentUsername() {
 
 async function fetchServerPlayers() {
     const storageKey = window.DEDOGEIUM_SERVER_STORAGE_KEY || "dedogeiumServerUrl";
-    const serverBase = normalizeServerUrl(window.SERVER_URL || localStorage.getItem(storageKey) || (window.location.origin && window.location.origin !== "null" ? window.location.origin : ""));
+    const serverBase = normalizeServerUrl(window.SERVER_URL || localStorage.getItem(storageKey) || getOriginServerCandidate());
     if (!serverBase) {
         return {
             players: {},

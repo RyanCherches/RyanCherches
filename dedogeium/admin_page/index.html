@@ -175,7 +175,13 @@
                     // try central server first (configurable)
                     let players = {};
                     try {
-                        const server = (window.SERVER_URL || (window.location.origin && window.location.origin !== "null" ? window.location.origin : "") || '').replace(/\/$/, '');
+                        const allowOriginServer = typeof window.DEDOGEIUM_ALLOW_ORIGIN_SERVER === "boolean"
+                            ? window.DEDOGEIUM_ALLOW_ORIGIN_SERVER
+                            : true;
+                        const originServer = allowOriginServer && window.location.origin && window.location.origin !== "null"
+                            ? window.location.origin
+                            : "";
+                        const server = (window.SERVER_URL || localStorage.getItem(window.DEDOGEIUM_SERVER_STORAGE_KEY || "dedogeiumServerUrl") || originServer || '').replace(/\/$/, '');
                         if (!server) throw new Error('No server configured');
                         const res = await fetch(server + '/api/players');
                         if (res.ok) players = await res.json();

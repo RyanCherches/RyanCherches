@@ -121,13 +121,20 @@ function normalizeServerUrl(value) {
     }
 }
 
+function getOriginServerCandidate() {
+    const allowOriginServer = typeof window.DEDOGEIUM_ALLOW_ORIGIN_SERVER === "boolean"
+        ? window.DEDOGEIUM_ALLOW_ORIGIN_SERVER
+        : true;
+    return allowOriginServer ? pageOrigin : "";
+}
+
 function buildServerCandidates(extraValues) {
     const values = [
         ...(Array.isArray(extraValues) ? extraValues : []),
         window.SERVER_URL,
         ...(Array.isArray(window.DEDOGEIUM_SERVER_CANDIDATES) ? window.DEDOGEIUM_SERVER_CANDIDATES : []),
         localStorage.getItem(serverStorageKey),
-        pageOrigin,
+        getOriginServerCandidate(),
     ];
     return Array.from(new Set(values.map(normalizeServerUrl).filter(Boolean)));
 }

@@ -727,10 +727,13 @@
 
     function getSyncServerBase() {
         const storageKey = window.DEDOGEIUM_SERVER_STORAGE_KEY || "dedogeiumServerUrl";
+        const allowOriginServer = typeof window.DEDOGEIUM_ALLOW_ORIGIN_SERVER === "boolean"
+            ? window.DEDOGEIUM_ALLOW_ORIGIN_SERVER
+            : true;
         const candidates = [
             window.SERVER_URL,
             localStorage.getItem(storageKey),
-            window.location && window.location.origin && window.location.origin !== "null"
+            allowOriginServer && window.location && window.location.origin && window.location.origin !== "null"
                 ? window.location.origin
                 : "",
         ];

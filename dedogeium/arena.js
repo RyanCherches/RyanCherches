@@ -286,11 +286,13 @@ async function api(path, options = {}) {
 
     const candidates = buildServerCandidates([serverBase]);
     let lastError = null;
+    const attemptNotes = [];
 
     for (const candidate of candidates) {
         const isLastCandidate = candidate === candidates[candidates.length - 1];
+        const requestUrl = `${candidate}${path}`;
         try {
-            const response = await fetch(`${candidate}${path}`, {
+            const response = await fetch(requestUrl, {
                 method: options.method || "GET",
                 headers: {
                     "Content-Type": "application/json",
@@ -307,6 +309,7 @@ async function api(path, options = {}) {
                 return data;
             }
 
+            attemptNotes.push(`${requestUrl} -> ${response.status}`);
             const message = data && data.error ? data.error : "The arena server request failed.";
             const shouldFallback = [404, 502, 503, 504].includes(response.status) && !isLastCandidate;
             if (shouldFallback) {
@@ -317,14 +320,25 @@ async function api(path, options = {}) {
             throw new Error(message);
         } catch (error) {
             lastError = error;
+             if (!attemptNotes.some((note) => note.startsWith(`${requestUrl} ->`))) {
+                const errorLabel = error && error.name === "TypeError"
+                    ? "network error"
+                    : (error && error.message ? error.message : "request failed");
+                attemptNotes.push(`${requestUrl} -> ${errorLabel}`);
+            }
             const shouldRetry = !isLastCandidate && (error && error.retryable === true || error && error.name === "TypeError");
             if (!shouldRetry) {
-                throw error;
+                break;
             }
         }
     }
 
-    throw lastError || new Error("The arena server request failed.");
+    const attemptsSummary = attemptNotes.length ? ` Tried: ${attemptNotes.join(" | ")}` : "";
+    const allNotFound = attemptNotes.length && attemptNotes.every((note) => note.includes("-> 404"));
+    if (allNotFound) {
+        throw new Error(`Arena API not found on this site.${attemptsSummary}`);
+    }
+    throw new Error(`${lastError && lastError.message ? lastError.message : "The arena server request failed."}${attemptsSummary}`);
 }
 
 function formatTimeAgo(timestamp) {

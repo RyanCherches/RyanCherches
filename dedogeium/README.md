@@ -22,6 +22,9 @@ The server listens on `PORT` (default `3000`) and stores data in `DATA_DIR` (def
 Configuration:
 - The browser now prefers the same origin you opened the page from, then falls back to a saved server URL if needed.
 - You can set environment variables in a `.env` or system env: `PORT` and `DATA_DIR`.
+- To hard-code one default public server for the site, set `window.DEDOGEIUM_DEFAULT_SERVER_URL` in `server_defaults.js`.
+- Example: `window.DEDOGEIUM_DEFAULT_SERVER_URL = "https://your-domain.com/dedogeium";`
+- Cloudflare Quick Tunnel URLs are temporary. If you want one constant public URL, use a hosted server, a reverse proxy on your own domain, or a named Cloudflare Tunnel.
 
 Arena combat:
 

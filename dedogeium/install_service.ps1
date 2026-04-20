@@ -1,6 +1,7 @@
 <#
 Install Dedogeium server as a Windows service.
-Tries to use nssm if available; otherwise falls back to sc.exe.
+Uses nssm if available; otherwise falls back to a Scheduled Task because
+plain sc.exe/New-Service does not correctly host node.exe apps as services.
 
 Run in an elevated PowerShell from this folder:
   .\install_service.ps1
@@ -8,6 +9,7 @@ Run in an elevated PowerShell from this folder:
 
 $serviceName = "DedogeiumServer"
 $displayName = "Dedogeium Server"
+$taskName = "DedogeiumServerStartup"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
 # Find node
@@ -38,23 +40,44 @@ if ($nssmCmd) {
     exit 0
 }
 
-Write-Output "nssm not found. Falling back to sc.exe create."
+Write-Output "nssm not found. Falling back to a Scheduled Task startup runner."
 
-# Build binPath argument with quotes
-$binPath = '"{0}" "{1}"' -f $nodePath, $serverJs
+$logsDir = Join-Path $scriptDir "logs"
+if (-not (Test-Path $logsDir)) {
+    New-Item -ItemType Directory -Path $logsDir | Out-Null
+}
+$stdoutLog = Join-Path $logsDir "scheduledtask-stdout.log"
+$stderrLog = Join-Path $logsDir "scheduledtask-stderr.log"
+$taskCommand = @"
+Set-Location '$scriptDir'
+& '$nodePath' '$serverJs' *>> '$stdoutLog' 2>> '$stderrLog'
+"@
 
-# Create the service
-& sc.exe create $serviceName binPath= $binPath DisplayName= "$displayName" start= auto
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "sc.exe create failed. Exit $LASTEXITCODE"
+try {
+    $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -Command `$ErrorActionPreference='Stop'; $taskCommand"
+    $trigger = New-ScheduledTaskTrigger -AtStartup
+    $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -StartWhenAvailable
+
+    Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Description "Starts the Dedogeium Node backend on boot." -Force | Out-Null
+} catch {
+    Write-Error "Could not register Scheduled Task ${taskName}: $_"
     exit 1
 }
 
-# Add a description
-& sc.exe description $serviceName "Dedogeium Node server"
+try {
+    Start-ScheduledTask -TaskName $taskName
+} catch {
+    Write-Warning "Scheduled Task ${taskName} was created, but could not be started immediately: $_"
+}
 
-# Start it
-Start-Service $serviceName
+try {
+    Start-Sleep -Seconds 2
+    $health = Invoke-WebRequest http://127.0.0.1:3000/api/health -UseBasicParsing -TimeoutSec 5
+    Write-Output "Scheduled Task ${taskName} created and Dedogeium responded with status $($health.StatusCode)."
+} catch {
+    Write-Warning "Scheduled Task ${taskName} was created, but the health check did not succeed yet: $_"
+}
 
 # Add firewall rule for port 3000
 try {
@@ -63,4 +86,4 @@ try {
     Write-Warning "Could not create firewall rule: $_"
 }
 
-Write-Output "Service $serviceName created and started. Check service status in Services.msc or with Get-Service $serviceName."
+Write-Output "Use 'Get-ScheduledTask -TaskName $taskName' and the logs in '$logsDir' if you need to troubleshoot startup."

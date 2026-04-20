@@ -33,7 +33,12 @@ const leaderboardState = {
 
 music.loop = true;
 music.volume = Math.min(1, Math.max(0, musicVolume / 100));
-music.play().catch(() => {});
+
+const today = new Date();
+const isAprilFools = today.getMonth() === 3 && today.getDate() === 1;
+if (isAprilFools) {
+  music.play().catch(() => {});
+}
 
 function openPopup() {
     if (!popup) return;

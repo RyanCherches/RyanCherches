@@ -13,9 +13,14 @@ const music = new Audio("rick roll.mp3");
 const storedMusicVolume = Number(localStorage.getItem("musicVolume"));
 const musicVolume = Number.isFinite(storedMusicVolume) ? storedMusicVolume : 50;
 
+const today = new Date();
+const isAprilFools = today.getMonth() === 3 && today.getDate() === 1;
+
 music.loop = true;
 music.volume = Math.min(1, Math.max(0, musicVolume / 100));
-music.play().catch(() => {});
+if (isAprilFools) {
+  music.play().catch(() => {});
+}
 
 let isHovering = false;
 let offsetX = 0;

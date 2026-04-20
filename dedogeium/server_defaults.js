@@ -7,5 +7,5 @@
     //
     // Note: Cloudflare Quick Tunnel URLs are temporary and change each time.
     // For a truly constant public URL, use a real hosted server or a named tunnel.
-    window.DEDOGEIUM_DEFAULT_SERVER_URL = "https://ryancherches.com/dedogeium";
+    window.DEDOGEIUM_DEFAULT_SERVER_URL = "https://api.ryancherches.com";
 })();

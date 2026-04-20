@@ -26,6 +26,16 @@ Configuration:
 - Example: `window.DEDOGEIUM_DEFAULT_SERVER_URL = "https://your-domain.com/dedogeium";`
 - Cloudflare Quick Tunnel URLs are temporary. If you want one constant public URL, use a hosted server, a reverse proxy on your own domain, or a named Cloudflare Tunnel.
 
+Caddy reverse proxy:
+
+- A ready-to-use `Caddyfile` is included for `api.ryancherches.com`.
+- It proxies all requests on that subdomain to the local Node backend at `127.0.0.1:3000`.
+- This is the recommended setup when `ryancherches.com` itself stays on GitHub Pages for the static site.
+- Install Caddy, then run `install_caddy_service.ps1` from an Administrator PowerShell.
+- After Caddy starts, verify:
+  - `https://api.ryancherches.com/api/health`
+  - `https://api.ryancherches.com/api/arena/discover`
+
 Arena combat:
 
 - Start the Dedogeium server on one machine in the local network with `npm start`.

@@ -78,6 +78,32 @@ if (submitBtn) {
         if (code.toLowerCase() === "april fools") {
             alert("Congratulations! You have redeemed the code: april fools! If you go into your inventory and find the box and check it, you will have fully redeemed the code! No... I swear its not a rick roll.");
             localStorage.setItem("aprilFoolsEnabled", "true");
+        } else if (code.toLowerCase() === "early gang") {
+            const redeemed = localStorage.getItem("earlyGangRedeemed");
+            if (redeemed) {
+                alert("You have already redeemed the 'early gang' promo code.");
+            } else {
+                // Add currency
+                const currentCurrency = Number(localStorage.getItem('currency') || 0);
+                localStorage.setItem('currency', String(currentCurrency + 10000));
+
+                // Add special doge
+                const inventory = JSON.parse(localStorage.getItem("inventory") || "[]");
+                inventory.push({ name: 'Doge', rarity: 'Mythic', id: Date.now() + Math.random() });
+                localStorage.setItem("inventory", JSON.stringify(inventory));
+
+                // Set title
+                const username = window.DedogeiumSystems ? window.DedogeiumSystems.getCurrentUsername() : "";
+                if (username) {
+                    const players = JSON.parse(localStorage.getItem("dedogeium_players") || "{}");
+                    if (!players[username]) players[username] = {};
+                    players[username].title = "early gang";
+                    localStorage.setItem("dedogeium_players", JSON.stringify(players));
+                }
+
+                localStorage.setItem("earlyGangRedeemed", "true");
+                alert("Congratulations! You redeemed the 'early gang' promo code and received 10,000 currency, a Mythic Doge, and the 'early gang' title!");
+            }
         } else {
             alert("Invalid promo code. Please try again.");
         }

@@ -1,6 +1,8 @@
 const refreshBtn = document.getElementById("refresh-btn");
 const playerNameEl = document.getElementById("player-name");
 const playerTitleEl = document.getElementById("player-title");
+const arenaTitleInput = document.getElementById("arena-title-input");
+const saveTitleBtn = document.getElementById("save-title-btn");
 const playerAvatarEl = document.getElementById("player-avatar");
 const playerDamageEl = document.getElementById("player-damage");
 const playerHealthEl = document.getElementById("player-health");
@@ -20,13 +22,20 @@ const battleLogEl = document.getElementById("battle-log");
 const recentMatchesEl = document.getElementById("recent-matches");
 const serverUrlInput = document.getElementById("server-url");
 const saveServerBtn = document.getElementById("save-server-btn");
+const toggleCompModeBtn = document.getElementById("toggle-comp-mode");
+const compModeContainer = document.getElementById("computer-mode");
+const compDamageInput = document.getElementById("comp-damage");
+const compHealthInput = document.getElementById("comp-health");
+const fightCompBtn = document.getElementById("fight-comp-btn");
 
 const pageOrigin = window.location.origin && window.location.origin !== "null" ? window.location.origin : "";
 const serverStorageKey = window.DEDOGEIUM_SERVER_STORAGE_KEY || "dedogeiumServerUrl";
 const attackEffectDurationMs = 820;
 let serverBase = "";
 let serverCandidates = [];
-
+let localMatch = null;
+let localRecentMatches = [];
+const LOCAL_MATCH_ID = "local-computer";
 const arenaState = {
     username: null,
     profile: null,
@@ -204,6 +213,29 @@ function getAvatar() {
         : assetUrl("Im just a chill guy no background.png");
 }
 
+function getStoredPlayerTitle(username) {
+    if (!username) return "";
+    try {
+        const players = JSON.parse(localStorage.getItem("dedogeium_players") || "{}");
+        const record = players[username] || {};
+        return typeof record.title === "string" && record.title.trim() ? record.title.trim() : "";
+    } catch (error) {
+        return "";
+    }
+}
+
+function setStoredPlayerTitle(username, title) {
+    if (!username) return;
+    try {
+        const players = JSON.parse(localStorage.getItem("dedogeium_players") || "{}");
+        if (!players[username]) players[username] = {};
+        players[username].title = title;
+        localStorage.setItem("dedogeium_players", JSON.stringify(players));
+    } catch (error) {
+        // ignore write error
+    }
+}
+
 function getStoredNumber(keys) {
     for (const key of keys) {
         const value = localStorage.getItem(key);
@@ -242,11 +274,13 @@ function buildProfile() {
     });
 
     totalHealth += getStoredNumber(["playerHP", "totalHP", "hpTotal", "total_hp", "hp"]);
+    const storedTitle = getStoredPlayerTitle(username);
+    const defaultTitle = equippedItems.length ? "Geared Arena Fighter" : "Fresh Arena Fighter";
 
     return {
         username,
         displayName: username || "doge",
-        title: equippedItems.length ? "Geared Arena Fighter" : "Fresh Arena Fighter",
+        title: storedTitle || defaultTitle,
         damage: totalDamage,
         maxHealth: totalHealth,
         avatar: getAvatar(),
@@ -369,11 +403,193 @@ function formatTimeAgo(timestamp) {
 function renderSelf(profile) {
     playerNameEl.textContent = profile.username || "Not logged in";
     playerTitleEl.textContent = profile.title;
+    if (arenaTitleInput) arenaTitleInput.value = profile.title || "";
     playerAvatarEl.src = profile.avatar;
     playerDamageEl.textContent = String(profile.damage);
     playerHealthEl.textContent = String(profile.maxHealth);
     playerEquippedEl.textContent = String(profile.equippedCount);
     if (playerCurrencyEl) playerCurrencyEl.textContent = String(getArenaCurrency());
+}
+
+function isLocalMatchActive() {
+    return localMatch && localMatch.status === "active";
+}
+
+function getOtherPlayer(match, username) {
+    return match.players.one.username === username ? match.players.two : match.players.one;
+}
+
+function createLocalComputerProfile(damage, maxHealth) {
+    return {
+        username: "arena-computer",
+        displayName: "Arena CPU",
+        title: "Computer Challenger",
+        damage: Math.max(1, Number(damage) || 20),
+        maxHealth: Math.max(1, Number(maxHealth) || 500),
+        currentHealth: Math.max(1, Number(maxHealth) || 500),
+        specialMeter: 0,
+        avatar: assetUrl("doge attack.png"),
+        equippedCount: 0,
+    };
+}
+
+function createLocalComputerMatch(profile, computerDamage, computerHealth) {
+    const player = {
+        username: profile.username || "local-player",
+        displayName: profile.displayName || "you",
+        title: profile.title || "Arena Fighter",
+        damage: Number(profile.damage) || 20,
+        maxHealth: Number(profile.maxHealth) || 500,
+        currentHealth: Number(profile.maxHealth) || 500,
+        specialMeter: 0,
+        avatar: profile.avatar || assetUrl("Im just a chill guy no background.png"),
+        equippedCount: profile.equippedCount || 0,
+    };
+    const computer = createLocalComputerProfile(computerDamage, computerHealth);
+
+    return {
+        id: LOCAL_MATCH_ID,
+        status: "active",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        currentTurn: player.username,
+        canAttack: true,
+        canSpecial: false,
+        winner: null,
+        log: [
+            { type: "system", text: "A local computer match has started." },
+        ],
+        players: {
+            one: player,
+            two: computer,
+        },
+    };
+}
+
+function updateLocalMatchState(match) {
+    if (!match) return;
+    const self = match.players.one;
+    match.canAttack = match.status === "active" && match.currentTurn === self.username;
+    match.canSpecial = match.canAttack && self.specialMeter >= 100;
+    match.updatedAt = Date.now();
+}
+
+function addLocalMatchLog(match, text) {
+    match.log.push({ type: "attack", text });
+    if (match.log.length > 20) match.log.shift();
+}
+
+function finalizeLocalMatch(match, winnerUsername) {
+    match.status = "finished";
+    match.winner = winnerUsername;
+    match.currentTurn = null;
+    match.canAttack = false;
+    match.canSpecial = false;
+    match.updatedAt = Date.now();
+    const opponent = getOtherPlayer(match, winnerUsername);
+    const winner = winnerUsername === match.players.one.username ? match.players.one : match.players.two;
+    match.log.push({ type: "system", text: `${winner.displayName} wins the match!` });
+
+    if (winnerUsername === match.players.one.username) {
+        const earned = addArenaCurrency(100);
+        showArenaRewardMessage(`Victory +${earned} coins!`, false);
+    } else {
+        showArenaRewardMessage("You were defeated by the Arena CPU.", true);
+    }
+    localRecentMatches.unshift({
+        players: match.players,
+        winner: winnerUsername,
+        updatedAt: Date.now(),
+        id: `local-${Date.now()}`,
+    });
+    if (localRecentMatches.length > 10) localRecentMatches.pop();
+}
+
+function runComputerTurn() {
+    if (!localMatch || localMatch.status !== "active") return;
+    const cpu = localMatch.players.two;
+    const player = localMatch.players.one;
+    const useSpecial = cpu.specialMeter >= 100;
+    const actionType = useSpecial ? "special" : "attack";
+    const damage = actionType === "special"
+        ? Math.round(cpu.damage * 1.7)
+        : cpu.damage;
+    player.currentHealth = Math.max(0, player.currentHealth - damage);
+    cpu.specialMeter = useSpecial ? 0 : Math.min(100, cpu.specialMeter + 30);
+    addLocalMatchLog(localMatch, `CPU ${actionType} hits ${player.displayName} for ${damage} damage.`);
+
+    if (player.currentHealth <= 0) {
+        finalizeLocalMatch(localMatch, cpu.username);
+        renderBattle(localMatch, arenaState.profile);
+        return;
+    }
+
+    localMatch.currentTurn = player.username;
+    updateLocalMatchState(localMatch);
+    renderBattle(localMatch, arenaState.profile);
+}
+
+function processLocalBattleAction(kind) {
+    if (!localMatch || localMatch.status !== "active") return;
+    const player = localMatch.players.one;
+    const cpu = localMatch.players.two;
+    if (localMatch.currentTurn !== player.username) return;
+
+    const isSpecial = kind === "special" && player.specialMeter >= 100;
+    const damage = isSpecial ? Math.round(player.damage * 1.7) : player.damage;
+    cpu.currentHealth = Math.max(0, cpu.currentHealth - damage);
+    player.specialMeter = isSpecial ? 0 : Math.min(100, player.specialMeter + 30);
+    addLocalMatchLog(localMatch, `${player.displayName} ${isSpecial ? "special" : "attacks"} for ${damage} damage.`);
+
+    if (cpu.currentHealth <= 0) {
+        finalizeLocalMatch(localMatch, player.username);
+        renderBattle(localMatch, arenaState.profile);
+        return;
+    }
+
+    localMatch.currentTurn = cpu.username;
+    updateLocalMatchState(localMatch);
+    renderBattle(localMatch, arenaState.profile);
+    window.setTimeout(() => {
+        runComputerTurn();
+    }, 800);
+}
+
+function startLocalComputerMatch() {
+    if (!arenaState.username) {
+        setConnectionStatus("Log in first so you can save the match result.", true);
+        return;
+    }
+    arenaState.profile = buildProfile();
+    renderSelf(arenaState.profile);
+    localMatch = createLocalComputerMatch(arenaState.profile, compDamageInput ? compDamageInput.value : 20, compHealthInput ? compHealthInput.value : 500);
+    arenaState.activeMatchId = LOCAL_MATCH_ID;
+    renderBattle(localMatch, arenaState.profile);
+}
+
+function forfeitLocalMatch() {
+    if (!localMatch) return;
+    const player = localMatch.players.one;
+    finalizeLocalMatch(localMatch, localMatch.players.two.username);
+    renderBattle(localMatch, arenaState.profile);
+}
+
+function saveArenaTitle() {
+    if (!arenaTitleInput) return;
+    const title = arenaTitleInput.value;
+    const username = getCurrentUsername();
+    if (!username) {
+        setConnectionStatus("Log in first to save a title.", true);
+        return;
+    }
+    if (!title) {
+        setConnectionStatus("Choose a title before saving.", true);
+        return;
+    }
+    setStoredPlayerTitle(username, title);
+    arenaState.profile.title = title;
+    renderSelf(arenaState.profile);
+    setConnectionStatus(`Title set to '${title}'.`, false);
 }
 
 function createEmptyState(message) {
@@ -814,6 +1030,12 @@ async function refreshArena(manual) {
     arenaState.profile = buildProfile();
     renderSelf(arenaState.profile);
 
+    if (localMatch) {
+        renderBattle(localMatch, arenaState.profile);
+        renderRecentMatches(localRecentMatches);
+        return;
+    }
+
     if (!arenaState.username) {
         setConnectionStatus("Log in first so the arena can announce you to the LAN server.", true);
         playersListEl.innerHTML = "";
@@ -905,6 +1127,11 @@ async function respondToChallenge(challengeId, accept) {
 }
 
 async function attack() {
+    if (localMatch) {
+        getAudioContext();
+        processLocalBattleAction("attack");
+        return;
+    }
     if (!arenaState.activeMatchId) return;
     getAudioContext();
     try {
@@ -922,6 +1149,11 @@ async function attack() {
 }
 
 async function specialAttack() {
+    if (localMatch) {
+        getAudioContext();
+        processLocalBattleAction("special");
+        return;
+    }
     if (!arenaState.activeMatchId) return;
     getAudioContext();
     try {
@@ -939,6 +1171,11 @@ async function specialAttack() {
 }
 
 async function forfeitMatch() {
+    if (localMatch) {
+        getAudioContext();
+        forfeitLocalMatch();
+        return;
+    }
     if (!arenaState.activeMatchId) return;
     getAudioContext();
     try {
@@ -970,6 +1207,21 @@ if (specialBtn) {
 forfeitBtn.addEventListener("click", forfeitMatch);
 if (saveServerBtn) {
     saveServerBtn.addEventListener("click", saveServerUrl);
+}
+if (toggleCompModeBtn && compModeContainer) {
+    toggleCompModeBtn.addEventListener("click", () => {
+        if (compModeContainer.style.display === "none") {
+            compModeContainer.style.display = "block";
+        } else {
+            compModeContainer.style.display = "none";
+        }
+    });
+}
+if (fightCompBtn) {
+    fightCompBtn.addEventListener("click", startLocalComputerMatch);
+}
+if (saveTitleBtn) {
+    saveTitleBtn.addEventListener("click", saveArenaTitle);
 }
 if (serverUrlInput) {
     serverUrlInput.addEventListener("keydown", (event) => {

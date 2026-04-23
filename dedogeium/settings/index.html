@@ -36,10 +36,80 @@
                 <span>Read dialogue out loud with character voices</span>
             </label>
             <p id="spoken-dialogue-status" class="settings-status"></p>
+            <div class="title-settings">
+                <h2>Player Title</h2>
+                <label for="player-title-input">Choose a title:</label>
+                <select id="player-title-input">
+                    <option value="">Select a title</option>
+                    <option value="Fresh Arena Fighter">Fresh Arena Fighter</option>
+                    <option value="Geared Arena Fighter">Geared Arena Fighter</option>
+                    <option value="early gang">early gang</option>
+                    <option value="admin">admin</option>
+                    <option value="Arena Champion">Arena Champion</option>
+                </select>
+                <button id="save-player-title" type="button">Save Title</button>
+                <p id="player-title-feedback" class="settings-status"></p>
+            </div>
             <br><br>
         </div>
     </main>
-    <script src="settings.js"></script>
+    <script>
+        function getCurrentUsername() {
+            const keys = ["Username", "Uabcd", "username", "playerName"];
+            for (const key of keys) {
+                const value = localStorage.getItem(key);
+                if (value) return String(value).trim().toLowerCase();
+            }
+            return "";
+        }
+
+        function getStoredTitle(username) {
+            if (!username) return "";
+            try {
+                const players = JSON.parse(localStorage.getItem("dedogeium_players") || "{}");
+                return (players[username] && players[username].title) || "";
+            } catch (error) {
+                return "";
+            }
+        }
+
+        function saveStoredTitle(username, title) {
+            if (!username) return;
+            try {
+                const players = JSON.parse(localStorage.getItem("dedogeium_players") || "{}");
+                if (!players[username]) players[username] = {};
+                players[username].title = title;
+                localStorage.setItem("dedogeium_players", JSON.stringify(players));
+            } catch (error) {
+                // ignore
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const titleInput = document.getElementById("player-title-input");
+            const saveButton = document.getElementById("save-player-title");
+            const feedback = document.getElementById("player-title-feedback");
+            const username = getCurrentUsername();
+            if (username && titleInput) {
+                titleInput.value = getStoredTitle(username);
+            }
+            if (saveButton) {
+                saveButton.addEventListener("click", () => {
+                    const title = normalizePlayerTitle(titleInput.value);
+                    if (!username) {
+                        feedback.textContent = "Log in first to save your title.";
+                        return;
+                    }
+                    if (!title) {
+                        feedback.textContent = "Enter a title before saving.";
+                        return;
+                    }
+                    saveStoredTitle(username, title);
+                    feedback.textContent = `Title saved: ${title}`;
+                });
+            }
+        });
+    </script>
 </body>
 </html>
 

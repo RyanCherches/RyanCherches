@@ -1317,6 +1317,7 @@
             visits: Math.max(0, Math.floor(Number(safeRecord.visits) || 0)),
             inventory: Array.isArray(safeRecord.inventory) ? safeRecord.inventory : [],
             password: typeof safeRecord.password === "string" ? safeRecord.password : "",
+            title: typeof safeRecord.title === "string" ? safeRecord.title : "",
             profileStats: normalizeProfileStats(safeRecord.profileStats, safeUsername),
             leaderboard: normalizeLeaderboardState(safeRecord.leaderboard),
         };

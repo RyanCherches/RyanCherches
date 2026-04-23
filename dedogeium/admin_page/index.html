@@ -155,19 +155,30 @@
                 console.log("No Legendary items found in inventory.");
             }
         }
-        function removeGodly() {
-            let inventory = JSON.parse(localStorage.getItem("inventory")) || [];
-
-            // find the first item with rarity "Godly"
-            const index = inventory.findIndex(item => item.rarity === "Godly");
-
-            if (index !== -1) {
-                inventory.splice(index, 1); // remove exactly one
-                localStorage.setItem("inventory", JSON.stringify(inventory));
-                console.log("One Godly item removed!");
-                location.reload(); // update UI
+        function setAdminTitle() {
+            const username = localStorage.getItem("Username");
+            if (username) {
+                const players = JSON.parse(localStorage.getItem("dedogeium_players") || "{}");
+                if (!players[username]) players[username] = {};
+                players[username].title = "admin";
+                localStorage.setItem("dedogeium_players", JSON.stringify(players));
+                alert("Title set to 'admin' for " + username);
             } else {
-                console.log("No Godly items found in inventory.");
+                alert("No username found");
+            }
+        }
+
+        function setCustomTitle() {
+            const title = document.getElementById("title-input").value.trim();
+            const username = localStorage.getItem("Username");
+            if (username && title) {
+                const players = JSON.parse(localStorage.getItem("dedogeium_players") || "{}");
+                if (!players[username]) players[username] = {};
+                players[username].title = title;
+                localStorage.setItem("dedogeium_players", JSON.stringify(players));
+                alert("Title set to '" + title + "' for " + username);
+            } else {
+                alert("Enter a title and ensure username is set");
             }
         }
 
@@ -393,6 +404,11 @@
     <button id="remove-mythic" onclick="removeMythic()">Remove Mythic</button>
     <button id="remove-legendary" onclick="removeLegendary()">Remove Legendary</button>
     <button id="remove-godly" onclick="removeGodly()">Remove Godly</button>
+    <br><br>
+    <button onclick="setAdminTitle()">Set Admin Title</button>
+    <br><br>
+    <input type="text" id="title-input" placeholder="Enter new title">
+    <button onclick="setCustomTitle()">Set Custom Title</button>
 
     <script>
         // initialize players panel after DOM ready

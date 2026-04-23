@@ -39,6 +39,17 @@
                     <img id="player-avatar" src="../Im just a chill guy no background.png" alt="Your fighter">
                     <div class="player-stats">
                         <p id="player-title">Arena Fighter</p>
+                        <div class="title-edit-row">
+                            <select id="arena-title-input">
+                                <option value="">Select a title</option>
+                                <option value="Fresh Arena Fighter">Fresh Arena Fighter</option>
+                                <option value="Geared Arena Fighter">Geared Arena Fighter</option>
+                                <option value="early gang">early gang</option>
+                                <option value="admin">admin</option>
+                                <option value="Arena Champion">Arena Champion</option>
+                            </select>
+                            <button id="save-title-btn" type="button">Save Title</button>
+                        </div>
                         <div class="stat-pill-row">
                             <span class="stat-pill">Damage <strong id="player-damage">20</strong></span>
                             <span class="stat-pill">Health <strong id="player-health">500</strong></span>
@@ -48,6 +59,13 @@
                     </div>
                 </div>
                 <p id="connection-status" class="status-text">Waiting for server...</p>
+                <button id="toggle-comp-mode">Toggle Computer Mode</button>
+                <div id="computer-mode" style="display:none;">
+                    <h3>Fight Computer</h3>
+                    <label>Computer Damage: <input type="number" id="comp-damage" value="20" min="1"></label>
+                    <label>Computer Health: <input type="number" id="comp-health" value="500" min="1"></label>
+                    <button id="fight-comp-btn">Fight Computer</button>
+                </div>
                 <div class="server-config">
                     <label for="server-url">Arena Server URL</label>
                     <div class="server-config-row">

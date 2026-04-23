@@ -22,6 +22,37 @@ const currentLevel = 4;
 const aprilFoolsEnabled = localStorage.getItem("aprilFoolsEnabled") === "true";
 const skipAllDialogueEnabled = localStorage.getItem("skipAllDialogueEnabled") === "true";
 const playerImg = document.querySelector(".character-container.player img");
+const game = document.getElementById("game");
+const battleRow = document.getElementById("battle-row");
+const playerContainer = document.querySelector(".character-container.player");
+const enemyContainer = document.querySelector(".character-container.enemy");
+const battleEffects = window.DedogeiumSystems && typeof window.DedogeiumSystems.createBattleEffectsController === "function"
+    ? window.DedogeiumSystems.createBattleEffectsController({
+        game,
+        battleRow,
+        playerContainer,
+        enemyContainer,
+        crystalAttack: crystal_attack
+    })
+    : null;
+let battleTurn = 1;
+const battleSkills = window.DedogeiumSystems && typeof window.DedogeiumSystems.createBattleSkillsController === "function"
+    ? window.DedogeiumSystems.createBattleSkillsController({
+        getCombatZone: () => document.getElementById("combat-zone"),
+        getHealth: () => health,
+        getMaxHealth: () => max_health,
+        setHealth: (value) => { health = value; },
+        getEnemyHealth: () => enemy_health,
+        getEnemyMaxHealth: () => enemy_max_health,
+        updateHealthUi: loadhealth,
+        updateCombatMessage: (text) => {
+            const message = document.getElementById("combat-message");
+            if (message) message.innerText = text;
+        },
+        isPlayerTurn: () => combat.isPlayerTurn,
+        isBattleActive: () => combat.active,
+    })
+    : null;
 const dialogueVoice = window.DedogeiumDialogueVoice || null;
 const dialogueVoiceMap = {
     good: { characterKey: "dedogeium-player", team: "player" },
@@ -270,6 +301,20 @@ const dialogue = [
 const activeDialogue = aprilFoolsEnabled ? rickdialogue : dialogue;
 let dialogueIndex = 0;
 let inCutscene = false;
+const postDialogueLose = [
+    { speaker: 'bad', text: "You were close, but close is still a loss." },
+    { speaker: 'good', text: "Then I will get stronger and erase that gap." },
+    { speaker: 'bad', text: "Do that, and maybe next time will be interesting." }
+];
+const postDialogueWin = [
+    { speaker: 'bad', text: "So that is the strength your side was hiding." },
+    { speaker: 'good', text: "No hiding. Just better choices and better training." },
+    { speaker: 'bad', text: "Then take what you earned and keep climbing." }
+];
+let postIndex = 0;
+let inPostDialogue = false;
+let activePostDialogue = [];
+let pendingBattleResultAction = null;
 
 function setDialogueButtonsVisible(visible) {
     const display = visible ? "inline-block" : "none";
@@ -310,6 +355,49 @@ function showNextLine() {
     }
 }
 
+function showPostLine(index) {
+    speech_good.innerHTML = "";
+    speech_bad.innerHTML = "";
+    const line = activePostDialogue[index];
+    if (!line) return;
+    if (line.speaker === 'good') speech_good.innerText = line.text;
+    else speech_bad.innerText = line.text;
+    speakDialogueLine(line);
+}
+
+function showNextPostLine() {
+    if (!inPostDialogue) return;
+    postIndex++;
+    if (postIndex < activePostDialogue.length) {
+        showPostLine(postIndex);
+    } else {
+        endPostDialogue();
+    }
+}
+
+function startPostDialogue(lines, onComplete) {
+    inPostDialogue = true;
+    postIndex = 0;
+    activePostDialogue = Array.isArray(lines) ? lines : [];
+    pendingBattleResultAction = typeof onComplete === "function" ? onComplete : null;
+    if (skipAllDialogueEnabled || !activePostDialogue.length) {
+        endPostDialogue();
+        return;
+    }
+    showPostLine(0);
+    setDialogueButtonsVisible(true);
+}
+
+function endPostDialogue() {
+    inPostDialogue = false;
+    stopDialogueVoice();
+    setDialogueButtonsVisible(false);
+    activePostDialogue = [];
+    const nextAction = pendingBattleResultAction;
+    pendingBattleResultAction = null;
+    if (nextAction) nextAction();
+}
+
 function startCutscene() {
     inCutscene = true;
     dialogueIndex = 0;
@@ -333,6 +421,9 @@ function endCutsceneAndStartBattle() {
     applyEquipmentBonuses();
     loadhealth();
     setupCombatUI();
+    if (battleEffects) battleEffects.ensureEffectsLayer();
+    battleTurn = 1;
+    if (battleSkills) battleSkills.startBattle();
     startPlayerTurn();
     beforeFightAudio.pause();
     duringFightAudio.loop = true;
@@ -355,8 +446,13 @@ yes_btn.addEventListener("click", function (){
 // skip button advances to the next line in the cutscene
 if (skipBtn) {
     skipBtn.addEventListener('click', function() {
-        if (!inCutscene) return;
-        showNextLine();
+        if (inCutscene) {
+            showNextLine();
+            return;
+        }
+        if (inPostDialogue) {
+            showNextPostLine();
+        }
     });
 }
 
@@ -496,6 +592,7 @@ function startPlayerTurn() {
     combat.pointerDir = 1;
     pointer.style.left = "0px";
     message.innerText = "Your turn! Press SPACE to stop pointer near center for higher damage.";
+    if (battleSkills) battleSkills.onPlayerTurnStart(battleTurn);
 
     if (combat.intervalId) clearInterval(combat.intervalId);
     combat.intervalId = setInterval(() => {
@@ -535,7 +632,9 @@ function handlePlayerStop() {
     combat.active = false;
 
     const acc = calculatePlayerAccuracy();
-    const hit = calculateDamage(damage, acc);
+    const skillBonus = battleSkills ? battleSkills.consumePlayerDamageBonus() : 0;
+    const hit = calculateDamage(damage, acc) + skillBonus;
+    if (battleEffects) battleEffects.triggerBattleAnimation("player", hit, acc);
     enemy_health = Math.max(0, enemy_health - hit);
     loadhealth();
 
@@ -556,9 +655,12 @@ function startEnemyTurn() {
     showCombatUI(true);
     const message = document.getElementById("combat-message");
     if (message) message.innerText = "Enemy is charging...";
+    if (battleSkills) battleSkills.onEnemyTurnStart(battleTurn);
 
     const acc = enemyAccuracy();
-    const hit = calculateDamage(enemy_damage, acc);
+    const baseHit = calculateDamage(enemy_damage, acc);
+    const hit = battleSkills ? battleSkills.applyIncomingEnemyDamage(baseHit) : baseHit;
+    if (battleEffects) battleEffects.triggerBattleAnimation("enemy", hit, acc);
     health = Math.max(0, health - hit);
     loadhealth();
     if (message) message.innerText = `Enemy hit ${hit} (accuracy ${Math.round(acc * 100)}%).`;
@@ -569,6 +671,7 @@ function startEnemyTurn() {
     }
 
     enemy_damage *= 2;
+    battleTurn += 1;
     setTimeout(startPlayerTurn, 900);
 }
 
@@ -578,6 +681,7 @@ function finishBattle(playerWon) {
     clearInterval(combat.intervalId);
     combat.intervalId = null;
     showCombatUI(false);
+    if (battleSkills) battleSkills.endBattle();
 
     if (playerWon) {
         const currentCompletedLevel = Number(localStorage.getItem("completedLevel")) || 0;
@@ -589,9 +693,13 @@ function finishBattle(playerWon) {
         const actualReward = addLevelCurrency(reward);
         const rewardItem = generateRewardItem();
         addItemToInventory(rewardItem);
-        showVictoryReward(actualReward, rewardItem);
+        startPostDialogue(postDialogueWin, function() {
+            showVictoryReward(actualReward, rewardItem);
+        });
     } else {
-        showDefeatMessage("Defeated! Grind and try again.");
+        startPostDialogue(postDialogueLose, function() {
+            showDefeatMessage("Defeated! Grind and try again.");
+        });
     }
     duringFightAudio.pause();
 }

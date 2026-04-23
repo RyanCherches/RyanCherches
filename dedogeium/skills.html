@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skills</title>
+    <link rel="stylesheet" href="skills.css">
+</head>
+<body>
+    <header>
+        <img src="Im just a chill guy no background.png" height="100" alt="Doge">
+        <h1><a href="home/">Dedogeium</a></h1>
+        <h1><a href="customize/">Customize</a></h1>
+        <h1><a href="skills/">Skills</a></h1>
+        <h1><a href="adventure/">Adventure</a></h1>
+    </header>
+    <main>
+        <section class="hero">
+            <div class="hero-grid">
+                <div class="hero-card">
+                    <h2>Battle Skills</h2>
+                    <p>Buy skills, choose whether they run in <strong>auto</strong> or <strong>manual</strong> mode, and set up how they behave in fights. Stronger skills cost more and unlock later in the battle.</p>
+                </div>
+                <div class="hero-card currency-card">
+                    <span>Currency available</span>
+                    <strong id="skills-currency">0</strong>
+                    <p>Spend carefully. The strongest skills are expensive for a reason.</p>
+                </div>
+            </div>
+            <p id="skills-message" class="message"></p>
+        </section>
+
+        <section class="panel">
+            <h3>Skill Mode</h3>
+            <p>Auto mode handles owned skills for you using the rules below. Manual mode lets you choose exactly which bought skills appear in battle.</p>
+            <div class="mode-toggle">
+                <button type="button" class="mode-btn" data-mode="auto">Auto</button>
+                <button type="button" class="mode-btn" data-mode="manual">Manual</button>
+            </div>
+        </section>
+
+        <div class="page-grid">
+            <section class="panel">
+                <h3>Buy Skills</h3>
+                <p>Every skill is a permanent unlock. Bigger effects come with later turn gates and higher prices.</p>
+                <div id="skills-shop-list" class="shop-grid"></div>
+            </section>
+
+            <section class="panel">
+                <h3>Owned Skills</h3>
+                <p>These rules control what auto mode is allowed to do with each skill that you own.</p>
+                <div id="owned-skills-list" class="skills-grid"></div>
+            </section>
+        </div>
+
+        <section id="auto-section" class="panel">
+            <h3>Auto Settings</h3>
+            <p>Set the style of the AI, when it tries to survive, and how many skills it can spend in one battle.</p>
+            <div class="control-grid">
+                <div class="control-card">
+                    <label for="auto-aggression">Aggression</label>
+                    <select id="auto-aggression">
+                        <option value="balanced">Balanced</option>
+                        <option value="aggressive">Aggressive</option>
+                        <option value="emergency">Emergency save</option>
+                    </select>
+                </div>
+                <div class="control-card">
+                    <label for="auto-heal-threshold">Heal threshold</label>
+                    <input id="auto-heal-threshold" type="number" min="0" max="100">
+                </div>
+                <div class="control-card">
+                    <label for="auto-guard-threshold">Guard threshold</label>
+                    <input id="auto-guard-threshold" type="number" min="0" max="100">
+                </div>
+                <div class="control-card">
+                    <label for="auto-finisher-threshold">Finisher threshold</label>
+                    <input id="auto-finisher-threshold" type="number" min="0" max="100">
+                </div>
+                <div class="control-card">
+                    <label for="auto-max-uses">Max auto skill uses</label>
+                    <input id="auto-max-uses" type="number" min="1" max="6">
+                </div>
+            </div>
+        </section>
+
+        <section id="manual-section" class="panel" hidden>
+            <h3>Manual Loadout</h3>
+            <p>Pick up to 3 bought skills. These are the ones that will appear in battle when you are on manual mode.</p>
+            <div id="manual-loadout-list" class="loadout-grid"></div>
+        </section>
+    </main>
+    <script src="server_defaults.js"></script>
+    <script src="server_config.js"></script>
+    <script src="game_systems.js"></script>
+    <script src="skills.js"></script>
+</body>
+</html>

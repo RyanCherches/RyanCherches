@@ -110,6 +110,54 @@
             luckShift: 0.22,
         },
     };
+    const SKILL_STATE_STORAGE_KEY = "dedogeiumSkillStateV1";
+    const SKILL_MODE_OPTIONS = ["auto", "manual"];
+    const SKILL_CATALOG = [
+        {
+            id: "healing_pulse",
+            label: "Healing Pulse",
+            description: "Restore a chunk of your health when the fight gets rough.",
+            kind: "heal",
+            cost: 220,
+            unlockTurn: 2,
+            healAmount: 140,
+        },
+        {
+            id: "iron_guard",
+            label: "Iron Guard",
+            description: "Brace yourself and cut the next enemy hit down hard.",
+            kind: "shield",
+            cost: 520,
+            unlockTurn: 2,
+            enemyMultiplier: 0.45,
+        },
+        {
+            id: "rage_drive",
+            label: "Rage Drive",
+            description: "Charge your next strike with a heavy damage boost.",
+            kind: "empower",
+            cost: 980,
+            unlockTurn: 3,
+            bonusDamage: 150,
+        },
+        {
+            id: "phoenix_core",
+            label: "Phoenix Core",
+            description: "A rare late-fight surge that heals you and powers the next swing.",
+            kind: "hybrid",
+            cost: 2200,
+            unlockTurn: 5,
+            healAmount: 200,
+            bonusDamage: 240,
+        },
+    ];
+    const DEFAULT_AUTO_SKILL_SETTINGS = {
+        aggression: "balanced",
+        healThreshold: 45,
+        guardThreshold: 55,
+        finisherThreshold: 32,
+        maxAutoSkillsPerBattle: 2,
+    };
     const DAILY_REWARD_CYCLE = [
         { currency: 25 },
         { currency: 40 },
@@ -254,6 +302,584 @@
         const normalizedBaseCost = Math.max(0, Math.floor(Number(baseCost) || 0));
         const normalizedPurchaseCount = Math.max(0, Math.floor(Number(purchaseCount) || 0));
         return Math.round(normalizedBaseCost * Math.pow(NON_DOGE_SHOP_PRICE_MULTIPLIER, normalizedPurchaseCount));
+    }
+
+    function getSkillDefinition(skillId) {
+        return SKILL_CATALOG.find((skill) => skill.id === skillId) || null;
+    }
+
+    function getDefaultSkillState() {
+        return {
+            mode: "auto",
+            ownedSkills: [],
+            manualLoadout: [],
+            autoSettings: { ...DEFAULT_AUTO_SKILL_SETTINGS },
+            autoRules: {},
+        };
+    }
+
+    function readRawSkillState() {
+        try {
+            return JSON.parse(localStorage.getItem(SKILL_STATE_STORAGE_KEY) || "null");
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function normalizeSkillMode(mode) {
+        return SKILL_MODE_OPTIONS.includes(mode) ? mode : "auto";
+    }
+
+    function clampPercent(value, fallback) {
+        return Math.max(0, Math.min(100, Math.round(Number.isFinite(Number(value)) ? Number(value) : fallback)));
+    }
+
+    function clampPositiveInt(value, fallback, max = 99) {
+        return Math.max(0, Math.min(max, Math.round(Number.isFinite(Number(value)) ? Number(value) : fallback)));
+    }
+
+    function normalizeSkillRule(rawRule, definition) {
+        const safeRule = rawRule && typeof rawRule === "object" ? rawRule : {};
+        return {
+            enabled: safeRule.enabled !== false,
+            minTurn: Math.max(definition.unlockTurn, clampPositiveInt(safeRule.minTurn, definition.unlockTurn, 20)),
+            hpThreshold: clampPercent(safeRule.hpThreshold, definition.kind === "shield" ? 60 : 45),
+        };
+    }
+
+    function normalizeSkillState(rawState) {
+        const fallback = getDefaultSkillState();
+        const safeState = rawState && typeof rawState === "object" ? rawState : {};
+        const ownedSkills = Array.isArray(safeState.ownedSkills)
+            ? Array.from(new Set(safeState.ownedSkills.filter((skillId) => Boolean(getSkillDefinition(skillId)))))
+            : [];
+        const autoRules = {};
+        ownedSkills.forEach((skillId) => {
+            autoRules[skillId] = normalizeSkillRule(safeState.autoRules && safeState.autoRules[skillId], getSkillDefinition(skillId));
+        });
+
+        return {
+            mode: normalizeSkillMode(safeState.mode),
+            ownedSkills,
+            manualLoadout: Array.isArray(safeState.manualLoadout)
+                ? Array.from(new Set(safeState.manualLoadout.filter((skillId) => ownedSkills.includes(skillId)))).slice(0, 3)
+                : [],
+            autoSettings: {
+                aggression: ["balanced", "aggressive", "emergency"].includes(safeState.autoSettings && safeState.autoSettings.aggression)
+                    ? safeState.autoSettings.aggression
+                    : fallback.autoSettings.aggression,
+                healThreshold: clampPercent(safeState.autoSettings && safeState.autoSettings.healThreshold, fallback.autoSettings.healThreshold),
+                guardThreshold: clampPercent(safeState.autoSettings && safeState.autoSettings.guardThreshold, fallback.autoSettings.guardThreshold),
+                finisherThreshold: clampPercent(safeState.autoSettings && safeState.autoSettings.finisherThreshold, fallback.autoSettings.finisherThreshold),
+                maxAutoSkillsPerBattle: Math.max(1, clampPositiveInt(safeState.autoSettings && safeState.autoSettings.maxAutoSkillsPerBattle, fallback.autoSettings.maxAutoSkillsPerBattle, 6)),
+            },
+            autoRules,
+        };
+    }
+
+    function writeSkillState(state) {
+        localStorage.setItem(SKILL_STATE_STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function getStoredCurrencyAmount() {
+        return Math.max(0, Math.round(Number(localStorage.getItem("currency") || "0") || 0));
+    }
+
+    function setStoredCurrencyAmount(amount) {
+        localStorage.setItem("currency", String(Math.max(0, Math.round(Number(amount) || 0))));
+    }
+
+    function getSkillStateSnapshot() {
+        const state = normalizeSkillState(readRawSkillState());
+        writeSkillState(state);
+        return {
+            state: deepClone(state),
+            catalog: deepClone(SKILL_CATALOG),
+        };
+    }
+
+    function updateSkillState(mutator) {
+        const state = normalizeSkillState(readRawSkillState());
+        const result = typeof mutator === "function" ? (mutator(state) || {}) : {};
+        if (result && result.ok === false) {
+            return {
+                ...result,
+                state: deepClone(state),
+                catalog: deepClone(SKILL_CATALOG),
+            };
+        }
+        writeSkillState(state);
+        return {
+            ok: true,
+            state: deepClone(state),
+            catalog: deepClone(SKILL_CATALOG),
+            ...result,
+        };
+    }
+
+    function buySkill(skillId) {
+        return updateSkillState((state) => {
+            const definition = getSkillDefinition(skillId);
+            if (!definition) {
+                return { ok: false, error: "That skill does not exist." };
+            }
+            if (state.ownedSkills.includes(skillId)) {
+                return { ok: false, error: "You already bought that skill." };
+            }
+            const currentCurrency = getStoredCurrencyAmount();
+            if (currentCurrency < definition.cost) {
+                return { ok: false, error: "Not enough currency." };
+            }
+
+            setStoredCurrencyAmount(currentCurrency - definition.cost);
+            state.ownedSkills.push(skillId);
+            state.autoRules[skillId] = normalizeSkillRule({}, definition);
+            if (state.manualLoadout.length < 3) {
+                state.manualLoadout.push(skillId);
+            }
+            return {
+                purchasedSkillId: skillId,
+                spentCurrency: definition.cost,
+                currency: getStoredCurrencyAmount(),
+            };
+        });
+    }
+
+    function setSkillMode(mode) {
+        return updateSkillState((state) => {
+            state.mode = normalizeSkillMode(mode);
+            return { mode: state.mode };
+        });
+    }
+
+    function setManualSkillLoadout(loadout) {
+        return updateSkillState((state) => {
+            const nextLoadout = Array.isArray(loadout)
+                ? Array.from(new Set(loadout.filter((skillId) => state.ownedSkills.includes(skillId)))).slice(0, 3)
+                : [];
+            state.manualLoadout = nextLoadout;
+            return { manualLoadout: deepClone(nextLoadout) };
+        });
+    }
+
+    function updateAutoSkillSettings(patch) {
+        return updateSkillState((state) => {
+            const safePatch = patch && typeof patch === "object" ? patch : {};
+            if (safePatch.aggression) {
+                state.autoSettings.aggression = ["balanced", "aggressive", "emergency"].includes(safePatch.aggression)
+                    ? safePatch.aggression
+                    : state.autoSettings.aggression;
+            }
+            if (Object.prototype.hasOwnProperty.call(safePatch, "healThreshold")) {
+                state.autoSettings.healThreshold = clampPercent(safePatch.healThreshold, state.autoSettings.healThreshold);
+            }
+            if (Object.prototype.hasOwnProperty.call(safePatch, "guardThreshold")) {
+                state.autoSettings.guardThreshold = clampPercent(safePatch.guardThreshold, state.autoSettings.guardThreshold);
+            }
+            if (Object.prototype.hasOwnProperty.call(safePatch, "finisherThreshold")) {
+                state.autoSettings.finisherThreshold = clampPercent(safePatch.finisherThreshold, state.autoSettings.finisherThreshold);
+            }
+            if (Object.prototype.hasOwnProperty.call(safePatch, "maxAutoSkillsPerBattle")) {
+                state.autoSettings.maxAutoSkillsPerBattle = Math.max(1, clampPositiveInt(safePatch.maxAutoSkillsPerBattle, state.autoSettings.maxAutoSkillsPerBattle, 6));
+            }
+            return { autoSettings: deepClone(state.autoSettings) };
+        });
+    }
+
+    function updateAutoSkillRule(skillId, patch) {
+        return updateSkillState((state) => {
+            if (!state.ownedSkills.includes(skillId)) {
+                return { ok: false, error: "Buy that skill first." };
+            }
+            const definition = getSkillDefinition(skillId);
+            const existing = normalizeSkillRule(state.autoRules[skillId], definition);
+            const safePatch = patch && typeof patch === "object" ? patch : {};
+            state.autoRules[skillId] = {
+                enabled: Object.prototype.hasOwnProperty.call(safePatch, "enabled") ? Boolean(safePatch.enabled) : existing.enabled,
+                minTurn: Math.max(definition.unlockTurn, clampPositiveInt(safePatch.minTurn, existing.minTurn, 20)),
+                hpThreshold: clampPercent(safePatch.hpThreshold, existing.hpThreshold),
+            };
+            return { autoRule: deepClone(state.autoRules[skillId]) };
+        });
+    }
+
+    function getOwnedSkillDefinitions(state) {
+        return state.ownedSkills
+            .map((skillId) => getSkillDefinition(skillId))
+            .filter(Boolean);
+    }
+
+    function createBattleSkillsController(options) {
+        const getCombatZone = options && typeof options.getCombatZone === "function"
+            ? options.getCombatZone
+            : () => options && options.combatZone;
+        const getHealth = options && options.getHealth;
+        const getMaxHealth = options && options.getMaxHealth;
+        const setHealth = options && options.setHealth;
+        const getEnemyHealth = options && options.getEnemyHealth;
+        const getEnemyMaxHealth = options && options.getEnemyMaxHealth;
+        const updateHealthUi = options && options.updateHealthUi;
+        const updateCombatMessage = options && options.updateCombatMessage;
+        const isPlayerTurn = options && options.isPlayerTurn;
+        const isBattleActive = options && options.isBattleActive;
+
+        let snapshot = getSkillStateSnapshot();
+        let battleState = {
+            currentTurn: 1,
+            usedSkills: {},
+            pendingPlayerBonus: 0,
+            pendingEnemyMultiplier: 1,
+            autoUses: 0,
+            active: false,
+        };
+
+        function refreshSnapshot() {
+            snapshot = getSkillStateSnapshot();
+            return snapshot;
+        }
+
+        function getHpPercent() {
+            const maxHealth = Math.max(1, Number(getMaxHealth ? getMaxHealth() : 1) || 1);
+            return (Math.max(0, Number(getHealth ? getHealth() : 0) || 0) / maxHealth) * 100;
+        }
+
+        function getEnemyHpPercent() {
+            const maxHealth = Math.max(1, Number(getEnemyMaxHealth ? getEnemyMaxHealth() : 1) || 1);
+            return (Math.max(0, Number(getEnemyHealth ? getEnemyHealth() : 0) || 0) / maxHealth) * 100;
+        }
+
+        function ensureUi() {
+            const combatZone = getCombatZone();
+            if (!combatZone) return null;
+            let root = combatZone.querySelector(".skill-control-panel");
+            if (root) return root;
+
+            root = document.createElement("div");
+            root.className = "skill-control-panel";
+            root.innerHTML = `
+                <div class="skill-panel-head">
+                    <span class="skill-panel-title">Skills</span>
+                    <span class="skill-panel-mode" id="battle-skill-mode-label"></span>
+                </div>
+                <div class="skill-status" id="battle-skill-status">No skills active.</div>
+                <div class="skill-button-row" id="battle-skill-buttons"></div>
+            `;
+            combatZone.appendChild(root);
+            return root;
+        }
+
+        function setStatus(text) {
+            const combatZone = getCombatZone();
+            const statusNode = combatZone ? combatZone.querySelector("#battle-skill-status") : null;
+            if (statusNode) {
+                statusNode.textContent = text || "No skills active.";
+            }
+        }
+
+        function renderUi() {
+            const combatZone = getCombatZone();
+            if (!combatZone) return;
+            ensureUi();
+            const modeLabel = combatZone.querySelector("#battle-skill-mode-label");
+            const buttonRow = combatZone.querySelector("#battle-skill-buttons");
+            if (!buttonRow) return;
+
+            const state = refreshSnapshot().state;
+            const ownedSkills = getOwnedSkillDefinitions(state);
+            modeLabel.textContent = state.mode === "auto" ? "Auto mode" : "Manual mode";
+            buttonRow.innerHTML = "";
+
+            if (!ownedSkills.length) {
+                setStatus("Buy skills on the Skills page to use them in battle.");
+                return;
+            }
+
+            if (state.mode === "auto") {
+                const summary = `Auto ${state.autoSettings.aggression} | Heal ${state.autoSettings.healThreshold}% | Guard ${state.autoSettings.guardThreshold}% | Finisher ${state.autoSettings.finisherThreshold}%`;
+                setStatus(summary);
+                return;
+            }
+
+            const loadout = state.manualLoadout
+                .map((skillId) => getSkillDefinition(skillId))
+                .filter(Boolean);
+            if (!loadout.length) {
+                setStatus("Pick up to 3 manual skills on the Skills page.");
+                return;
+            }
+
+            loadout.forEach((skill) => {
+                const isUnlocked = battleState.currentTurn >= skill.unlockTurn;
+                const isUsed = Boolean(battleState.usedSkills[skill.id]);
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "skill-button";
+                button.disabled = !battleState.active || !isPlayerTurn || !isPlayerTurn() || !isBattleActive || !isBattleActive() || !isUnlocked || isUsed;
+                button.innerHTML = `
+                    <span class="skill-button-name">${skill.label}</span>
+                    <span class="skill-button-meta">Turn ${skill.unlockTurn}</span>
+                `;
+                button.addEventListener("click", () => {
+                    useSkill(skill.id, "manual");
+                });
+                buttonRow.appendChild(button);
+            });
+
+            setStatus(`Turn ${battleState.currentTurn}. Use a skill before your timed strike.`);
+        }
+
+        function applySkill(skillId, source) {
+            const state = refreshSnapshot().state;
+            if (!state.ownedSkills.includes(skillId)) {
+                return { ok: false, error: "Skill not owned." };
+            }
+
+            const skill = getSkillDefinition(skillId);
+            if (!skill) {
+                return { ok: false, error: "Skill not found." };
+            }
+            if (battleState.usedSkills[skill.id]) {
+                return { ok: false, error: "That skill was already used this battle." };
+            }
+            if (battleState.currentTurn < skill.unlockTurn) {
+                return { ok: false, error: `That skill unlocks on turn ${skill.unlockTurn}.` };
+            }
+
+            let message = "";
+            if ((skill.kind === "heal" || skill.kind === "hybrid") && typeof setHealth === "function") {
+                const nextHealth = Math.min(Number(getMaxHealth ? getMaxHealth() : 0) || 0, (Number(getHealth ? getHealth() : 0) || 0) + (skill.healAmount || 0));
+                setHealth(nextHealth);
+                message = `${skill.label} restored ${skill.healAmount} health.`;
+            }
+            if (skill.kind === "shield" || skill.kind === "hybrid") {
+                battleState.pendingEnemyMultiplier = Math.min(battleState.pendingEnemyMultiplier, Number(skill.enemyMultiplier || 0.45));
+                message = message ? `${message} Your guard is up for the next enemy hit.` : `${skill.label} will cut the next enemy hit.`;
+            }
+            if (skill.kind === "empower" || skill.kind === "hybrid") {
+                battleState.pendingPlayerBonus += Number(skill.bonusDamage || 0);
+                message = message ? `${message} Your next hit gains +${skill.bonusDamage} damage.` : `${skill.label} charged your next strike with +${skill.bonusDamage} damage.`;
+            }
+
+            battleState.usedSkills[skill.id] = true;
+            if (source === "auto") {
+                battleState.autoUses += 1;
+            }
+            if (typeof updateHealthUi === "function") {
+                updateHealthUi();
+            }
+            if (typeof updateCombatMessage === "function") {
+                updateCombatMessage(message);
+            }
+            renderUi();
+            return { ok: true, message };
+        }
+
+        function getAutoCandidate(phase) {
+            const state = refreshSnapshot().state;
+            if (state.mode !== "auto") return null;
+            if (battleState.autoUses >= state.autoSettings.maxAutoSkillsPerBattle) return null;
+
+            const ownedSkills = getOwnedSkillDefinitions(state).filter((skill) => {
+                if (battleState.usedSkills[skill.id]) return false;
+                const rule = state.autoRules[skill.id] || normalizeSkillRule({}, skill);
+                if (!rule.enabled) return false;
+                if (battleState.currentTurn < rule.minTurn) return false;
+                return true;
+            });
+            if (!ownedSkills.length) return null;
+
+            const hpPercent = getHpPercent();
+            const enemyHpPercent = getEnemyHpPercent();
+
+            if (phase === "player") {
+                const healSkill = ownedSkills.find((skill) => {
+                    const rule = state.autoRules[skill.id];
+                    return (skill.kind === "heal" || skill.kind === "hybrid")
+                        && hpPercent <= Math.min(state.autoSettings.healThreshold, rule.hpThreshold);
+                });
+                if (healSkill) return healSkill;
+
+                const attackSkills = ownedSkills.filter((skill) => skill.kind === "empower" || skill.kind === "hybrid");
+                if (!attackSkills.length) return null;
+                if (state.autoSettings.aggression === "aggressive") {
+                    return attackSkills.sort((a, b) => b.unlockTurn - a.unlockTurn)[0];
+                }
+                if (enemyHpPercent <= state.autoSettings.finisherThreshold || hpPercent <= state.autoSettings.healThreshold) {
+                    return attackSkills.sort((a, b) => b.unlockTurn - a.unlockTurn)[0];
+                }
+                return null;
+            }
+
+            if (phase === "enemy") {
+                return ownedSkills.find((skill) => {
+                    const rule = state.autoRules[skill.id];
+                    return skill.kind === "shield"
+                        && hpPercent <= Math.min(state.autoSettings.guardThreshold, rule.hpThreshold);
+                }) || null;
+            }
+
+            return null;
+        }
+
+        function maybeRunAutoSkill(phase) {
+            const skill = getAutoCandidate(phase);
+            if (!skill) return null;
+            return applySkill(skill.id, "auto");
+        }
+
+        function useSkill(skillId, source = "manual") {
+            const result = applySkill(skillId, source);
+            if (!result.ok && typeof updateCombatMessage === "function") {
+                updateCombatMessage(result.error || "That skill could not be used.");
+            }
+            return result;
+        }
+
+        function startBattle() {
+            battleState = {
+                currentTurn: 1,
+                usedSkills: {},
+                pendingPlayerBonus: 0,
+                pendingEnemyMultiplier: 1,
+                autoUses: 0,
+                active: true,
+            };
+            ensureUi();
+            renderUi();
+        }
+
+        function onPlayerTurnStart(turnNumber) {
+            battleState.active = true;
+            battleState.currentTurn = Math.max(1, Math.round(Number(turnNumber) || battleState.currentTurn || 1));
+            renderUi();
+            maybeRunAutoSkill("player");
+        }
+
+        function onEnemyTurnStart(turnNumber) {
+            battleState.currentTurn = Math.max(1, Math.round(Number(turnNumber) || battleState.currentTurn || 1));
+            maybeRunAutoSkill("enemy");
+            renderUi();
+        }
+
+        function consumePlayerDamageBonus() {
+            const bonus = battleState.pendingPlayerBonus;
+            battleState.pendingPlayerBonus = 0;
+            renderUi();
+            return bonus;
+        }
+
+        function applyIncomingEnemyDamage(baseDamage) {
+            const adjusted = Math.max(1, Math.round(Number(baseDamage || 0) * battleState.pendingEnemyMultiplier));
+            battleState.pendingEnemyMultiplier = 1;
+            renderUi();
+            return adjusted;
+        }
+
+        function endBattle() {
+            battleState.active = false;
+            renderUi();
+        }
+
+        return {
+            ensureUi,
+            renderUi,
+            startBattle,
+            onPlayerTurnStart,
+            onEnemyTurnStart,
+            consumePlayerDamageBonus,
+            applyIncomingEnemyDamage,
+            useSkill,
+            endBattle,
+        };
+    }
+
+    function createBattleEffectsController(options) {
+        const game = options && options.game;
+        const battleRow = options && options.battleRow;
+        const playerContainer = options && options.playerContainer;
+        const enemyContainer = options && options.enemyContainer;
+        const crystalAttack = options && options.crystalAttack;
+        let animationTimeoutId = null;
+
+        function ensureEffectsLayer() {
+            if (!battleRow) return null;
+            let effectsLayer = battleRow.querySelector("#battle-effects");
+            if (effectsLayer) return effectsLayer;
+
+            effectsLayer = document.createElement("div");
+            effectsLayer.id = "battle-effects";
+            effectsLayer.innerHTML = `
+                <div class="impact-ring"></div>
+                <div class="impact-core"></div>
+                <div id="damage-burst" class="damage-burst"></div>
+            `;
+            battleRow.appendChild(effectsLayer);
+            return effectsLayer;
+        }
+
+        function clearBattleAnimation() {
+            if (animationTimeoutId) {
+                clearTimeout(animationTimeoutId);
+                animationTimeoutId = null;
+            }
+
+            if (game) {
+                game.classList.remove("player-striking", "enemy-striking");
+            }
+            if (playerContainer) {
+                playerContainer.classList.remove("is-attacking", "is-hit");
+            }
+            if (enemyContainer) {
+                enemyContainer.classList.remove("is-attacking", "is-hit");
+            }
+
+            const damageBurst = battleRow ? battleRow.querySelector("#damage-burst") : null;
+            if (damageBurst) {
+                damageBurst.className = "damage-burst";
+                damageBurst.textContent = "";
+            }
+
+            if (crystalAttack) {
+                crystalAttack.classList.remove("attack-strike", "enemy-attack-strike");
+                crystalAttack.style.display = "none";
+            }
+        }
+
+        function triggerBattleAnimation(attacker, hit, accuracy) {
+            if (!game || !battleRow) return;
+
+            ensureEffectsLayer();
+            const attackerContainer = attacker === "player" ? playerContainer : enemyContainer;
+            const defenderContainer = attacker === "player" ? enemyContainer : playerContainer;
+            const strikeClass = attacker === "player" ? "player-striking" : "enemy-striking";
+            const burstSideClass = attacker === "player" ? "enemy-side" : "player-side";
+            const projectileClass = attacker === "player" ? "attack-strike" : "enemy-attack-strike";
+            const damageBurst = battleRow.querySelector("#damage-burst");
+
+            clearBattleAnimation();
+            void game.offsetWidth;
+            game.classList.add(strikeClass);
+            if (attackerContainer) attackerContainer.classList.add("is-attacking");
+            if (defenderContainer) defenderContainer.classList.add("is-hit");
+
+            if (crystalAttack) {
+                crystalAttack.style.display = "block";
+                crystalAttack.classList.add(projectileClass);
+            }
+
+            if (damageBurst) {
+                damageBurst.textContent = `${accuracy >= 0.92 ? "CRIT " : ""}-${hit}`;
+                damageBurst.className = `damage-burst show ${burstSideClass}${accuracy >= 0.92 ? " crit" : ""}`;
+            }
+
+            animationTimeoutId = window.setTimeout(clearBattleAnimation, 780);
+        }
+
+        return {
+            ensureEffectsLayer,
+            clearBattleAnimation,
+            triggerBattleAnimation,
+        };
     }
 
     function getDefaultDailyRewardState() {
@@ -1151,7 +1777,9 @@
         STORAGE_KEY,
         DAILY_REWARD_STORAGE_KEY,
         PLAYER_RECORDS_STORAGE_KEY,
+        SKILL_STATE_STORAGE_KEY,
         BOOST_DEFINITIONS: deepClone(BOOST_DEFINITIONS),
+        SKILL_CATALOG: deepClone(SKILL_CATALOG),
         DAILY_REWARD_CYCLE: deepClone(DAILY_REWARD_CYCLE),
         LEADERBOARD_CATEGORY_DEFINITIONS: deepClone(LEADERBOARD_CATEGORY_DEFINITIONS),
         LEADERBOARD_REWARD_TIERS: deepClone(LEADERBOARD_REWARD_TIERS),
@@ -1170,6 +1798,12 @@
         getBoostChargeCost,
         isBoostActive,
         buyExtraSlot,
+        getSkillStateSnapshot,
+        buySkill,
+        setSkillMode,
+        setManualSkillLoadout,
+        updateAutoSkillSettings,
+        updateAutoSkillRule,
         buyBoostCharge,
         startBoost,
         stopBoost,
@@ -1191,6 +1825,8 @@
         buildCompletedLeaderboardEntries,
         getLeaderboardRewardPreview,
         claimLeaderboardReward,
+        createBattleSkillsController,
+        createBattleEffectsController,
     };
 
     startLeaderboardTracking();

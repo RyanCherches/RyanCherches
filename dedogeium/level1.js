@@ -21,11 +21,44 @@ const completedLevel = Number(localStorage.getItem("completedLevel"));
 const aprilFoolsEnabled = localStorage.getItem("aprilFoolsEnabled") === "true";
 const skipAllDialogueEnabled = localStorage.getItem("skipAllDialogueEnabled") === "true";
 const playerImg = document.querySelector(".character-container.player img");
+const game = document.getElementById("game");
+const battleRow = document.getElementById("battle-row");
+const playerContainer = document.querySelector(".character-container.player");
+const enemyContainer = document.querySelector(".character-container.enemy");
 const dialogueVoice = window.DedogeiumDialogueVoice || null;
 const dialogueVoiceMap = {
     good: { characterKey: "dedogeium-player", team: "player" },
     bad: { characterKey: "level1-enemy", team: "enemy" },
 };
+const combat = {
+    active: false,
+    isPlayerTurn: false,
+    pointerPos: 0,
+    pointerDir: 1,
+    speed: 3.6,
+    intervalId: null,
+    timeoutId: null,
+    barWidth: 0,
+    pointerWidth: 40,
+    maxX: 0
+};
+let battleAnimationTimeoutId = null;
+let equipmentBonusesApplied = false;
+let battleTurn = 1;
+const battleSkills = window.DedogeiumSystems && typeof window.DedogeiumSystems.createBattleSkillsController === "function"
+    ? window.DedogeiumSystems.createBattleSkillsController({
+        getCombatZone: () => document.getElementById("combat-zone"),
+        getHealth: () => health,
+        getMaxHealth: () => max_health,
+        setHealth: (value) => { health = value; },
+        getEnemyHealth: () => enemy_health,
+        getEnemyMaxHealth: () => enemy_max_health,
+        updateHealthUi: loadhealth,
+        updateCombatMessage,
+        isPlayerTurn: () => combat.isPlayerTurn,
+        isBattleActive: () => combat.active,
+    })
+    : null;
 
 function speakDialogueLine(line) {
     if (!line || !dialogueVoice) return;
@@ -59,10 +92,52 @@ window.onload = function() {
 
 const enemy_max_health = 1000;
 let enemy_health = 1000;
-const max_health = 500;
+let max_health = 500;
 let health = 500;
 let damage = 20;
 let enemy_damage = 20;
+const rarityBonuses = {
+    "Common": { damage: 2, health: 50 },
+    "Uncommon": { damage: 5, health: 100 },
+    "Rare": { damage: 10, health: 150 },
+    "Epic": { damage: 20, health: 250 },
+    "Legendary": { damage: 40, health: 400 },
+    "Godly": { damage: 80, health: 600 }
+};
+const fireRarityBonuses = {
+    "Common": { damage: 6, health: 125 },
+    "Uncommon": { damage: 12, health: 165 },
+    "Rare": { damage: 22, health: 275 },
+    "Epic": { damage: 42, health: 550 },
+    "Legendary": { damage: 85, health: 700 },
+    "Godly": { damage: 100, health: 900 }
+};
+
+function getItemBonus(item) {
+    if (item && item.name === "Fire Doge") {
+        return fireRarityBonuses[item.rarity] || { damage: 0, health: 0 };
+    }
+    return rarityBonuses[item && item.rarity] || { damage: 0, health: 0 };
+}
+
+function applyEquipmentBonuses() {
+    if (equipmentBonusesApplied) return;
+
+    const equippedItems = JSON.parse(localStorage.getItem("equippedItems")) || [];
+    let totalDamageBonus = 0;
+    let totalHealthBonus = 0;
+
+    equippedItems.forEach((item) => {
+        const bonus = getItemBonus(item);
+        totalDamageBonus += bonus.damage;
+        totalHealthBonus += bonus.health;
+    });
+
+    damage += totalDamageBonus;
+    max_health += totalHealthBonus;
+    health = max_health;
+    equipmentBonusesApplied = true;
+}
 
 function getLevelCurrency() {
     return Number(localStorage.getItem("currency") || "0");
@@ -174,6 +249,20 @@ function renderLevelShop() {
     shopContainer.appendChild(message);
 }
 
+function hideLevelShop() {
+    const shopContainer = document.getElementById("level-shop");
+    if (shopContainer) {
+        shopContainer.style.display = "none";
+    }
+}
+
+function showDefeatMessage(message) {
+    setLevelShopMessage("", false);
+    if (maybe_vic) maybe_vic.textContent = message;
+    hideLevelShop();
+    if (victory) victory.style.display = "block";
+}
+
 cancel_btn.addEventListener("click", function() {
     stopDialogueVoice();
     window.location.href = routeBase + "adventure/";
@@ -205,15 +294,22 @@ const activeDialogue = aprilFoolsEnabled ? rickdialogue : dialogue;
 let dialogueIndex = 0;
 let inCutscene = false;
 
-// post-battle dialogue (speaking after the fight)
-const postDialogue = [
+const postDialogueLose = [
     { speaker: 'good', text: "I will win one day. I will get the best gear and beat you." },
     { speaker: 'bad', text: "Excuses. Exuces. Exuces." },
     { speaker: 'good', text: "You think your so cool, well lets find out soon." },
     { speaker: 'bad', text: "Well then see you soon." }
 ];
+const postDialogueWin = [
+    { speaker: 'bad', text: "So you really did beat me..." },
+    { speaker: 'good', text: "I told you this was propaganda." },
+    { speaker: 'bad', text: "Maybe I followed the wrong side too fast." },
+    { speaker: 'good', text: "Then come back when you are ready to think for yourself." }
+];
 let postIndex = 0;
 let inPostDialogue = false;
+let activePostDialogue = [];
+let pendingBattleResultAction = null;
 
 function setDialogueButtonsVisible(visible) {
     const display = visible ? "inline-block" : "none";
@@ -247,7 +343,7 @@ function showLine(index) {
 function showPostLine(index) {
     speech_good.innerHTML = "";
     speech_bad.innerHTML = "";
-    const line = postDialogue[index];
+    const line = activePostDialogue[index];
     if (!line) return;
     if (line.speaker === 'good') speech_good.innerText = line.text;
     else speech_bad.innerText = line.text;
@@ -267,17 +363,19 @@ function showNextLine() {
 function showNextPostLine() {
     if (!inPostDialogue) return;
     postIndex++;
-    if (postIndex < postDialogue.length) {
+    if (postIndex < activePostDialogue.length) {
         showPostLine(postIndex);
     } else {
         endPostDialogue();
     }
 }
 
-function startPostDialogue() {
+function startPostDialogue(lines, onComplete) {
     inPostDialogue = true;
     postIndex = 0;
-    if (skipAllDialogueEnabled) {
+    activePostDialogue = Array.isArray(lines) ? lines : [];
+    pendingBattleResultAction = typeof onComplete === "function" ? onComplete : null;
+    if (skipAllDialogueEnabled || !activePostDialogue.length) {
         endPostDialogue();
         return;
     }
@@ -289,7 +387,13 @@ function endPostDialogue() {
     inPostDialogue = false;
     stopDialogueVoice();
     setDialogueButtonsVisible(false);
-    // show victory UI after post-dialogue finishes
+    activePostDialogue = [];
+    const nextAction = pendingBattleResultAction;
+    pendingBattleResultAction = null;
+    if (nextAction) {
+        nextAction();
+        return;
+    }
     if (victory) victory.style.display = "block";
 }
 
@@ -310,11 +414,15 @@ function endCutsceneAndStartBattle() {
     setDialogueButtonsVisible(false);
     speech_good.innerHTML = "";
     speech_bad.innerHTML = "";
-    // begin the fight
     enemy_hlth_element.style.display = "block";
     hlth_element.style.display = "block";
+    applyEquipmentBonuses();
     loadhealth();
-    battleLoop();
+    setupCombatUI();
+    setupBattleEffects();
+    battleTurn = 1;
+    if (battleSkills) battleSkills.startBattle();
+    startPlayerTurn();
     beforeFightAudio.pause();
     duringFightAudio.loop = true;
     duringFightAudio.play();
@@ -342,45 +450,6 @@ if (skipBtn) {
 }
 
 
-async function battleLoop() {
-    while (enemy_health > 0 && health > 0) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        attack()
-        loadhealth()
-        if (enemy_health <= 0) break;
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        enemy_attack()
-        loadhealth()
-        damage *= 2;
-        enemy_damage *= 2;
-    }
-    const playerWon = enemy_health <= 0;
-    if (playerWon) {
-        if (completedLevel < 2) {
-            localStorage.setItem("completedLevel", 2);
-        }
-        if (window.DedogeiumSystems && typeof window.DedogeiumSystems.recordComputerVictory === "function") {
-            window.DedogeiumSystems.recordComputerVictory();
-        }
-        const reward = 10;
-        const actualReward = addLevelCurrency(reward);
-        if (maybe_vic) {
-            maybe_vic.innerHTML = `Victory! You earned ${actualReward} currency! Visit Customize to spend it.`;
-        }
-        renderLevelShop();
-        startPostDialogue();
-    } else {
-        if (maybe_vic) {
-            maybe_vic.textContent = "Defeated! Grind and try again.";
-        }
-        const shopContainer = document.getElementById("level-shop");
-        if (shopContainer) {
-            shopContainer.style.display = "none";
-        }
-        if (victory) victory.style.display = "block";
-    }
-    duringFightAudio.pause();
-}
 function loadhealth() {
     if (enemy_health <= 0) {
         enemy_health = 0;
@@ -392,19 +461,283 @@ function loadhealth() {
     hlth_element.innerHTML = health +"/" + max_health;
     
 }
-function attack() {
-    if (crystal_attack) {
-        crystal_attack.style.display = "block";
-        crystal_attack.classList.remove("attack-strike");
-        void crystal_attack.offsetWidth; // trigger reflow to restart animation
-        crystal_attack.classList.add("attack-strike");
+
+function queueCombatTimeout(callback, delay) {
+    if (combat.timeoutId) {
+        clearTimeout(combat.timeoutId);
     }
-    enemy_health -= damage;
-}
-function enemy_attack() {
-    if (crystal_attack) {
-        crystal_attack.style.display = "none";
-    }
-    health -= enemy_damage;
+    combat.timeoutId = window.setTimeout(callback, delay);
 }
 
+function setupCombatUI() {
+    if (document.getElementById("combat-zone")) return;
+
+    const combatZone = document.createElement("div");
+    combatZone.id = "combat-zone";
+
+    const bar = document.createElement("img");
+    bar.id = "combat-bar";
+    bar.src = "combat bar.png";
+    bar.alt = "";
+
+    const pointer = document.createElement("img");
+    pointer.id = "combat-pointer";
+    pointer.src = "combat pointer.png";
+    pointer.alt = "";
+
+    const message = document.createElement("div");
+    message.id = "combat-message";
+
+    combatZone.appendChild(bar);
+    combatZone.appendChild(pointer);
+    combatZone.appendChild(message);
+    combatZone.addEventListener("pointerdown", function(event) {
+        if (!combat.active || !combat.isPlayerTurn) return;
+        event.preventDefault();
+        handlePlayerStop();
+    });
+    document.body.appendChild(combatZone);
+}
+
+function setupBattleEffects() {
+    if (!battleRow || document.getElementById("battle-effects")) return;
+
+    const effectsLayer = document.createElement("div");
+    effectsLayer.id = "battle-effects";
+    effectsLayer.innerHTML = `
+        <div class="impact-ring"></div>
+        <div class="impact-core"></div>
+        <div id="damage-burst" class="damage-burst"></div>
+    `;
+    battleRow.appendChild(effectsLayer);
+}
+
+function showCombatUI(show) {
+    const combatZone = document.getElementById("combat-zone");
+    if (!combatZone) return;
+    combatZone.style.display = show ? "block" : "none";
+}
+
+function updateCombatMessage(message, turnClass) {
+    const combatZone = document.getElementById("combat-zone");
+    const messageNode = document.getElementById("combat-message");
+    if (combatZone) {
+        combatZone.classList.remove("player-turn", "enemy-turn");
+        if (turnClass) combatZone.classList.add(turnClass);
+    }
+    if (messageNode) {
+        messageNode.textContent = message;
+    }
+}
+
+function clearBattleAnimation() {
+    if (battleAnimationTimeoutId) {
+        clearTimeout(battleAnimationTimeoutId);
+        battleAnimationTimeoutId = null;
+    }
+
+    if (game) {
+        game.classList.remove("player-striking", "enemy-striking");
+    }
+    if (playerContainer) {
+        playerContainer.classList.remove("is-attacking", "is-hit");
+    }
+    if (enemyContainer) {
+        enemyContainer.classList.remove("is-attacking", "is-hit");
+    }
+
+    const damageBurst = document.getElementById("damage-burst");
+    if (damageBurst) {
+        damageBurst.className = "damage-burst";
+        damageBurst.textContent = "";
+    }
+
+    if (crystal_attack) {
+        crystal_attack.classList.remove("attack-strike", "enemy-attack-strike");
+        crystal_attack.style.display = "none";
+    }
+}
+
+function triggerBattleAnimation(attacker, hit, accuracy) {
+    const attackerContainer = attacker === "player" ? playerContainer : enemyContainer;
+    const defenderContainer = attacker === "player" ? enemyContainer : playerContainer;
+    const strikeClass = attacker === "player" ? "player-striking" : "enemy-striking";
+    const burstSideClass = attacker === "player" ? "enemy-side" : "player-side";
+    const projectileClass = attacker === "player" ? "attack-strike" : "enemy-attack-strike";
+    const damageBurst = document.getElementById("damage-burst");
+
+    clearBattleAnimation();
+    if (!game) return;
+
+    void game.offsetWidth;
+    game.classList.add(strikeClass);
+    if (attackerContainer) attackerContainer.classList.add("is-attacking");
+    if (defenderContainer) defenderContainer.classList.add("is-hit");
+
+    if (crystal_attack) {
+        crystal_attack.style.display = "block";
+        crystal_attack.classList.add(projectileClass);
+    }
+
+    if (damageBurst) {
+        damageBurst.textContent = `${accuracy >= 0.92 ? "CRIT " : ""}-${hit}`;
+        damageBurst.className = `damage-burst show ${burstSideClass}${accuracy >= 0.92 ? " crit" : ""}`;
+    }
+
+    battleAnimationTimeoutId = window.setTimeout(clearBattleAnimation, 780);
+}
+
+function startPlayerTurn() {
+    const bar = document.getElementById("combat-bar");
+    const pointer = document.getElementById("combat-pointer");
+    if (!bar || !pointer) return;
+
+    combat.isPlayerTurn = true;
+    combat.active = true;
+    showCombatUI(true);
+    updateCombatMessage("Your turn. Press SPACE or tap the bar near the center for a stronger hit.", "player-turn");
+    if (battleSkills) battleSkills.onPlayerTurnStart(battleTurn);
+
+    const rect = bar.getBoundingClientRect();
+    combat.barWidth = rect.width;
+    combat.pointerWidth = pointer.clientWidth || combat.pointerWidth;
+    combat.maxX = Math.max(0, combat.barWidth - combat.pointerWidth);
+    combat.pointerPos = 0;
+    combat.pointerDir = 1;
+    pointer.style.left = "0px";
+
+    if (combat.intervalId) {
+        clearInterval(combat.intervalId);
+    }
+    combat.intervalId = setInterval(() => {
+        if (!combat.active || !combat.isPlayerTurn) return;
+        combat.pointerPos += combat.pointerDir * combat.speed;
+        if (combat.pointerPos <= 0) {
+            combat.pointerPos = 0;
+            combat.pointerDir = 1;
+        }
+        if (combat.pointerPos >= combat.maxX) {
+            combat.pointerPos = combat.maxX;
+            combat.pointerDir = -1;
+        }
+        pointer.style.left = `${combat.pointerPos}px`;
+    }, 12);
+}
+
+function calculatePlayerAccuracy() {
+    if (combat.barWidth <= 0) return 0;
+    const sweetSpotCenter = combat.barWidth * (904 / 1920);
+    const pointerCenter = combat.pointerPos + (combat.pointerWidth / 2);
+    const dist = Math.abs(pointerCenter - sweetSpotCenter);
+    const maxDistance = Math.max(sweetSpotCenter, combat.barWidth - sweetSpotCenter);
+    const ratio = Math.min(1, dist / maxDistance);
+    return Math.max(0, 1 - ratio);
+}
+
+function calculateDamage(base, acc) {
+    return Math.max(1, Math.round(base * (0.75 + 1.25 * acc)));
+}
+
+function enemyAccuracy() {
+    if (Math.random() < 0.2) {
+        return 0.85 + Math.random() * 0.15;
+    }
+    return Math.random() * 0.6;
+}
+
+function handlePlayerStop() {
+    if (!combat.active || !combat.isPlayerTurn) return;
+
+    clearInterval(combat.intervalId);
+    combat.intervalId = null;
+    combat.active = false;
+
+    const acc = calculatePlayerAccuracy();
+    const skillBonus = battleSkills ? battleSkills.consumePlayerDamageBonus() : 0;
+    const hit = calculateDamage(damage, acc) + skillBonus;
+    triggerBattleAnimation("player", hit, acc);
+    enemy_health = Math.max(0, enemy_health - hit);
+    loadhealth();
+    updateCombatMessage(`You hit ${hit} damage with ${Math.round(acc * 100)}% accuracy.`, "player-turn");
+
+    if (enemy_health <= 0) {
+        queueCombatTimeout(() => finishBattle(true), 860);
+        return;
+    }
+
+    damage *= 2;
+    queueCombatTimeout(startEnemyTurn, 980);
+}
+
+function startEnemyTurn() {
+    combat.isPlayerTurn = false;
+    combat.active = false;
+    showCombatUI(true);
+    updateCombatMessage("Enemy is charging up...", "enemy-turn");
+    if (battleSkills) battleSkills.onEnemyTurnStart(battleTurn);
+
+    const acc = enemyAccuracy();
+    const baseHit = calculateDamage(enemy_damage, acc);
+    const hit = battleSkills ? battleSkills.applyIncomingEnemyDamage(baseHit) : baseHit;
+    queueCombatTimeout(() => {
+        triggerBattleAnimation("enemy", hit, acc);
+        health = Math.max(0, health - hit);
+        loadhealth();
+        updateCombatMessage(`Enemy hit ${hit} damage with ${Math.round(acc * 100)}% accuracy.`, "enemy-turn");
+
+        if (health <= 0) {
+            queueCombatTimeout(() => finishBattle(false), 860);
+            return;
+        }
+
+        enemy_damage *= 2;
+        battleTurn += 1;
+        queueCombatTimeout(startPlayerTurn, 980);
+    }, 420);
+}
+
+function finishBattle(playerWon) {
+    combat.active = false;
+    combat.isPlayerTurn = false;
+    clearInterval(combat.intervalId);
+    combat.intervalId = null;
+    if (combat.timeoutId) {
+        clearTimeout(combat.timeoutId);
+        combat.timeoutId = null;
+    }
+
+    showCombatUI(false);
+    clearBattleAnimation();
+    if (battleSkills) battleSkills.endBattle();
+
+    if (playerWon) {
+        if (completedLevel < 2) {
+            localStorage.setItem("completedLevel", 2);
+        }
+        if (window.DedogeiumSystems && typeof window.DedogeiumSystems.recordComputerVictory === "function") {
+            window.DedogeiumSystems.recordComputerVictory();
+        }
+
+        const reward = 10;
+        const actualReward = addLevelCurrency(reward);
+        if (maybe_vic) {
+            maybe_vic.innerHTML = `Victory! You earned ${actualReward} currency! Visit Customize to spend it.`;
+        }
+        startPostDialogue(postDialogueWin, function() {
+            if (victory) victory.style.display = "block";
+        });
+    } else {
+        startPostDialogue(postDialogueLose, function() {
+            showDefeatMessage("Defeated! Grind and try again.");
+        });
+    }
+
+    duringFightAudio.pause();
+}
+
+document.addEventListener("keydown", function(event) {
+    if (event.code !== "Space") return;
+    if (!combat.active || !combat.isPlayerTurn) return;
+    event.preventDefault();
+    handlePlayerStop();
+});

@@ -10,9 +10,27 @@ const speech_good = document.getElementById("speech-good");
 const speech_bad = document.getElementById("speech-bad");
 const skipBtn = document.getElementById("skip-btn");
 const crystal_attack = document.getElementById("crystal_attack");
-const beforeFightAudio = new Audio("before fight.mp3");
-const duringFightAudio = new Audio("during fight.mp3");
-const postDialogueWinAudio = new Audio("postDialogueWin.mp3");
+
+function getDedogeiumBasePath() {
+    const pathSegments = window.location.pathname.split("/").filter(Boolean);
+    const dedogeiumIndex = pathSegments.indexOf("dedogeium");
+    if (dedogeiumIndex === -1) {
+        return "/";
+    }
+    return `/${pathSegments.slice(0, dedogeiumIndex + 1).join("/")}/`;
+}
+
+const dedogeiumBasePath = getDedogeiumBasePath();
+
+function assetUrl(fileName) {
+    if (!fileName) return "";
+    if (/^https?:\/\//i.test(fileName)) return fileName;
+    return `${dedogeiumBasePath}${String(fileName).replace(/^\/+/, "")}`;
+}
+
+const beforeFightAudio = new Audio(assetUrl("before fight.mp3"));
+const duringFightAudio = new Audio(assetUrl("during fight.mp3"));
+const postDialogueWinAudio = new Audio(assetUrl("postDialogueWin.mp3"));
 const storedMusicVolume = Number(localStorage.getItem("musicVolume"));
 const musicVolume = Number.isFinite(storedMusicVolume) ? storedMusicVolume : 50;
 const musicVolumeNormalized = Math.min(1, Math.max(0, musicVolume / 100));
@@ -197,16 +215,6 @@ const SOCCER_LEVELS = {
 };
 
 const levelConfig = SOCCER_LEVELS[currentLevel] || SOCCER_LEVELS[9];
-function getDedogeiumBasePath() {
-    const pathSegments = window.location.pathname.split("/").filter(Boolean);
-    const dedogeiumIndex = pathSegments.indexOf("dedogeium");
-    if (dedogeiumIndex === -1) {
-        return "/";
-    }
-    return `/${pathSegments.slice(0, dedogeiumIndex + 1).join("/")}/`;
-}
-
-const dedogeiumBasePath = getDedogeiumBasePath();
 const rarities = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Godly"];
 const rarityBonuses = {
     "Common": { damage: 2, health: 50 },
@@ -916,9 +924,9 @@ function initializeLevelPresentation() {
 }
 
 if (aprilFoolsEnabled) {
-    if (playerImg) playerImg.src = "rick astley doge.png";
-    beforeFightAudio.src = "rick roll.mp3";
-    duringFightAudio.src = "rick roll.mp3";
+    if (playerImg) playerImg.src = assetUrl("rick astley doge.png");
+    beforeFightAudio.src = assetUrl("rick roll.mp3");
+    duringFightAudio.src = assetUrl("rick roll.mp3");
 }
 
 initializeLevelPresentation();

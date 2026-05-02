@@ -30,13 +30,13 @@ function assetUrl(fileName) {
 
 const beforeFightAudio = new Audio(assetUrl("before fight.mp3"));
 const duringFightAudio = new Audio(assetUrl("during fight.mp3"));
-const postDialogueWinAudio = new Audio(assetUrl("postDialogueWin.mp3"));
+const postDialogueWinAudio = null;
 const storedMusicVolume = Number(localStorage.getItem("musicVolume"));
 const musicVolume = Number.isFinite(storedMusicVolume) ? storedMusicVolume : 50;
 const musicVolumeNormalized = Math.min(1, Math.max(0, musicVolume / 100));
 beforeFightAudio.volume = musicVolumeNormalized;
 duringFightAudio.volume = musicVolumeNormalized;
-postDialogueWinAudio.volume = musicVolumeNormalized;
+if (postDialogueWinAudio) postDialogueWinAudio.volume = musicVolumeNormalized;
 
 const currentLevel = Number(document.body.dataset.level || "9");
 const aprilFoolsEnabled = localStorage.getItem("aprilFoolsEnabled") === "true";
@@ -60,7 +60,9 @@ const dialogueVoice = window.DedogeiumDialogueVoice || null;
 if (dialogueVoice && typeof dialogueVoice.registerMusicAudio === "function") {
     dialogueVoice.registerMusicAudio(beforeFightAudio, { baseVolume: musicVolumeNormalized });
     dialogueVoice.registerMusicAudio(duringFightAudio, { baseVolume: musicVolumeNormalized });
-    dialogueVoice.registerMusicAudio(postDialogueWinAudio, { baseVolume: musicVolumeNormalized });
+    if (postDialogueWinAudio) {
+        dialogueVoice.registerMusicAudio(postDialogueWinAudio, { baseVolume: musicVolumeNormalized });
+    }
 }
 const dialogueVoiceMap = {
     good: { characterKey: "dedogeium-player", team: "player" },
@@ -890,8 +892,10 @@ function finishBattle(playerWon) {
         const actualReward = addLevelCurrency(levelConfig.victoryCurrency);
         const rewardItem = generateRewardItem();
         addItemToInventory(rewardItem);
-        postDialogueWinAudio.currentTime = 0;
-        postDialogueWinAudio.play().catch(() => {});
+        if (postDialogueWinAudio) {
+            postDialogueWinAudio.currentTime = 0;
+            postDialogueWinAudio.play().catch(() => {});
+        }
         startPostDialogue(levelConfig.postDialogueWin, () => {
             showVictoryReward(actualReward, rewardItem);
         });

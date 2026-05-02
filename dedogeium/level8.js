@@ -11,13 +11,13 @@ const skipBtn = document.getElementById("skip-btn");
 const crystal_attack = document.getElementById("crystal_attack");
 const beforeFightAudio = new Audio("before fight.mp3");
 const duringFightAudio = new Audio("during fight.mp3");
-const postDialogueWinAudio = new Audio("postDialogueWin.mp3");
+const postDialogueWinAudio = null;
 const storedMusicVolume = Number(localStorage.getItem("musicVolume"));
 const musicVolume = Number.isFinite(storedMusicVolume) ? storedMusicVolume : 50;
 const musicVolumeNormalized = Math.min(1, Math.max(0, musicVolume / 100));
 beforeFightAudio.volume = musicVolumeNormalized;
 duringFightAudio.volume = musicVolumeNormalized;
-postDialogueWinAudio.volume = musicVolumeNormalized;
+if (postDialogueWinAudio) postDialogueWinAudio.volume = musicVolumeNormalized;
 const maybe_vic = document.getElementById("maybe-vic");
 const completedLevel = Number(localStorage.getItem("completedLevel"));
 const currentLevel = 8;
@@ -125,7 +125,9 @@ const dialogueVoice = window.DedogeiumDialogueVoice || null;
 if (dialogueVoice && typeof dialogueVoice.registerMusicAudio === "function") {
     dialogueVoice.registerMusicAudio(beforeFightAudio, { baseVolume: musicVolumeNormalized });
     dialogueVoice.registerMusicAudio(duringFightAudio, { baseVolume: musicVolumeNormalized });
-    dialogueVoice.registerMusicAudio(postDialogueWinAudio, { baseVolume: musicVolumeNormalized });
+    if (postDialogueWinAudio) {
+        dialogueVoice.registerMusicAudio(postDialogueWinAudio, { baseVolume: musicVolumeNormalized });
+    }
 }
 const dialogueVoiceMap = {
     good: { characterKey: "dedogeium-player", team: "player" },
@@ -497,8 +499,10 @@ function startPostDialogueWin() {
     }
     showPostWinLine(0);
     setDialogueButtonsVisible(true);
-    postDialogueWinAudio.loop = false;
-    postDialogueWinAudio.play();
+    if (postDialogueWinAudio) {
+        postDialogueWinAudio.loop = false;
+        postDialogueWinAudio.play().catch(() => {});
+    }
 }
 
 function endPostDialogue() {

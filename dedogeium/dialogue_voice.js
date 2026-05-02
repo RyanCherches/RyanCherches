@@ -2,7 +2,9 @@
     const SPOKEN_DIALOGUE_KEY = "spokenDialogueEnabled";
     const PLAYER_CHARACTER_KEY = "dedogeium-player";
     const DEFAULT_MUSIC_DUCK_MULTIPLIER = 0.32;
+    const SAFE_ENEMY_VOICE_KEYS = new Set(["level6-enemy"]);
     const ENEMY_VOICE_PROFILES = {
+        "level6-enemy": { rate: 0.92, pitch: 0.76, volume: 0.97 },
         "level9-enemy": { rate: 0.94, pitch: 0.84, volume: 0.95 },
         "level10-enemy": { rate: 1.01, pitch: 0.78, volume: 0.97 },
         "level11-enemy": { rate: 0.88, pitch: 0.66, volume: 0.99 },
@@ -129,7 +131,15 @@
         }
 
         const enemyVoices = voices.filter((voice, index) => index !== playerIndex);
-        return enemyVoices[hashString(characterKey) % enemyVoices.length];
+        if (!enemyVoices.length) {
+            return voices[playerIndex] || voices[0];
+        }
+
+        const safeEnemyVoices = SAFE_ENEMY_VOICE_KEYS.has(characterKey)
+            ? enemyVoices.filter((voice) => /en/i.test(voice.lang || "")).slice(0, 4)
+            : [];
+        const pool = safeEnemyVoices.length ? safeEnemyVoices : enemyVoices;
+        return pool[hashString(characterKey) % pool.length];
     }
 
     function getSpeechTuning(characterKey, team) {

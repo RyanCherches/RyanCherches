@@ -141,6 +141,12 @@ main {
     cursor:pointer;
 }
 
+.soccer-doge {
+    width: 96px;
+    min-width: 50px;
+    cursor: pointer;
+}
+
 /* level boxes */
 .levels {
     background-image: url("level.png");

@@ -55,7 +55,78 @@ const battleSkills = window.DedogeiumSystems && typeof window.DedogeiumSystems.c
         isBattleActive: () => combat.active,
     })
     : null;
+let pendingPlayerDamageMultiplier = 1;
+
+function getEnemyAbilityForCurrentTurn() {
+    return window.DedogeiumSystems && typeof window.DedogeiumSystems.getEnemyAbilityForTurn === "function"
+        ? window.DedogeiumSystems.getEnemyAbilityForTurn(currentLevel, battleTurn)
+        : null;
+}
+
+function applyPlayerAttackAdjustments(rawHit) {
+    const hit = Math.max(1, Math.round(rawHit * pendingPlayerDamageMultiplier));
+    const weakened = pendingPlayerDamageMultiplier < 0.999;
+    pendingPlayerDamageMultiplier = 1;
+    return { hit, weakened };
+}
+
+function triggerEnemySpecialAbility(baseHit) {
+    const ability = getEnemyAbilityForCurrentTurn();
+    if (!ability) {
+        return {
+            ability: null,
+            healAmount: 0,
+            hit: battleSkills ? battleSkills.applyIncomingEnemyDamage(baseHit) : baseHit,
+        };
+    }
+
+    if (battleEffects && typeof battleEffects.triggerSpecialAbility === "function") {
+        battleEffects.triggerSpecialAbility({
+            attacker: "enemy",
+            label: ability.name,
+            variant: ability.variant,
+            primaryColor: ability.primaryColor,
+            secondaryColor: ability.secondaryColor,
+            accentColor: ability.accentColor,
+        });
+    }
+
+    const healAmount = ability.healPercent ? Math.round(enemy_max_health * ability.healPercent) : 0;
+    if (healAmount > 0) {
+        enemy_health = Math.min(enemy_max_health, enemy_health + healAmount);
+    }
+    if (ability.enemyDamageBoost) {
+        enemy_damage += ability.enemyDamageBoost;
+    }
+    if (ability.nextPlayerDamageMultiplier) {
+        pendingPlayerDamageMultiplier = Math.min(pendingPlayerDamageMultiplier, ability.nextPlayerDamageMultiplier);
+    }
+
+    const boostedHit = Math.max(1, Math.round(baseHit * (ability.damageMultiplier || 1)) + (ability.flatDamage || 0));
+    return {
+        ability,
+        healAmount,
+        hit: battleSkills ? battleSkills.applyIncomingEnemyDamage(boostedHit) : boostedHit,
+    };
+}
+
+function formatEnemyAttackMessage(hit, acc, ability, healAmount) {
+    if (!ability) {
+        return `Enemy hit ${hit} (accuracy ${Math.round(acc * 100)}%).`;
+    }
+
+    const extras = [];
+    if (healAmount > 0) extras.push(`healed ${healAmount}`);
+    if (ability.enemyDamageBoost) extras.push("powered up");
+    if (ability.nextPlayerDamageMultiplier && ability.nextPlayerDamageMultiplier < 1) extras.push("dulled your next hit");
+    return `${ability.name}! Enemy hit ${hit} (accuracy ${Math.round(acc * 100)}%)${extras.length ? ` and ${extras.join(" + ")}` : ""}.`;
+}
 const dialogueVoice = window.DedogeiumDialogueVoice || null;
+if (dialogueVoice && typeof dialogueVoice.registerMusicAudio === "function") {
+    dialogueVoice.registerMusicAudio(beforeFightAudio, { baseVolume: musicVolumeNormalized });
+    dialogueVoice.registerMusicAudio(duringFightAudio, { baseVolume: musicVolumeNormalized });
+    dialogueVoice.registerMusicAudio(postDialogueWinAudio, { baseVolume: musicVolumeNormalized });
+}
 const dialogueVoiceMap = {
     good: { characterKey: "dedogeium-player", team: "player" },
     bad: { characterKey: "level7-enemy", team: "enemy" },
@@ -82,11 +153,20 @@ if (aprilFoolsEnabled) {
 let inventory = JSON.parse(localStorage.getItem("inventory")) || [];
 const rarities = ["Common", "Uncommon", "Rare", "Epic", "Legendary", "Godly"];
 const rarityWeights = [30, 39, 30, 1, 0, 0];
-const routeBase = window.location.pathname.includes('/index.html') ? '../' : '';
+function getDedogeiumBasePath() {
+    const pathSegments = window.location.pathname.split("/").filter(Boolean);
+    const dedogeiumIndex = pathSegments.indexOf("dedogeium");
+    if (dedogeiumIndex === -1) {
+        return "/";
+    }
+    return `/${pathSegments.slice(0, dedogeiumIndex + 1).join("/")}/`;
+}
+
+const dedogeiumBasePath = getDedogeiumBasePath();
 
 home.addEventListener("click", function() {
     stopDialogueVoice();
-    window.location.href = routeBase + "adventure/";
+    window.location.href = `${dedogeiumBasePath}adventure/`;
 });
 
 window.onload = function() {
@@ -114,6 +194,9 @@ if (aprilFoolsEnabled) {
     playerImg.src = "rick astley doge.png";
 }
 function getItemBonus(item) {
+    if (item && item.name === "Soccer Ball") {
+        return { damage: 0, health: 0 };
+    }
     if (item && item.name === "Fire Doge") {
         return fireRarityBonuses[item.rarity] || { damage: 0, health: 0 };
     }
@@ -271,7 +354,7 @@ function showDefeatMessage(message) {
 
 cancel_btn.addEventListener("click", function() {
     stopDialogueVoice();
-    window.location.href = routeBase + "adventure/";
+    window.location.href = `${dedogeiumBasePath}adventure/`;
 });
 
 let speechTimeoutId = null;
@@ -676,13 +759,14 @@ function handlePlayerStop() {
 
     const acc = calculatePlayerAccuracy();
     const skillBonus = battleSkills ? battleSkills.consumePlayerDamageBonus() : 0;
-    const hit = calculateDamage(damage, acc) + skillBonus;
-    if (battleEffects) battleEffects.triggerBattleAnimation("player", hit, acc);
-    enemy_health = Math.max(0, enemy_health - hit);
+    const rawHit = calculateDamage(damage, acc) + skillBonus;
+    const attackResult = applyPlayerAttackAdjustments(rawHit);
+    if (battleEffects) battleEffects.triggerBattleAnimation("player", attackResult.hit, acc);
+    enemy_health = Math.max(0, enemy_health - attackResult.hit);
     loadhealth();
 
     const message = document.getElementById("combat-message");
-    if (message) message.innerText = `You hit ${hit} (accuracy ${Math.round(acc * 100)}%).`;
+    if (message) message.innerText = `You hit ${attackResult.hit} (accuracy ${Math.round(acc * 100)}%).${attackResult.weakened ? " The enemy special softened the blow." : ""}`;
 
     if (enemy_health <= 0) {
         finishBattle(true);
@@ -702,11 +786,12 @@ function startEnemyTurn() {
 
     const acc = enemyAccuracy();
     const baseHit = calculateDamage(enemy_damage, acc);
-    const hit = battleSkills ? battleSkills.applyIncomingEnemyDamage(baseHit) : baseHit;
+    const abilityResult = triggerEnemySpecialAbility(baseHit);
+    const hit = abilityResult.hit;
     if (battleEffects) battleEffects.triggerBattleAnimation("enemy", hit, acc);
     health = Math.max(0, health - hit);
     loadhealth();
-    if (message) message.innerText = `Enemy hit ${hit} (accuracy ${Math.round(acc * 100)}%).`;
+    if (message) message.innerText = formatEnemyAttackMessage(hit, acc, abilityResult.ability, abilityResult.healAmount);
 
     if (health <= 0) {
         finishBattle(false);

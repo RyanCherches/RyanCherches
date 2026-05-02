@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-label="Soccer ball">
+  <circle cx="80" cy="80" r="70" fill="#fff" stroke="#111" stroke-width="5"/>
+  <polygon points="80,50 108,66 98,97 62,97 52,66" fill="#111"/>
+  <path d="M80 12v38M27 34l25 32M133 34l-25 32M18 90l34 6M142 90l-34 6M48 136l14-39M112 136l-14-39" fill="none" stroke="#111" stroke-width="4"/>
+</svg>

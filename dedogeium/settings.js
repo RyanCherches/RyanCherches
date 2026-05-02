@@ -6,8 +6,11 @@ const skipAllDialogueCheckbox = document.getElementById("skip-all-dialogue");
 const skipAllDialogueStatus = document.getElementById("skip-all-dialogue-status");
 const spokenDialogueCheckbox = document.getElementById("spoken-dialogue");
 const spokenDialogueStatus = document.getElementById("spoken-dialogue-status");
+const splitBackgroundCheckbox = document.getElementById("split-background");
+const splitBackgroundStatus = document.getElementById("split-background-status");
 const SKIP_ALL_DIALOGUE_KEY = "skipAllDialogueEnabled";
 const SPOKEN_DIALOGUE_KEY = "spokenDialogueEnabled";
+const SPLIT_BG_KEY = "splitBackgroundEnabled";
 
 const musicPreview = new Audio("rick roll.mp3");
 musicPreview.loop = true;
@@ -39,6 +42,13 @@ function updateSpokenDialogueStatus(enabled) {
         : "Dialogue speech is off.";
 }
 
+function updateSplitBackgroundStatus(enabled) {
+    if (!splitBackgroundStatus) return;
+    splitBackgroundStatus.textContent = enabled
+        ? "Split background effect is on. Half blue, half red with color switching."
+        : "Split background effect is off.";
+}
+
 const savedVolume = clampVolume(localStorage.getItem("musicVolume") ?? 50);
 if (volumeSlider) {
     volumeSlider.value = savedVolume;
@@ -57,6 +67,12 @@ if (spokenDialogueCheckbox) {
     spokenDialogueCheckbox.checked = spokenDialogueEnabled;
 }
 updateSpokenDialogueStatus(spokenDialogueEnabled);
+
+const splitBackgroundEnabled = localStorage.getItem(SPLIT_BG_KEY) === "true";
+if (splitBackgroundCheckbox) {
+    splitBackgroundCheckbox.checked = splitBackgroundEnabled;
+}
+updateSplitBackgroundStatus(splitBackgroundEnabled);
 
 if (volumeSlider) {
     volumeSlider.addEventListener("input", () => {
@@ -115,5 +131,13 @@ if (spokenDialogueCheckbox) {
         const enabled = spokenDialogueCheckbox.checked;
         localStorage.setItem(SPOKEN_DIALOGUE_KEY, String(enabled));
         updateSpokenDialogueStatus(enabled);
+    });
+}
+
+if (splitBackgroundCheckbox) {
+    splitBackgroundCheckbox.addEventListener("change", () => {
+        const enabled = splitBackgroundCheckbox.checked;
+        localStorage.setItem(SPLIT_BG_KEY, String(enabled));
+        updateSplitBackgroundStatus(enabled);
     });
 }

@@ -164,6 +164,16 @@ window.addEventListener('DOMContentLoaded', function() {
         "Godly": "godly fire doge.png"
     };
 
+    function getItemType(item) {
+        if (item && item.name === "Fire Doge") {
+            return "Fire Doge";
+        }
+        if (item && item.name === "Soccer Ball") {
+            return "Soccer Ball";
+        }
+        return "Doge";
+    }
+
     // Map doge type + rarity to stat bonuses (damage, health)
     const rarityBonuses = {
         "Doge": {
@@ -181,6 +191,14 @@ window.addEventListener('DOMContentLoaded', function() {
             "Epic": { damage: 30, health: 375 },
             "Legendary": { damage: 60, health: 600 },
             "Godly": { damage: 120, health: 900 }
+        },
+        "Soccer Ball": {
+            "Common": { damage: 2, health: 120 },
+            "Uncommon": { damage: 4, health: 180 },
+            "Rare": { damage: 7, health: 260 },
+            "Epic": { damage: 11, health: 360 },
+            "Legendary": { damage: 16, health: 500 },
+            "Godly": { damage: 24, health: 700 }
         }
     };
 
@@ -189,6 +207,11 @@ window.addEventListener('DOMContentLoaded', function() {
         if (item && (item.name === "Rick Astley Doge" || item.name === "Rick Astley")) {
             return "rick astley.webp";
         }
+        if (item && item.name === "Soccer Ball") {
+            return window.DedogeiumSystems && typeof window.DedogeiumSystems.getSoccerBallImageForRarity === "function"
+                ? window.DedogeiumSystems.getSoccerBallImageForRarity(rarity)
+                : "soccer-ball-basic.svg";
+        }
         if (item && item.name === "Fire Doge" && fireRarityImages[rarity]) {
             return fireRarityImages[rarity];
         }
@@ -196,7 +219,7 @@ window.addEventListener('DOMContentLoaded', function() {
     }
 
     function getItemBonus(item) {
-        const itemName = item && item.name === "Fire Doge" ? "Fire Doge" : "Doge";
+        const itemName = getItemType(item);
         const bonusGroup = rarityBonuses[itemName] || {};
         return bonusGroup[item && item.rarity] || { damage: 0, health: 0 };
     }
@@ -671,7 +694,13 @@ function buildExchangeUI() {
     ];
 
     function getItemType(item) {
-        return item && item.name === "Fire Doge" ? "Fire Doge" : "Doge";
+        if (item && item.name === "Fire Doge") {
+            return "Fire Doge";
+        }
+        if (item && item.name === "Soccer Ball") {
+            return "Soccer Ball";
+        }
+        return "Doge";
     }
 
     function countByRarity(itemType) {
@@ -729,12 +758,17 @@ function buildExchangeUI() {
     exchangeList.innerHTML = "";
     renderExchangeGroup("Doge");
     renderExchangeGroup("Fire Doge");
+    renderExchangeGroup("Soccer Ball");
 }
 
 function performExchange(itemType, fromRarity, requiredCount, toRarity) {
     let inventory = JSON.parse(localStorage.getItem("inventory")) || [];
     const fromItems = inventory.filter(it => {
-        const currentType = it && it.name === "Fire Doge" ? "Fire Doge" : "Doge";
+        const currentType = it && it.name === "Fire Doge"
+            ? "Fire Doge"
+            : it && it.name === "Soccer Ball"
+                ? "Soccer Ball"
+                : "Doge";
         return it.rarity === fromRarity && currentType === itemType;
     });
     if (fromItems.length < requiredCount) return false;
@@ -931,6 +965,14 @@ function displayEquippedItems(equippedItems, getItemImage, getItemBonus) {
             if (v !== null) { playerHP = parseInt(v) || 0; break; }
         }
         healthDisplay.textContent = totalHealth + playerHP;
+    }
+
+    const previewContainer = document.querySelector(".display-character");
+    if (previewContainer && window.DedogeiumSystems && typeof window.DedogeiumSystems.syncSoccerBallVisual === "function") {
+        window.DedogeiumSystems.syncSoccerBallVisual(previewContainer, {
+            className: "equipped-preview-ball",
+            alt: "Equipped soccer ball preview",
+        });
     }
 }
 

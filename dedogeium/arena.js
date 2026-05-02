@@ -256,7 +256,11 @@ function getEquippedItems() {
 }
 
 function getItemBonus(item) {
-    const itemType = item && item.name === "Fire Doge" ? "Fire Doge" : "Doge";
+    const itemType = item && item.name === "Fire Doge"
+        ? "Fire Doge"
+        : item && item.name === "Soccer Ball"
+            ? "Soccer Ball"
+            : "Doge";
     const group = rarityBonuses[itemType] || {};
     return group[item && item.rarity] || { damage: 0, health: 0 };
 }

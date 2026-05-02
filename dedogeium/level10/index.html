@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="../">
+    <title>Level 10</title>
+    <link rel="stylesheet" href="level1.css">
+    <link rel="stylesheet" href="split-background.css">
+</head>
+<body data-level="10">
+    <div id="game" width="100vw">
+        <img src="crystal attack.png" id="crystal_attack" width="100px" alt="">
+        <div id="yes-no">
+            <div>
+                <p class="prompt-title">Start Level 10?</p>
+                <p class="prompt-subtitle">Face the next soccerball doge evolution.</p>
+            </div>
+            <div id="btns">
+                <button id="ok-btn" type="button">OK</button>
+                <button id="cancel-btn" type="button">Cancel</button>
+            </div>
+        </div>
+        <button id="skip-btn" type="button" style="display:none;">Next</button>
+        <div id="victory">
+            <p id="maybe-vic" aria-live="polite"></p>
+            <button id="bye-btn" type="button">Go back</button>
+        </div>
+        <div id="battle-row">
+            <div class="character-container player">
+                <div class="character-body">
+                    <img src="Im just a chill guy no background.png" id="player-img" class="fighter-art player-avatar" width="102px" alt="Your doge">
+                    <p id="hlth"></p>
+                </div>
+                <p class="speech" id="speech-good"></p>
+            </div>
+            <div class="character-container enemy">
+                <div class="character-body">
+                    <img src="soccer-doge-striker.png" id="enemy-img" class="fighter-art enemy-avatar" width="112px" alt="Enemy doge">
+                    <p id="enemy-hlth"></p>
+                </div>
+                <p class="speech" id="speech-bad"></p>
+            </div>
+        </div>
+    </div>
+<script src="split-background.js"></script>
+<script src="game_systems.js"></script>
+<script src="dialogue_voice.js"></script>
+<script src="level-soccer.js"></script>
+</body>
+</html>

@@ -25,7 +25,20 @@ const game = document.getElementById("game");
 const battleRow = document.getElementById("battle-row");
 const playerContainer = document.querySelector(".character-container.player");
 const enemyContainer = document.querySelector(".character-container.enemy");
+const battleEffects = window.DedogeiumSystems && typeof window.DedogeiumSystems.createBattleEffectsController === "function"
+    ? window.DedogeiumSystems.createBattleEffectsController({
+        game,
+        battleRow,
+        playerContainer,
+        enemyContainer,
+        crystalAttack: crystal_attack
+    })
+    : null;
 const dialogueVoice = window.DedogeiumDialogueVoice || null;
+if (dialogueVoice && typeof dialogueVoice.registerMusicAudio === "function") {
+    dialogueVoice.registerMusicAudio(beforeFightAudio, { baseVolume: musicVolumeNormalized });
+    dialogueVoice.registerMusicAudio(duringFightAudio, { baseVolume: musicVolumeNormalized });
+}
 const dialogueVoiceMap = {
     good: { characterKey: "dedogeium-player", team: "player" },
     bad: { characterKey: "level1-enemy", team: "enemy" },
@@ -45,6 +58,7 @@ const combat = {
 let battleAnimationTimeoutId = null;
 let equipmentBonusesApplied = false;
 let battleTurn = 1;
+const currentLevel = 1;
 const battleSkills = window.DedogeiumSystems && typeof window.DedogeiumSystems.createBattleSkillsController === "function"
     ? window.DedogeiumSystems.createBattleSkillsController({
         getCombatZone: () => document.getElementById("combat-zone"),
@@ -59,6 +73,74 @@ const battleSkills = window.DedogeiumSystems && typeof window.DedogeiumSystems.c
         isBattleActive: () => combat.active,
     })
     : null;
+let pendingPlayerDamageMultiplier = 1;
+
+function getEnemyAbilityForCurrentTurn() {
+    return window.DedogeiumSystems && typeof window.DedogeiumSystems.getEnemyAbilityForTurn === "function"
+        ? window.DedogeiumSystems.getEnemyAbilityForTurn(currentLevel, battleTurn)
+        : null;
+}
+
+function applyPlayerAttackAdjustments(rawHit) {
+    const hit = Math.max(1, Math.round(rawHit * pendingPlayerDamageMultiplier));
+    const weakened = pendingPlayerDamageMultiplier < 0.999;
+    pendingPlayerDamageMultiplier = 1;
+    return { hit, weakened };
+}
+
+function triggerEnemySpecialAbility(baseHit) {
+    const ability = getEnemyAbilityForCurrentTurn();
+    if (!ability) {
+        return {
+            ability: null,
+            healAmount: 0,
+            hit: battleSkills ? battleSkills.applyIncomingEnemyDamage(baseHit) : baseHit,
+        };
+    }
+
+    if (battleEffects && typeof battleEffects.triggerSpecialAbility === "function") {
+        battleEffects.triggerSpecialAbility({
+            attacker: "enemy",
+            label: ability.name,
+            variant: ability.variant,
+            primaryColor: ability.primaryColor,
+            secondaryColor: ability.secondaryColor,
+            accentColor: ability.accentColor,
+        });
+    }
+
+    const healAmount = ability.healPercent
+        ? Math.round(enemy_max_health * ability.healPercent)
+        : 0;
+    if (healAmount > 0) {
+        enemy_health = Math.min(enemy_max_health, enemy_health + healAmount);
+    }
+    if (ability.enemyDamageBoost) {
+        enemy_damage += ability.enemyDamageBoost;
+    }
+    if (ability.nextPlayerDamageMultiplier) {
+        pendingPlayerDamageMultiplier = Math.min(pendingPlayerDamageMultiplier, ability.nextPlayerDamageMultiplier);
+    }
+
+    const boostedHit = Math.max(1, Math.round(baseHit * (ability.damageMultiplier || 1)) + (ability.flatDamage || 0));
+    return {
+        ability,
+        healAmount,
+        hit: battleSkills ? battleSkills.applyIncomingEnemyDamage(boostedHit) : boostedHit,
+    };
+}
+
+function formatEnemyAttackMessage(hit, acc, ability, healAmount) {
+    if (!ability) {
+        return `Enemy hit ${hit} damage with ${Math.round(acc * 100)}% accuracy.`;
+    }
+
+    const extras = [];
+    if (healAmount > 0) extras.push(`healed ${healAmount}`);
+    if (ability.enemyDamageBoost) extras.push("powered up");
+    if (ability.nextPlayerDamageMultiplier && ability.nextPlayerDamageMultiplier < 1) extras.push("dulled your next hit");
+    return `${ability.name}! Enemy hit ${hit} damage with ${Math.round(acc * 100)}% accuracy${extras.length ? ` and ${extras.join(" + ")}` : ""}.`;
+}
 
 function speakDialogueLine(line) {
     if (!line || !dialogueVoice) return;
@@ -78,11 +160,20 @@ if (aprilFoolsEnabled) {
     duringFightAudio.src = "rick roll.mp3";
 }
     
-const routeBase = window.location.pathname.includes('/index.html') ? '../' : '';
+function getDedogeiumBasePath() {
+    const pathSegments = window.location.pathname.split("/").filter(Boolean);
+    const dedogeiumIndex = pathSegments.indexOf("dedogeium");
+    if (dedogeiumIndex === -1) {
+        return "/";
+    }
+    return `/${pathSegments.slice(0, dedogeiumIndex + 1).join("/")}/`;
+}
+
+const dedogeiumBasePath = getDedogeiumBasePath();
 
 home.addEventListener("click", function() {
     stopDialogueVoice();
-    window.location.href = routeBase + "adventure/";
+    window.location.href = `${dedogeiumBasePath}adventure/`;
 });
 
 window.onload = function() {
@@ -114,6 +205,9 @@ const fireRarityBonuses = {
 };
 
 function getItemBonus(item) {
+    if (item && item.name === "Soccer Ball") {
+        return { damage: 0, health: 0 };
+    }
     if (item && item.name === "Fire Doge") {
         return fireRarityBonuses[item.rarity] || { damage: 0, health: 0 };
     }
@@ -265,7 +359,7 @@ function showDefeatMessage(message) {
 
 cancel_btn.addEventListener("click", function() {
     stopDialogueVoice();
-    window.location.href = routeBase + "adventure/";
+    window.location.href = `${dedogeiumBasePath}adventure/`;
 });
 
 let speechTimeoutId = null;
@@ -500,6 +594,11 @@ function setupCombatUI() {
 }
 
 function setupBattleEffects() {
+    if (battleEffects) {
+        battleEffects.ensureEffectsLayer();
+        return;
+    }
+
     if (!battleRow || document.getElementById("battle-effects")) return;
 
     const effectsLayer = document.createElement("div");
@@ -531,6 +630,11 @@ function updateCombatMessage(message, turnClass) {
 }
 
 function clearBattleAnimation() {
+    if (battleEffects) {
+        battleEffects.clearBattleAnimation();
+        return;
+    }
+
     if (battleAnimationTimeoutId) {
         clearTimeout(battleAnimationTimeoutId);
         battleAnimationTimeoutId = null;
@@ -559,6 +663,11 @@ function clearBattleAnimation() {
 }
 
 function triggerBattleAnimation(attacker, hit, accuracy) {
+    if (battleEffects) {
+        battleEffects.triggerBattleAnimation(attacker, hit, accuracy);
+        return;
+    }
+
     const attackerContainer = attacker === "player" ? playerContainer : enemyContainer;
     const defenderContainer = attacker === "player" ? enemyContainer : playerContainer;
     const strikeClass = attacker === "player" ? "player-striking" : "enemy-striking";
@@ -654,11 +763,15 @@ function handlePlayerStop() {
 
     const acc = calculatePlayerAccuracy();
     const skillBonus = battleSkills ? battleSkills.consumePlayerDamageBonus() : 0;
-    const hit = calculateDamage(damage, acc) + skillBonus;
-    triggerBattleAnimation("player", hit, acc);
-    enemy_health = Math.max(0, enemy_health - hit);
+    const rawHit = calculateDamage(damage, acc) + skillBonus;
+    const attackResult = applyPlayerAttackAdjustments(rawHit);
+    triggerBattleAnimation("player", attackResult.hit, acc);
+    enemy_health = Math.max(0, enemy_health - attackResult.hit);
     loadhealth();
-    updateCombatMessage(`You hit ${hit} damage with ${Math.round(acc * 100)}% accuracy.`, "player-turn");
+    updateCombatMessage(
+        `You hit ${attackResult.hit} damage with ${Math.round(acc * 100)}% accuracy.${attackResult.weakened ? " The enemy special softened the blow." : ""}`,
+        "player-turn"
+    );
 
     if (enemy_health <= 0) {
         queueCombatTimeout(() => finishBattle(true), 860);
@@ -678,12 +791,13 @@ function startEnemyTurn() {
 
     const acc = enemyAccuracy();
     const baseHit = calculateDamage(enemy_damage, acc);
-    const hit = battleSkills ? battleSkills.applyIncomingEnemyDamage(baseHit) : baseHit;
+    const abilityResult = triggerEnemySpecialAbility(baseHit);
+    const hit = abilityResult.hit;
     queueCombatTimeout(() => {
         triggerBattleAnimation("enemy", hit, acc);
         health = Math.max(0, health - hit);
         loadhealth();
-        updateCombatMessage(`Enemy hit ${hit} damage with ${Math.round(acc * 100)}% accuracy.`, "enemy-turn");
+        updateCombatMessage(formatEnemyAttackMessage(hit, acc, abilityResult.ability, abilityResult.healAmount), "enemy-turn");
 
         if (health <= 0) {
             queueCombatTimeout(() => finishBattle(false), 860);

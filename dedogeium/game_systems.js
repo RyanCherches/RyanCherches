@@ -34,6 +34,177 @@
             "Godly": { damage: 120, health: 900 },
             "Mythic": { damage: 170, health: 1200 },
         },
+        "Soccer Ball": {
+            "Common": { damage: 2, health: 120 },
+            "Uncommon": { damage: 4, health: 180 },
+            "Rare": { damage: 7, health: 260 },
+            "Epic": { damage: 11, health: 360 },
+            "Legendary": { damage: 16, health: 500 },
+            "Godly": { damage: 24, health: 700 },
+            "Mythic": { damage: 30, health: 850 },
+        },
+    };
+    const LEVEL_BATTLE_CONFIGS = {
+        1: {
+            ability: {
+                name: "Resolve Pulse",
+                variant: "pulse",
+                primaryColor: "#88ffc5",
+                secondaryColor: "#ffe28c",
+                accentColor: "#f7fff8",
+                firstTurn: 2,
+                cooldown: 3,
+                damageMultiplier: 1.18,
+                healPercent: 0.08,
+                nextPlayerDamageMultiplier: 0.88,
+            },
+        },
+        2: {
+            ability: {
+                name: "Ember Tackle",
+                variant: "arc",
+                primaryColor: "#ff874f",
+                secondaryColor: "#ffd36a",
+                accentColor: "#fff3de",
+                firstTurn: 2,
+                cooldown: 2,
+                damageMultiplier: 1.34,
+                enemyDamageBoost: 6,
+            },
+        },
+        3: {
+            ability: {
+                name: "Phantom Drift",
+                variant: "storm",
+                primaryColor: "#78d7ff",
+                secondaryColor: "#9189ff",
+                accentColor: "#eef7ff",
+                firstTurn: 3,
+                cooldown: 2,
+                damageMultiplier: 1.15,
+                nextPlayerDamageMultiplier: 0.74,
+            },
+        },
+        4: {
+            ability: {
+                name: "Prism Nova",
+                variant: "nova",
+                primaryColor: "#ff7a59",
+                secondaryColor: "#82ffe4",
+                accentColor: "#fff6a8",
+                firstTurn: 2,
+                cooldown: 2,
+                damageMultiplier: 1.42,
+                healPercent: 0.1,
+            },
+        },
+        5: {
+            ability: {
+                name: "Pack Mirage",
+                variant: "storm",
+                primaryColor: "#9af4ff",
+                secondaryColor: "#f2f4ff",
+                accentColor: "#7effb8",
+                firstTurn: 2,
+                cooldown: 3,
+                damageMultiplier: 1.28,
+                nextPlayerDamageMultiplier: 0.82,
+            },
+        },
+        6: {
+            ability: {
+                name: "Flame Wheel",
+                variant: "arc",
+                primaryColor: "#ff6138",
+                secondaryColor: "#ffcb53",
+                accentColor: "#fff6da",
+                firstTurn: 2,
+                cooldown: 2,
+                damageMultiplier: 1.4,
+                enemyDamageBoost: 10,
+            },
+        },
+        7: {
+            ability: {
+                name: "Inferno Stampede",
+                variant: "storm",
+                primaryColor: "#ff5132",
+                secondaryColor: "#ffbf40",
+                accentColor: "#ffe9cf",
+                firstTurn: 2,
+                cooldown: 2,
+                damageMultiplier: 1.56,
+                flatDamage: 28,
+            },
+        },
+        8: {
+            ability: {
+                name: "Apex Supernova",
+                variant: "nova",
+                primaryColor: "#ff6565",
+                secondaryColor: "#ffd257",
+                accentColor: "#fefeff",
+                firstTurn: 2,
+                cooldown: 2,
+                damageMultiplier: 1.78,
+                healPercent: 0.12,
+                enemyDamageBoost: 18,
+            },
+        },
+        9: {
+            ability: {
+                name: "Curve Shot",
+                variant: "arc",
+                primaryColor: "#8dff84",
+                secondaryColor: "#ffffff",
+                accentColor: "#2f2f2f",
+                firstTurn: 2,
+                cooldown: 2,
+                damageMultiplier: 1.55,
+                nextPlayerDamageMultiplier: 0.78,
+            },
+        },
+        10: {
+            ability: {
+                name: "Rocket Tackle",
+                variant: "storm",
+                primaryColor: "#d1ff5b",
+                secondaryColor: "#f3fff8",
+                accentColor: "#202020",
+                firstTurn: 2,
+                cooldown: 2,
+                damageMultiplier: 1.72,
+                enemyDamageBoost: 14,
+            },
+        },
+        11: {
+            ability: {
+                name: "Captain's Whistle",
+                variant: "pulse",
+                primaryColor: "#72f7ff",
+                secondaryColor: "#ffd76a",
+                accentColor: "#ffffff",
+                firstTurn: 2,
+                cooldown: 2,
+                damageMultiplier: 1.48,
+                healPercent: 0.16,
+                nextPlayerDamageMultiplier: 0.74,
+            },
+        },
+        12: {
+            ability: {
+                name: "Meteor Bicycle Kick",
+                variant: "nova",
+                primaryColor: "#fff0b8",
+                secondaryColor: "#8dff84",
+                accentColor: "#1d1d1d",
+                firstTurn: 2,
+                cooldown: 2,
+                damageMultiplier: 2.05,
+                flatDamage: 48,
+                enemyDamageBoost: 20,
+            },
+        },
     };
     const LEADERBOARD_CATEGORY_DEFINITIONS = {
         attack: {
@@ -799,7 +970,9 @@
         const playerContainer = options && options.playerContainer;
         const enemyContainer = options && options.enemyContainer;
         const crystalAttack = options && options.crystalAttack;
+        const projectileVariantClasses = ["boss-attack", "empowered", "variant-arc", "variant-storm", "variant-pulse", "variant-nova"];
         let animationTimeoutId = null;
+        let specialTimeoutId = null;
 
         function ensureEffectsLayer() {
             if (!battleRow) return null;
@@ -811,26 +984,59 @@
             effectsLayer.innerHTML = `
                 <div class="impact-ring"></div>
                 <div class="impact-core"></div>
+                <div class="impact-shock"></div>
                 <div id="damage-burst" class="damage-burst"></div>
+                <div class="ability-overlay" aria-hidden="true">
+                    <div class="ability-flare"></div>
+                    <div class="ability-rings"></div>
+                    <div class="ability-sparks"></div>
+                    <div class="ability-label"></div>
+                </div>
             `;
             battleRow.appendChild(effectsLayer);
             return effectsLayer;
         }
 
-        function clearBattleAnimation() {
+        function clearSpecialAbility() {
+            if (specialTimeoutId) {
+                clearTimeout(specialTimeoutId);
+                specialTimeoutId = null;
+            }
+            const overlay = battleRow ? battleRow.querySelector(".ability-overlay") : null;
+            if (!overlay) return;
+            overlay.className = "ability-overlay";
+            overlay.style.removeProperty("--ability-primary");
+            overlay.style.removeProperty("--ability-secondary");
+            overlay.style.removeProperty("--ability-accent");
+            const label = overlay.querySelector(".ability-label");
+            if (label) {
+                label.textContent = "";
+            }
+        }
+
+        function clearBattleAnimation(options = {}) {
+            const keepAbility = Boolean(options.keepAbility);
             if (animationTimeoutId) {
                 clearTimeout(animationTimeoutId);
                 animationTimeoutId = null;
             }
 
             if (game) {
-                game.classList.remove("player-striking", "enemy-striking");
+                game.classList.remove("player-striking", "enemy-striking", "boss-striking");
             }
             if (playerContainer) {
-                playerContainer.classList.remove("is-attacking", "is-hit");
+                playerContainer.classList.remove("is-attacking", "is-hit", "boss-casting");
             }
             if (enemyContainer) {
-                enemyContainer.classList.remove("is-attacking", "is-hit");
+                enemyContainer.classList.remove("is-attacking", "is-hit", "boss-casting");
+            }
+
+            const effectsLayer = battleRow ? battleRow.querySelector("#battle-effects") : null;
+            if (effectsLayer) {
+                effectsLayer.className = "";
+                effectsLayer.style.removeProperty("--impact-primary");
+                effectsLayer.style.removeProperty("--impact-secondary");
+                effectsLayer.style.removeProperty("--impact-accent");
             }
 
             const damageBurst = battleRow ? battleRow.querySelector("#damage-burst") : null;
@@ -840,46 +1046,118 @@
             }
 
             if (crystalAttack) {
-                crystalAttack.classList.remove("attack-strike", "enemy-attack-strike");
+                crystalAttack.classList.remove("attack-strike", "enemy-attack-strike", ...projectileVariantClasses);
                 crystalAttack.style.display = "none";
+                crystalAttack.style.removeProperty("--projectile-primary");
+                crystalAttack.style.removeProperty("--projectile-secondary");
+                crystalAttack.style.removeProperty("--projectile-accent");
+            }
+
+            if (!keepAbility) {
+                clearSpecialAbility();
             }
         }
 
-        function triggerBattleAnimation(attacker, hit, accuracy) {
+        function triggerBattleAnimation(attacker, hit, accuracy, effectOptions = {}) {
             if (!game || !battleRow) return;
 
-            ensureEffectsLayer();
+            const effectsLayer = ensureEffectsLayer();
             const attackerContainer = attacker === "player" ? playerContainer : enemyContainer;
             const defenderContainer = attacker === "player" ? enemyContainer : playerContainer;
             const strikeClass = attacker === "player" ? "player-striking" : "enemy-striking";
             const burstSideClass = attacker === "player" ? "enemy-side" : "player-side";
             const projectileClass = attacker === "player" ? "attack-strike" : "enemy-attack-strike";
             const damageBurst = battleRow.querySelector("#damage-burst");
+            const variant = ["arc", "storm", "pulse", "nova"].includes(String(effectOptions.variant || "").toLowerCase())
+                ? String(effectOptions.variant).toLowerCase()
+                : "";
+            const hasBossStyle = attacker === "enemy" && (Boolean(effectOptions.isBossAttack) || Boolean(variant));
+            const isEmpowered = hasBossStyle && Boolean(effectOptions.empowered);
+            const durationMs = Math.max(780, Math.round(Number(effectOptions.durationMs) || 0) || 780);
 
-            clearBattleAnimation();
+            clearBattleAnimation({ keepAbility: true });
             void game.offsetWidth;
             game.classList.add(strikeClass);
+            if (hasBossStyle) game.classList.add("boss-striking");
             if (attackerContainer) attackerContainer.classList.add("is-attacking");
+            if (hasBossStyle && attackerContainer) attackerContainer.classList.add("boss-casting");
             if (defenderContainer) defenderContainer.classList.add("is-hit");
+
+            if (effectsLayer && hasBossStyle) {
+                effectsLayer.className = `boss-impact${variant ? ` variant-${variant}` : ""}${isEmpowered ? " empowered" : ""}`;
+                effectsLayer.style.setProperty("--impact-primary", effectOptions.primaryColor || "#8dff84");
+                effectsLayer.style.setProperty("--impact-secondary", effectOptions.secondaryColor || "#ffffff");
+                effectsLayer.style.setProperty("--impact-accent", effectOptions.accentColor || "#202020");
+            }
 
             if (crystalAttack) {
                 crystalAttack.style.display = "block";
+                if (hasBossStyle) {
+                    crystalAttack.style.setProperty("--projectile-primary", effectOptions.primaryColor || "#8dff84");
+                    crystalAttack.style.setProperty("--projectile-secondary", effectOptions.secondaryColor || "#ffffff");
+                    crystalAttack.style.setProperty("--projectile-accent", effectOptions.accentColor || "#202020");
+                    crystalAttack.classList.add("boss-attack");
+                    if (variant) crystalAttack.classList.add(`variant-${variant}`);
+                    if (isEmpowered) crystalAttack.classList.add("empowered");
+                }
                 crystalAttack.classList.add(projectileClass);
             }
 
             if (damageBurst) {
                 damageBurst.textContent = `${accuracy >= 0.92 ? "CRIT " : ""}-${hit}`;
-                damageBurst.className = `damage-burst show ${burstSideClass}${accuracy >= 0.92 ? " crit" : ""}`;
+                damageBurst.className = `damage-burst show ${burstSideClass}${accuracy >= 0.92 ? " crit" : ""}${hasBossStyle ? " boss" : ""}${isEmpowered ? " empowered" : ""}`;
             }
 
-            animationTimeoutId = window.setTimeout(clearBattleAnimation, 780);
+            animationTimeoutId = window.setTimeout(clearBattleAnimation, durationMs);
+        }
+
+        function triggerSpecialAbility(options = {}) {
+            if (!battleRow) return;
+
+            ensureEffectsLayer();
+            const overlay = battleRow.querySelector(".ability-overlay");
+            const label = overlay ? overlay.querySelector(".ability-label") : null;
+            if (!overlay) return;
+
+            clearSpecialAbility();
+            void overlay.offsetWidth;
+            overlay.className = `ability-overlay is-active variant-${options.variant || "pulse"} from-${options.attacker === "player" ? "player" : "enemy"}`;
+            overlay.style.setProperty("--ability-primary", options.primaryColor || "#7effb8");
+            overlay.style.setProperty("--ability-secondary", options.secondaryColor || "#ffd76a");
+            overlay.style.setProperty("--ability-accent", options.accentColor || "#ffffff");
+            if (label) {
+                label.textContent = options.label || "Special Move";
+            }
+
+            specialTimeoutId = window.setTimeout(clearSpecialAbility, 1100);
         }
 
         return {
             ensureEffectsLayer,
             clearBattleAnimation,
+            clearSpecialAbility,
             triggerBattleAnimation,
+            triggerSpecialAbility,
         };
+    }
+
+    function getLevelBattleConfig(level) {
+        const safeLevel = Math.max(1, Math.floor(Number(level) || 0));
+        const config = LEVEL_BATTLE_CONFIGS[safeLevel];
+        return config ? deepClone(config) : null;
+    }
+
+    function getEnemyAbilityForTurn(level, battleTurn) {
+        const config = getLevelBattleConfig(level);
+        const ability = config && config.ability;
+        if (!ability) return null;
+
+        const safeTurn = Math.max(1, Math.floor(Number(battleTurn) || 0));
+        const firstTurn = Math.max(1, Math.floor(Number(ability.firstTurn) || 1));
+        const cooldown = Math.max(1, Math.floor(Number(ability.cooldown) || 1));
+        if (safeTurn < firstTurn) return null;
+        if ((safeTurn - firstTurn) % cooldown !== 0) return null;
+        return deepClone(ability);
     }
 
     function getDefaultDailyRewardState() {
@@ -1185,10 +1463,73 @@
         }
     }
 
+    function getEquippedItemType(item) {
+        if (item && item.name === "Fire Doge") {
+            return "Fire Doge";
+        }
+        if (item && item.name === "Soccer Ball") {
+            return "Soccer Ball";
+        }
+        return "Doge";
+    }
+
     function getProfileItemBonus(item) {
-        const itemType = item && item.name === "Fire Doge" ? "Fire Doge" : "Doge";
+        const itemType = getEquippedItemType(item);
         const group = PROFILE_STAT_BONUSES[itemType] || {};
         return group[item && item.rarity] || { damage: 0, health: 0 };
+    }
+
+    function hasEquippedItemByName(itemName) {
+        return getStoredEquippedItems().some((item) => item && item.name === itemName);
+    }
+
+    function getEquippedSoccerBallItem() {
+        return getStoredEquippedItems().find((item) => item && item.name === "Soccer Ball") || null;
+    }
+
+    function getSoccerBallImageForRarity(rarity) {
+        return rarity === "Godly" || rarity === "Mythic"
+            ? "soccer-ball-final.svg"
+            : "soccer-ball-basic.svg";
+    }
+
+    function getSoccerBallProjectileClass(rarity) {
+        return rarity === "Godly" || rarity === "Mythic"
+            ? "world-ball-attack"
+            : "soccer-ball-attack";
+    }
+
+    function syncSoccerBallVisual(container, options = {}) {
+        if (!container || !container.querySelector) {
+            return false;
+        }
+
+        const className = options.className || "equipped-soccer-ball";
+        const selector = `.${className.trim().split(/\s+/).join(".")}`;
+        const existingBall = container.querySelector(selector);
+        const equippedBallItem = getEquippedSoccerBallItem();
+        if (!equippedBallItem) {
+            if (existingBall) {
+                existingBall.remove();
+            }
+            return false;
+        }
+
+        const soccerBall = existingBall || document.createElement("img");
+        soccerBall.src = options.imageSrc || getSoccerBallImageForRarity(equippedBallItem.rarity);
+        soccerBall.alt = options.alt || "Equipped soccer ball";
+        soccerBall.className = className;
+
+        if (!existingBall) {
+            const beforeNode = options.beforeSelector ? container.querySelector(options.beforeSelector) : null;
+            if (beforeNode) {
+                container.insertBefore(soccerBall, beforeNode);
+            } else {
+                container.appendChild(soccerBall);
+            }
+        }
+
+        return true;
     }
 
     function getCurrentCombatProfile() {
@@ -1826,6 +2167,13 @@
         buildCompletedLeaderboardEntries,
         getLeaderboardRewardPreview,
         claimLeaderboardReward,
+        getLevelBattleConfig,
+        getEnemyAbilityForTurn,
+        hasEquippedItemByName,
+        getEquippedSoccerBallItem,
+        getSoccerBallImageForRarity,
+        getSoccerBallProjectileClass,
+        syncSoccerBallVisual,
         createBattleSkillsController,
         createBattleEffectsController,
     };

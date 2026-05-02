@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 360" role="img" aria-labelledby="title desc">
+  <title id="title">Captain Soccer Doge</title>
+  <desc id="desc">A centered transparent sprite of the muscular soccer doge with multiple soccer balls.</desc>
+  <defs>
+    <linearGradient id="captain-head" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#6dcbc6"/>
+      <stop offset="100%" stop-color="#349da0"/>
+    </linearGradient>
+    <linearGradient id="captain-muscle" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#63b9b6"/>
+      <stop offset="100%" stop-color="#489899"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="180" cy="338" rx="92" ry="16" fill="#000" opacity="0.12"/>
+  <ellipse cx="180" cy="44" rx="24" ry="34" fill="url(#captain-head)"/>
+  <ellipse cx="172" cy="34" rx="5" ry="2.5" fill="#1d5959"/>
+  <ellipse cx="188" cy="34" rx="5" ry="2.5" fill="#1d5959"/>
+  <ellipse cx="180" cy="45" rx="6" ry="5.5" fill="#163333"/>
+  <path d="M157 74h46l20 84h-86z" fill="#8dd4d4"/>
+  <path d="M134 89c-18 6-29 22-29 42 0 20 11 38 29 44" fill="none" stroke="url(#captain-muscle)" stroke-width="22" stroke-linecap="round"/>
+  <path d="M226 89c18 6 29 22 29 42 0 20-11 38-29 44" fill="none" stroke="url(#captain-muscle)" stroke-width="22" stroke-linecap="round"/>
+  <path d="M122 139c-16 18-18 44-6 65 9 14 20 24 31 30" fill="none" stroke="url(#captain-muscle)" stroke-width="21" stroke-linecap="round"/>
+  <path d="M238 139c16 18 18 44 6 65-9 14-20 24-31 30" fill="none" stroke="url(#captain-muscle)" stroke-width="21" stroke-linecap="round"/>
+  <path d="M139 226c-5 16-9 36-9 58 0 26 4 50 10 72" fill="none" stroke="#91d8d8" stroke-width="16" stroke-linecap="round"/>
+  <path d="M221 226c5 16 9 36 9 58 0 26-4 50-10 72" fill="none" stroke="#91d8d8" stroke-width="16" stroke-linecap="round"/>
+  <path d="M132 318c10-2 20-2 30 0" fill="none" stroke="#91d8d8" stroke-width="10" stroke-linecap="round"/>
+  <path d="M198 318c10-2 20-2 30 0" fill="none" stroke="#91d8d8" stroke-width="10" stroke-linecap="round"/>
+  <path d="M140 96c10 18 49 18 61 0" fill="none" stroke="#73caca" stroke-width="12" stroke-linecap="round"/>
+  <path d="M143 116c8 14 45 14 54 0" fill="none" stroke="#73caca" stroke-width="10" stroke-linecap="round"/>
+  <path d="M146 136c7 13 38 13 45 0" fill="none" stroke="#73caca" stroke-width="9" stroke-linecap="round"/>
+  <g transform="translate(104 132)">
+    <circle cx="0" cy="0" r="30" fill="#fff" stroke="#111" stroke-width="2"/>
+    <polygon points="0,-12 12,-4 8,11 -8,11 -12,-4" fill="#111"/>
+    <path d="M0 -28v16M-22 -17l12 8M22 -17l-12 8M-24 11l13-1M24 11l-13-1M-13 24l6-12M13 24l-6-12" fill="none" stroke="#111" stroke-width="2"/>
+  </g>
+  <g transform="translate(258 154)">
+    <circle cx="0" cy="0" r="30" fill="#fff" stroke="#111" stroke-width="2"/>
+    <polygon points="0,-12 12,-4 8,11 -8,11 -12,-4" fill="#111"/>
+    <path d="M0 -28v16M-22 -17l12 8M22 -17l-12 8M-24 11l13-1M24 11l-13-1M-13 24l6-12M13 24l-6-12" fill="none" stroke="#111" stroke-width="2"/>
+  </g>
+  <g transform="translate(144 278)">
+    <circle cx="0" cy="0" r="34" fill="#fff" stroke="#111" stroke-width="2"/>
+    <polygon points="0,-14 14,-4 9,12 -9,12 -14,-4" fill="#111"/>
+    <path d="M0 -31v18M-25 -19l14 8M25 -19l-14 8M-28 13l15-1M28 13l-15-1M-15 27l7-14M15 27l-7-14" fill="none" stroke="#111" stroke-width="2"/>
+  </g>
+  <g transform="translate(238 286)">
+    <circle cx="0" cy="0" r="34" fill="#fff" stroke="#111" stroke-width="2"/>
+    <polygon points="0,-14 14,-4 9,12 -9,12 -14,-4" fill="#111"/>
+    <path d="M0 -31v18M-25 -19l14 8M25 -19l-14 8M-28 13l15-1M28 13l-15-1M-15 27l7-14M15 27l-7-14" fill="none" stroke="#111" stroke-width="2"/>
+  </g>
+  <g transform="translate(184 332)">
+    <circle cx="0" cy="0" r="34" fill="#fff" stroke="#111" stroke-width="2"/>
+    <polygon points="0,-14 14,-4 9,12 -9,12 -14,-4" fill="#111"/>
+    <path d="M0 -31v18M-25 -19l14 8M25 -19l-14 8M-28 13l15-1M28 13l-15-1M-15 27l7-14M15 27l-7-14" fill="none" stroke="#111" stroke-width="2"/>
+  </g>
+</svg>

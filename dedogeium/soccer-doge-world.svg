@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 360" role="img" aria-labelledby="title desc">
+  <title id="title">World Star Soccer Doge</title>
+  <desc id="desc">A centered transparent sprite of the crystal final soccer doge with a blue ball.</desc>
+  <defs>
+    <linearGradient id="world-head" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#5ec3c2"/>
+      <stop offset="100%" stop-color="#238b90"/>
+    </linearGradient>
+    <linearGradient id="world-crystal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d7fbff"/>
+      <stop offset="100%" stop-color="#3fb4c9"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="178" cy="336" rx="92" ry="16" fill="#000" opacity="0.12"/>
+  <path d="M132 84c26-22 53-31 86-28-14 18-24 31-28 41 21-9 45-12 64-8-13 15-27 26-42 34 18-3 34-1 47 8-17 13-35 21-56 24-20 17-41 20-62 6-17-3-33-12-48-25 15-5 30-7 48-5-16-10-30-22-42-36 21-2 40 0 57 5-8-11-16-23-24-35z" fill="#27555b"/>
+  <path d="M178 46c20 7 32 19 38 34-17-3-32 0-46 8-17-11-31-14-48-10 11-15 30-26 56-32z" fill="#356d70"/>
+  <ellipse cx="110" cy="84" rx="27" ry="50" fill="url(#world-head)" transform="rotate(-25 110 84)"/>
+  <ellipse cx="90" cy="211" rx="17" ry="68" fill="#202020" transform="rotate(46 90 211)"/>
+  <ellipse cx="138" cy="262" rx="18" ry="90" fill="#202020" transform="rotate(18 138 262)"/>
+  <ellipse cx="214" cy="153" rx="17" ry="72" fill="#202020" transform="rotate(-38 214 153)"/>
+  <ellipse cx="270" cy="246" rx="19" ry="92" fill="#202020" transform="rotate(16 270 246)"/>
+  <path d="M230 112l24-18 18 20-18 23z" fill="url(#world-crystal)"/>
+  <path d="M244 122l22-24 22 26-20 26z" fill="url(#world-crystal)"/>
+  <path d="M255 139l24-22 20 28-19 22z" fill="url(#world-crystal)"/>
+  <path d="M231 132l18 21-14 21-18-16z" fill="url(#world-crystal)"/>
+  <path d="M248 144l18 23-12 20-20-18z" fill="url(#world-crystal)"/>
+  <g transform="translate(208 196)">
+    <circle cx="0" cy="0" r="31" fill="#3f82cf" stroke="#17365d" stroke-width="2"/>
+    <polygon points="0,-12 12,-4 8,11 -8,11 -12,-4" fill="#4a93e4"/>
+    <path d="M0 -29v16M-22 -17l12 8M22 -17l-12 8M-24 11l13-1M24 11l-13-1M-13 24l6-12M13 24l-6-12" fill="none" stroke="#17365d" stroke-width="2"/>
+  </g>
+  <g transform="translate(72 285)">
+    <circle cx="0" cy="0" r="42" fill="#3f82cf" stroke="#17365d" stroke-width="3"/>
+    <polygon points="0,-16 16,-5 11,14 -11,14 -16,-5" fill="#4a93e4"/>
+    <path d="M0 -39v21M-30 -23l16 10M30 -23l-16 10M-33 15l18-1M33 15l-18-1M-18 32l8-16M18 32l-8-16" fill="none" stroke="#17365d" stroke-width="2.2"/>
+  </g>
+  <path d="M188 174l85 70" stroke="#4aa0ff" stroke-width="8" stroke-linecap="round" opacity="0.45"/>
+</svg>

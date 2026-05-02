@@ -9,6 +9,10 @@ const secondCousin = document.getElementById("second-cousin-doge");
 const firstRed = document.getElementById("first-red-doge");
 const firstBossRed = document.getElementById("firstboss-red-doge");
 const finalBossRed = document.getElementById("finalboss-red-doge");
+const soccerRookie = document.getElementById("soccer-rookie-doge");
+const soccerStriker = document.getElementById("soccer-striker-doge");
+const soccerCaptain = document.getElementById("soccer-captain-doge");
+const soccerWorld = document.getElementById("soccer-world-doge");
 const music = new Audio("rick roll.mp3");
 const storedMusicVolume = Number(localStorage.getItem("musicVolume"));
 const musicVolume = Number.isFinite(storedMusicVolume) ? storedMusicVolume : 50;
@@ -55,6 +59,10 @@ function updateAdventureMap() {
   setLevelImage(firstRed, "fire doge.png", "fire doge locked.png", completedLevel >= 6);
   setLevelImage(firstBossRed, "fire doge first boss.png", "first boss doge locked.png", completedLevel >= 7);
   setLevelImage(finalBossRed, "fire doge final boss.png", "final boss doge locked.png", completedLevel >= 8);
+  setLevelImage(soccerRookie, "soccer-doge-rookie.png", "soccer-doge-rookie.png", completedLevel >= 9);
+  setLevelImage(soccerStriker, "soccer-doge-striker.png", "soccer-doge-striker.png", completedLevel >= 10);
+  setLevelImage(soccerCaptain, "soccer-doge-captain.png", "soccer-doge-captain.png", completedLevel >= 11);
+  setLevelImage(soccerWorld, "soccer-doge-world.png", "soccer-doge-world.png", completedLevel >= 12);
 
   document.querySelectorAll(".level-link").forEach((link) => {
     const requiredLevel = Number(link.dataset.requiredLevel || "0");

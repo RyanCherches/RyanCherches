@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 360" role="img" aria-labelledby="title desc">
+  <title id="title">Striker Soccer Doge</title>
+  <desc id="desc">A centered transparent sprite of the soccer doge in a jersey with a ball.</desc>
+  <defs>
+    <linearGradient id="striker-head" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#69c9c4"/>
+      <stop offset="100%" stop-color="#30989a"/>
+    </linearGradient>
+    <linearGradient id="striker-skin" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#65bbb9"/>
+      <stop offset="100%" stop-color="#45999a"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="164" cy="338" rx="80" ry="16" fill="#000" opacity="0.12"/>
+  <ellipse cx="161" cy="68" rx="34" ry="48" fill="url(#striker-head)"/>
+  <ellipse cx="149" cy="60" rx="6" ry="3" fill="#1f5b5b"/>
+  <ellipse cx="174" cy="60" rx="6" ry="3" fill="#1f5b5b"/>
+  <ellipse cx="161" cy="72" rx="7" ry="6" fill="#173535"/>
+  <path d="M119 124c-26 6-39 22-40 46-2 33 22 56 48 64" fill="none" stroke="#4d9f9f" stroke-width="18" stroke-linecap="round"/>
+  <path d="M203 124c26 6 39 22 40 46 2 33-22 56-48 64" fill="none" stroke="#4d9f9f" stroke-width="18" stroke-linecap="round"/>
+  <path d="M100 241c5 12 11 19 20 28" fill="none" stroke="#4d9f9f" stroke-width="18" stroke-linecap="round"/>
+  <path d="M222 241c-5 12-11 19-20 28" fill="none" stroke="#4d9f9f" stroke-width="18" stroke-linecap="round"/>
+  <path d="M113 115h96l14 17-10 96h-104l-10-96z" fill="#3d487c" stroke="#111" stroke-width="3"/>
+  <rect x="137" y="116" width="18" height="110" fill="#a42f48"/>
+  <rect x="166" y="116" width="18" height="110" fill="#a42f48"/>
+  <path d="M113 115l-14 17 13 8 18-19z" fill="#3d487c" stroke="#111" stroke-width="3"/>
+  <path d="M209 115l14 17-13 8-18-19z" fill="#3d487c" stroke="#111" stroke-width="3"/>
+  <path d="M133 114h56" stroke="#5e6bd0" stroke-width="6" opacity="0.75"/>
+  <circle cx="192" cy="150" r="9" fill="none" stroke="#fff" stroke-width="5"/>
+  <path d="M138 150l8-14 8 14z" fill="#f1de4b"/>
+  <path d="M143 228c-3 30-4 60-1 91" fill="none" stroke="#81cdcf" stroke-width="18" stroke-linecap="round"/>
+  <path d="M179 228c3 30 4 60 1 91" fill="none" stroke="#81cdcf" stroke-width="18" stroke-linecap="round"/>
+  <path d="M129 325c12-1 23-1 34 0" fill="none" stroke="#81cdcf" stroke-width="10" stroke-linecap="round"/>
+  <path d="M165 325c12-1 23-1 34 0" fill="none" stroke="#81cdcf" stroke-width="10" stroke-linecap="round"/>
+  <g transform="translate(231 278)">
+    <circle cx="0" cy="0" r="33" fill="#fff" stroke="#111" stroke-width="2"/>
+    <polygon points="0,-14 14,-4 9,12 -9,12 -14,-4" fill="#111"/>
+    <path d="M0 -31v18M-25 -19l14 8M25 -19l-14 8M-28 13l15-1M28 13l-15-1M-15 27l7-14M15 27l-7-14" fill="none" stroke="#111" stroke-width="2"/>
+  </g>
+</svg>

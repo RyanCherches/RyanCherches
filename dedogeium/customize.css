@@ -90,8 +90,18 @@ body {
     padding: 12px;
     width:100%;
     display:flex;
+    flex-direction: column;
+    gap: 8px;
     justify-content:center;
     align-items:center;
+}
+
+.equipped-preview-ball {
+    width: 72px;
+    max-width: 48%;
+    height: auto;
+    margin-top: -12px;
+    filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.28));
 }
 
 .list-items {

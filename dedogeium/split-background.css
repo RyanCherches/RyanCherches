@@ -1,0 +1,75 @@
+.split-bg-container {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+    isolation: isolate;
+}
+
+.split-bg-half {
+    position: absolute;
+    top: -2%;
+    bottom: -2%;
+    width: 50%;
+}
+
+.split-bg-half--left {
+    left: 0;
+    background: linear-gradient(90deg, #0000ff 0%, #0000ff 72%, rgba(0, 0, 255, 0.7) 100%);
+}
+
+.split-bg-half--right {
+    right: 0;
+    background: linear-gradient(270deg, #ff0000 0%, #ff0000 72%, rgba(255, 0, 0, 0.7) 100%);
+}
+
+.split-bg-seam {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: clamp(360px, 50vw, 920px);
+    height: 100%;
+    transform: translateX(-50%);
+    filter: blur(16px) saturate(128%) brightness(1.05);
+    opacity: 1;
+}
+
+.split-bg-seam::before,
+.split-bg-seam::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+}
+
+.split-bg-seam::before {
+    background:
+        linear-gradient(
+            90deg,
+            rgba(0, 0, 255, 0.08) 0%,
+            rgba(0, 0, 255, 0.16) 24%,
+            rgba(255, 255, 255, 0.12) 50%,
+            rgba(255, 0, 0, 0.16) 76%,
+            rgba(255, 0, 0, 0.08) 100%
+        );
+}
+
+.split-bg-seam::after {
+    background:
+        radial-gradient(circle at center, rgba(255, 255, 255, 0.18), transparent 62%),
+        linear-gradient(90deg, rgba(0, 0, 255, 0.16), transparent 32%, transparent 68%, rgba(255, 0, 0, 0.16));
+    filter: blur(34px);
+}
+
+.split-bg-seam-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 0.65s ease-in-out;
+}
+
+.split-bg-seam-canvas.is-visible {
+    opacity: 1;
+}

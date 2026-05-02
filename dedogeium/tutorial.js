@@ -1,4 +1,13 @@
-const routeBase = window.location.pathname.includes("/index.html") ? "../" : "";
+function getDedogeiumBasePath() {
+    const pathSegments = window.location.pathname.split("/").filter(Boolean);
+    const dedogeiumIndex = pathSegments.indexOf("dedogeium");
+    if (dedogeiumIndex === -1) {
+        return "/";
+    }
+    return `/${pathSegments.slice(0, dedogeiumIndex + 1).join("/")}/`;
+}
+
+const dedogeiumBasePath = getDedogeiumBasePath();
 const completeTutorialBtn = document.getElementById("complete-tutorial-btn");
 const tutorialStatus = document.getElementById("tutorial-status");
 const tutorialProgressLabel = document.getElementById("tutorial-progress-label");
@@ -83,7 +92,7 @@ document.addEventListener("DOMContentLoaded", function () {
             localStorage.setItem("seenTutorialPrompt", "true");
             renderTutorialState("Level 1 unlocked. Sending you back to the adventure map...");
             window.setTimeout(function () {
-                window.location.href = routeBase + "adventure/";
+                window.location.href = `${dedogeiumBasePath}adventure/`;
             }, 450);
         });
     }

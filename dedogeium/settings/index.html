@@ -36,6 +36,11 @@
                 <span>Read dialogue out loud with character voices</span>
             </label>
             <p id="spoken-dialogue-status" class="settings-status"></p>
+            <label for="split-background" class="settings-toggle">
+                <input type="checkbox" id="split-background">
+                <span>Enable split background effect (blue/red with color switching)</span>
+            </label>
+            <p id="split-background-status" class="settings-status"></p>
             <div class="title-settings">
                 <h2>Player Title</h2>
                 <label for="player-title-input">Choose a title:</label>
@@ -106,6 +111,32 @@
                     }
                     saveStoredTitle(username, title);
                     feedback.textContent = `Title saved: ${title}`;
+                });
+            }
+
+            // Split background toggle
+            const splitBgCheckbox = document.getElementById("split-background");
+            const splitBgStatus = document.getElementById("split-background-status");
+            const SPLIT_BG_KEY = "splitBackgroundEnabled";
+
+            function updateSplitBgStatus(enabled) {
+                if (!splitBgStatus) return;
+                splitBgStatus.textContent = enabled
+                    ? "Split background effect is on. Half blue, half red with color switching."
+                    : "Split background effect is off.";
+            }
+
+            const splitBgEnabled = localStorage.getItem(SPLIT_BG_KEY) === "true";
+            if (splitBgCheckbox) {
+                splitBgCheckbox.checked = splitBgEnabled;
+            }
+            updateSplitBgStatus(splitBgEnabled);
+
+            if (splitBgCheckbox) {
+                splitBgCheckbox.addEventListener("change", () => {
+                    const enabled = splitBgCheckbox.checked;
+                    localStorage.setItem(SPLIT_BG_KEY, String(enabled));
+                    updateSplitBgStatus(enabled);
                 });
             }
         });

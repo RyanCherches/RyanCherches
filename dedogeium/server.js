@@ -52,14 +52,31 @@ function resolveWritableDataDir() {
 
   let lastError = null;
   for (const candidate of candidates) {
+    let probeDatabase = null;
     try {
       fs.mkdirSync(candidate, { recursive: true });
       const probeFile = path.join(candidate, '.dedogeium-write-test');
       fs.writeFileSync(probeFile, 'ok', 'utf8');
       fs.unlinkSync(probeFile);
+      probeDatabase = new DatabaseSync(path.join(candidate, 'dedogeium.sqlite'));
+      probeDatabase.exec(`
+        CREATE TABLE IF NOT EXISTS __write_probe (id INTEGER);
+        INSERT INTO __write_probe DEFAULT VALUES;
+        DELETE FROM __write_probe;
+      `);
+      probeDatabase.close();
+      probeDatabase = null;
       return candidate;
     } catch (error) {
       lastError = error;
+    } finally {
+      if (probeDatabase) {
+        try {
+          probeDatabase.close();
+        } catch (error) {
+          lastError = error;
+        }
+      }
     }
   }
 
@@ -126,7 +143,8 @@ function migrateLegacyPlayers(database) {
     WHERE username = ?
   `);
 
-  const runMigration = database.transaction(() => {
+  try {
+    database.exec('BEGIN');
     Object.entries(legacyPlayers).forEach(([username, rawRecord]) => {
       const safeUsername = normalizeUsername(username);
       if (!safeUsername) return;
@@ -159,9 +177,15 @@ function migrateLegacyPlayers(database) {
         insertUser.run(safeUsername, passwordHash, passwordSalt, JSON.stringify(mergedRecord), createdAt, updatedAt, loginAt);
       }
     });
-  });
-
-  runMigration();
+    database.exec('COMMIT');
+  } catch (error) {
+    try {
+      database.exec('ROLLBACK');
+    } catch (rollbackError) {
+      // The original migration error is the useful one to surface.
+    }
+    throw error;
+  }
 }
 
 function getLanUrls(listenPort) {

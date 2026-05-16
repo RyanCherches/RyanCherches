@@ -406,6 +406,74 @@
             }
         }
 
+        function readLocalPlayers() {
+            try {
+                const players = JSON.parse(localStorage.getItem("dedogeium_players") || "{}");
+                return players && typeof players === "object" ? players : {};
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function writeLocalPlayers(players) {
+            localStorage.setItem("dedogeium_players", JSON.stringify(players || {}));
+        }
+
+        function createLocalAuthToken(username) {
+            return `local_${username}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+        }
+
+        function isServerLookupFailure(error) {
+            const message = error && error.message ? String(error.message) : "";
+            return message.startsWith("No Dedogeium server responded.");
+        }
+
+        function handleLocalAuth(mode, username, password) {
+            const players = readLocalPlayers();
+            const existing = players[username] && typeof players[username] === "object" ? players[username] : null;
+            const now = Date.now();
+
+            if (mode === "register") {
+                if (existing && typeof existing.password === "string" && existing.password) {
+                    throw new Error("That local username is already taken on this device.");
+                }
+                players[username] = {
+                    ...(existing || {}),
+                    password,
+                    firstSeen: existing && existing.firstSeen ? existing.firstSeen : now,
+                    lastSeen: now,
+                    visits: Math.max(1, Number(existing && existing.visits) || 0),
+                };
+                writeLocalPlayers(players);
+                return {
+                    ok: true,
+                    username,
+                    token: createLocalAuthToken(username),
+                    localOnly: true,
+                };
+            }
+
+            if (!existing || !existing.password) {
+                throw new Error("No local account with that username exists on this device. Create one first or start the Dedogeium server.");
+            }
+            if (String(existing.password) !== String(password)) {
+                throw new Error("Incorrect local password for that device account.");
+            }
+
+            players[username] = {
+                ...existing,
+                lastSeen: now,
+                visits: Math.max(1, Number(existing.visits) || 0),
+            };
+            writeLocalPlayers(players);
+            return {
+                ok: true,
+                username,
+                token: createLocalAuthToken(username),
+                localOnly: true,
+            };
+        }
+
         async function sendAuthRequest(pathname, payload) {
             const preferredServer = serverUrlInput ? serverUrlInput.value : "";
             const { apiBase } = await findWorkingApiBase(preferredServer);
@@ -431,15 +499,29 @@
 
             setStatus(mode === "register" ? "Creating account..." : "Logging in...");
             try {
-                const payload = await sendAuthRequest(mode === "register" ? "/auth/register" : "/auth/login", {
-                    username,
-                    password,
-                });
+                let payload;
+                try {
+                    payload = await sendAuthRequest(mode === "register" ? "/auth/register" : "/auth/login", {
+                        username,
+                        password,
+                    });
+                } catch (error) {
+                    if (!isServerLookupFailure(error)) {
+                        throw error;
+                    }
+                    payload = handleLocalAuth(mode, username, password);
+                }
                 persistUsername(payload.username);
                 localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, payload.token);
                 clearStoredPasswords();
                 primeLocalPlayerRecord(payload.username);
-                setStatus(mode === "register" ? "Account created. Redirecting..." : "Login successful. Redirecting...");
+                if (payload.localOnly) {
+                    setStatus(mode === "register"
+                        ? "Local-only account created on this device. Redirecting..."
+                        : "Logged in with this device's local account. Redirecting...");
+                } else {
+                    setStatus(mode === "register" ? "Account created. Redirecting..." : "Login successful. Redirecting...");
+                }
                 window.location.href = getPostLoginTarget();
             } catch (error) {
                 setStatus(error && error.message ? error.message : "Login failed.", true);

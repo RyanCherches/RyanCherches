@@ -181,7 +181,7 @@ const SOCCER_LEVELS = {
         ],
     },
     12: {
-        enemyName: "World Star Doge",
+        enemyName: "Brother - World Star Form",
         enemyImage: "soccer-doge-world.png",
         projectileImage: "soccer-ball-final.svg",
         projectileClass: "world-ball-attack",
@@ -202,18 +202,18 @@ const SOCCER_LEVELS = {
             { label: "Godly Fire Doge", cost: 1100, item: { name: "Fire Doge", rarity: "Godly" } },
         ],
         dialogue: [
-            { speaker: "good", text: "Okay... you really do look like the final boss now." },
-            { speaker: "bad", text: "World Star Doge. Stadium lights, world-class shot, and enough power to erase your highlight reel." },
-            { speaker: "good", text: "Good. If I win here, I am saving that replay forever." },
-            { speaker: "bad", text: "Then survive the bicycle kick, the meteor strike, and the roar of the whole arena." },
+            { speaker: "good", text: "Brother...? So this whole World Star form was you?" },
+            { speaker: "bad", text: "Yeah. I stopped hiding behind other teams a while ago. If you wanted the truth, you had to make it this far." },
+            { speaker: "good", text: "I came all this way to bring you back, not to watch you turn into their final boss." },
+            { speaker: "bad", text: "Then prove you can stand with me. Survive this match, and I will finally listen." },
         ],
         postDialogueWin: [
-            { speaker: "bad", text: "You cleared the entire evolution line... and stole the stage from me." },
-            { speaker: "good", text: "Now that is a replay worth framing on the wall." },
+            { speaker: "bad", text: "Alright... you win. Maybe I spent too long chasing their power and not enough time hearing you out." },
+            { speaker: "good", text: "Then come home, brother. We settle the rest together, not on opposite sides." },
         ],
         postDialogueLose: [
-            { speaker: "bad", text: "Final forms do not flinch, and my shot does not miss once it leaves the sky." },
-            { speaker: "good", text: "Then I am coming back with enough power to blast that star out of orbit." },
+            { speaker: "bad", text: "You still are not ready for what I became. Come back when you can face me as my brother, not just another challenger." },
+            { speaker: "good", text: "Then I will come back stronger, and next time I am taking you home." },
         ],
     },
 };

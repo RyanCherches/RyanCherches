@@ -12,6 +12,8 @@ const crystal_attack = document.getElementById("crystal_attack");
 const beforeFightAudio = new Audio("before fight.mp3");
 const duringFightAudio = new Audio("during fight.mp3");
 const postDialogueWinAudio = null;
+beforeFightAudio.preload = "auto";
+duringFightAudio.preload = "auto";
 const storedMusicVolume = Number(localStorage.getItem("musicVolume"));
 const musicVolume = Number.isFinite(storedMusicVolume) ? storedMusicVolume : 50;
 const musicVolumeNormalized = Math.min(1, Math.max(0, musicVolume / 100));
@@ -145,6 +147,27 @@ function stopDialogueVoice() {
     dialogueVoice.stop();
 }
 
+function playLoopingAudio(audio) {
+    if (!audio) return;
+    audio.loop = true;
+    const playPromise = audio.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {});
+    }
+}
+
+function startBeforeFightMusic() {
+    duringFightAudio.pause();
+    duringFightAudio.currentTime = 0;
+    playLoopingAudio(beforeFightAudio);
+}
+
+function startBattleMusic() {
+    beforeFightAudio.pause();
+    duringFightAudio.currentTime = 0;
+    playLoopingAudio(duringFightAudio);
+}
+
 if (aprilFoolsEnabled) {
     // April 1 only: swap main character + music to Rick Astley.
     if (playerImg) playerImg.src = "rick astley doge.png";
@@ -172,8 +195,8 @@ home.addEventListener("click", function() {
 });
 
 window.onload = function() {
-    beforeFightAudio.loop = true;
-    beforeFightAudio.play();
+    beforeFightAudio.load();
+    duringFightAudio.load();
 }
 
 const rarityBonuses = {
@@ -541,15 +564,14 @@ function endCutsceneAndStartBattle() {
     battleTurn = 1;
     if (battleSkills) battleSkills.startBattle();
     startPlayerTurn();
-    beforeFightAudio.pause();
-    duringFightAudio.loop = true;
-    duringFightAudio.play();
+    startBattleMusic();
 }
 
 // start cutscene on OK, instead of instantly starting the battle
 yes_btn.addEventListener("click", function (){
     yes_no.style.display = "none";
     speech();
+    startBeforeFightMusic();
     startCutscene();
 });
 

@@ -61,6 +61,27 @@
         }
     }
 
+    function buildLocalPortCandidates(value) {
+        const normalized = normalizeServerUrl(value);
+        if (!normalized) return [];
+        try {
+            const parsed = new URL(normalized);
+            if (!shouldUseCurrentOriginAsServer(normalized)) return [];
+            const protocol = parsed.protocol || "http:";
+            const hostname = parsed.hostname || "127.0.0.1";
+            return Array.from(new Set([
+                normalizeServerUrl(`${protocol}//${hostname}:3000`),
+                normalizeServerUrl(`${protocol}//localhost:3000`),
+                normalizeServerUrl(`${protocol}//127.0.0.1:3000`),
+                normalizeServerUrl(`${protocol}//${hostname}:5000`),
+                normalizeServerUrl(`${protocol}//localhost:5000`),
+                normalizeServerUrl(`${protocol}//127.0.0.1:5000`),
+            ].filter(Boolean)));
+        } catch (error) {
+            return [];
+        }
+    }
+
     const currentServer = normalizeServerUrl(getScriptBaseUrl() || routeOrigin);
     const originServer = normalizeServerUrl(routeOrigin);
     const normalizedSavedServer = normalizeServerUrl(savedServer);
@@ -68,13 +89,25 @@
     const effectiveSavedServer = !allowOriginServer && (normalizedSavedServer === currentServer || normalizedSavedServer === originServer)
         ? ""
         : normalizedSavedServer;
-    const candidates = [
-        normalizeServerUrl(queryServer),
-        effectiveSavedServer,
-        normalizeServerUrl(defaultServer),
-        currentServer,
-        allowOriginServer ? originServer : "",
-    ].filter(Boolean);
+    const localPreferredCandidates = allowOriginServer
+        ? [
+            normalizeServerUrl(queryServer),
+            currentServer,
+            originServer,
+            ...buildLocalPortCandidates(currentServer),
+            ...buildLocalPortCandidates(originServer),
+            effectiveSavedServer,
+            normalizeServerUrl(defaultServer),
+        ]
+        : [
+            normalizeServerUrl(queryServer),
+            effectiveSavedServer,
+            normalizeServerUrl(defaultServer),
+            currentServer,
+            originServer,
+        ];
+
+    const candidates = localPreferredCandidates.filter(Boolean);
     const uniqueCandidates = Array.from(new Set(candidates));
     const resolvedServer = uniqueCandidates[0] || "";
 

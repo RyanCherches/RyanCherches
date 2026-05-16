@@ -25,7 +25,7 @@
        }
        .glass-container {
         width: 300px;
-        height: 300px;
+        height: 390px;
         position:relative;
         z-index: 1;
         background: rgba(255, 255, 255, 0.1);
@@ -126,6 +126,41 @@
         background-color:black;
         color:white;
        }
+       .secondary-action {
+        background: transparent;
+        color: white;
+        outline: 1px solid #fff;
+       }
+       .secondary-action:hover {
+        background: rgba(255, 255, 255, 0.12);
+        color: white;
+       }
+       .auth-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 10px;
+       }
+       .auth-status {
+        min-height: 34px;
+        color: #fff;
+        font-size: 12px;
+        line-height: 1.4;
+       }
+       .server-wrap {
+        margin-top: 12px;
+        text-align: left;
+       }
+       .server-wrap label {
+        display: block;
+        color: #fff;
+        font-size: 12px;
+        margin-bottom: 6px;
+       }
+       .server-wrap input {
+        margin-top: 0;
+        width: 100%;
+       }
        #register:hover {
         color:black;
        }
@@ -185,8 +220,15 @@
                         <input type="checkbox" id="remember" name="remember">
                         <label for="remember">Remeber me</label>
                     </div>
-                    <button type="button" class="login" onclick="login()">Login</button>
-                    <!-- <p>Don't have an account/forgot your password? <a href="signup.html" id= "register">Register</a></p> -->
+                    <div class="server-wrap">
+                        <label for="server-url-input">Server URL (optional)</label>
+                        <input type="text" id="server-url-input" placeholder="Auto-detect, or enter http://127.0.0.1:3000">
+                    </div>
+                    <div class="auth-actions">
+                        <button type="submit" class="login">Login</button>
+                        <button type="button" id="register-btn" class="login secondary-action">Create Account</button>
+                    </div>
+                    <p class="auth-status" id="auth-status">Use the same username and password on every device if you want to keep one shared leaderboard account.</p>
                 </form>
             </div>
         </div>
@@ -207,6 +249,14 @@
         const toggleBtn = document.getElementById("show-passwd");
         const passwordInput = document.getElementById("Password");
         const icon = toggleBtn.querySelector("img");
+        const authForm = document.querySelector("form");
+        const registerBtn = document.getElementById("register-btn");
+        const authStatus = document.getElementById("auth-status");
+        const serverUrlInput = document.getElementById("server-url-input");
+        const AUTH_TOKEN_STORAGE_KEY = "dedogeiumAuthToken";
+        const USERNAME_KEYS = ["Username", "Uabcd", "username", "playerName"];
+        const PASSWORD_KEYS = ["Password", "Pabc", "password", "pass", "pwd"];
+        const requestedNext = new URLSearchParams(window.location.search).get("next");
 
         toggleBtn.addEventListener("click", function () {
             const isPassword = passwordInput.type === "password";
@@ -216,63 +266,278 @@
             icon.src = isPassword ? "notvisible_password.png" : "visible_password.png";
             icon.alt = isPassword ? "hidden" : "visible";
         });
-        /*function login() {
-            const username = document.getElementById("username").value.trim();
-            localStorage.setItem("username", username);
-            const password = document.getElementById("password");
-            localStorage.setItem("password", password)
-            if (username.toLowerCase() === "admin" && password == "rfcdabest") {
-                window.location.href = routeBase + "main_admin/";
-            } else {
-                window.location.href = routeBase + "main_normal/";
-            }
-            
-        }*/
-        const routeBase = window.location.pathname.includes('/index.html') ? '../' : '';
+        function setStatus(message, isError = false) {
+            if (!authStatus) return;
+            authStatus.textContent = message;
+            authStatus.style.color = isError ? "#ffd5d5" : "#fff";
+        }
 
-        function login() {
-            const Username = document.getElementById("Username").value.trim().toLowerCase();
-            const Password = document.getElementById("Password").value;
-
-            localStorage.setItem("Username", Username); // Store username for later
-            localStorage.setItem("Password", Password); // Store password for later
-            // Ensure admin can see this player: update dedogeium_players and inventory_<name>
+        function normalizeServerUrl(value) {
+            const trimmed = String(value || "").trim();
+            if (!trimmed) return "";
+            const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
             try {
-                const players = JSON.parse(localStorage.getItem('dedogeium_players')) || {};
-                const now = Date.now();
-                if (!players[Username]) {
-                    players[Username] = { firstSeen: now, visits: 0, inventory: [] };
+                const parsed = new URL(withProtocol);
+                const normalizedPath = parsed.pathname && parsed.pathname !== "/"
+                    ? parsed.pathname.replace(/\/+$/, "")
+                    : "";
+                return `${parsed.protocol}//${parsed.host}${normalizedPath}`;
+            } catch (error) {
+                return "";
+            }
+        }
+
+        function buildApiBaseCandidates(serverBase) {
+            const normalized = normalizeServerUrl(serverBase);
+            if (!normalized) return [];
+            try {
+                const parsed = new URL(normalized);
+                const path = parsed.pathname && parsed.pathname !== "/"
+                    ? parsed.pathname.replace(/\/+$/, "")
+                    : "";
+                return Array.from(new Set([
+                    `${parsed.origin}${path}/api`,
+                    `${parsed.origin}/api`,
+                ]));
+            } catch (error) {
+                return [`${normalized}/api`];
+            }
+        }
+
+        function getSavedServerBase() {
+            const allowOriginServer = typeof window.DEDOGEIUM_ALLOW_ORIGIN_SERVER === "boolean"
+                ? window.DEDOGEIUM_ALLOW_ORIGIN_SERVER
+                : true;
+            const originServer = allowOriginServer && window.location.origin && window.location.origin !== "null"
+                ? window.location.origin
+                : "";
+            const storageKey = window.DEDOGEIUM_SERVER_STORAGE_KEY || "dedogeiumServerUrl";
+            return normalizeServerUrl(window.SERVER_URL || localStorage.getItem(storageKey) || window.DEDOGEIUM_SITE_SERVER_BASE || originServer || "");
+        }
+
+        function getServerCandidates(preferredServer) {
+            const storageKey = window.DEDOGEIUM_SERVER_STORAGE_KEY || "dedogeiumServerUrl";
+            const allowOriginServer = typeof window.DEDOGEIUM_ALLOW_ORIGIN_SERVER === "boolean"
+                ? window.DEDOGEIUM_ALLOW_ORIGIN_SERVER
+                : true;
+            const originServer = allowOriginServer && window.location.origin && window.location.origin !== "null"
+                ? window.location.origin
+                : "";
+            const candidates = [
+                preferredServer,
+                window.SERVER_URL,
+                localStorage.getItem(storageKey),
+                ...(Array.isArray(window.DEDOGEIUM_SERVER_CANDIDATES) ? window.DEDOGEIUM_SERVER_CANDIDATES : []),
+                window.DEDOGEIUM_SITE_SERVER_BASE || "",
+                originServer,
+                "http://127.0.0.1:3000",
+                "http://localhost:3000",
+                "http://127.0.0.1:5000",
+                "http://localhost:5000",
+            ]
+                .map(normalizeServerUrl)
+                .filter(Boolean);
+            return Array.from(new Set(candidates));
+        }
+
+        async function findWorkingApiBase(preferredServer) {
+            const storageKey = window.DEDOGEIUM_SERVER_STORAGE_KEY || "dedogeiumServerUrl";
+            const attempts = [];
+            for (const serverBase of getServerCandidates(preferredServer)) {
+                for (const apiBase of buildApiBaseCandidates(serverBase)) {
+                    try {
+                        const response = await fetch(`${apiBase}/health`);
+                        const data = await response.json().catch(() => ({}));
+                        if (response.ok && data && data.ok) {
+                            localStorage.setItem(storageKey, serverBase);
+                            window.SERVER_URL = serverBase;
+                            if (serverUrlInput) serverUrlInput.value = serverBase;
+                            return { apiBase, serverBase };
+                        }
+                        attempts.push(`${apiBase}/health -> ${response.status}`);
+                    } catch (error) {
+                        attempts.push(`${apiBase}/health -> network error`);
+                    }
                 }
-                players[Username].lastSeen = now;
-                players[Username].visits = (players[Username].visits || 0) + 1;
-                players[Username].password = Password;
-                // snapshot current global inventory if present
-                try { players[Username].inventory = JSON.parse(localStorage.getItem('inventory')) || []; } catch(e) { players[Username].inventory = []; }
-                localStorage.setItem('dedogeium_players', JSON.stringify(players));
-                localStorage.setItem('inventory_' + Username, JSON.stringify(players[Username].inventory));
-            } catch (e) { console.error('Could not register player in localStorage', e); }
+            }
 
-            // attempt to POST to central server (optional). If server unreachable, ignore error.
-            (async function() {
+            throw new Error(`No Dedogeium server responded. Tried: ${attempts.join(" | ")}`);
+        }
+
+        function persistUsername(username) {
+            USERNAME_KEYS.forEach((key) => {
+                localStorage.setItem(key, username);
+            });
+        }
+
+        function clearStoredPasswords() {
+            PASSWORD_KEYS.forEach((key) => {
+                localStorage.removeItem(key);
+            });
+        }
+
+        function getPostLoginTarget() {
+            if (!requestedNext) return "home/";
+            if (/^[a-z]+:\/\//i.test(requestedNext)) return "home/";
+            if (requestedNext.startsWith("//")) return "home/";
+            return requestedNext;
+        }
+
+        function primeLocalPlayerRecord(username) {
+            try {
+                const players = JSON.parse(localStorage.getItem("dedogeium_players") || "{}");
+                const now = Date.now();
+                if (!players[username]) {
+                    players[username] = { firstSeen: now, visits: 0, inventory: [] };
+                }
+                players[username].firstSeen = players[username].firstSeen || now;
+                players[username].lastSeen = now;
+                players[username].visits = Math.max(1, Number(players[username].visits) || 0);
                 try {
-                    const allowOriginServer = typeof window.DEDOGEIUM_ALLOW_ORIGIN_SERVER === "boolean"
-                        ? window.DEDOGEIUM_ALLOW_ORIGIN_SERVER
-                        : true;
-                    const originServer = allowOriginServer && window.location.origin && window.location.origin !== "null"
-                        ? window.location.origin
-                        : "";
-                    const server = (window.SERVER_URL || localStorage.getItem(window.DEDOGEIUM_SERVER_STORAGE_KEY || "dedogeiumServerUrl") || originServer || '').replace(/\/$/, '');
-                    if (!server) return;
-                    await fetch(server + '/api/player', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ username: Username, player: players[Username] })
-                    });
-                } catch (e) { /* ignore network errors */ }
-            })();
+                    players[username].inventory = JSON.parse(localStorage.getItem("inventory")) || [];
+                } catch (error) {
+                    players[username].inventory = [];
+                }
+                localStorage.setItem("dedogeium_players", JSON.stringify(players));
+                localStorage.setItem(`inventory_${username}`, JSON.stringify(players[username].inventory));
+            } catch (error) {
+                console.error("Could not update local player cache", error);
+            }
+        }
 
-            alert("Login successful! Redirecting to the homepage...");
-            window.location.href = "/dedogeium/index.html";
+        function readLocalPlayers() {
+            try {
+                const players = JSON.parse(localStorage.getItem("dedogeium_players") || "{}");
+                return players && typeof players === "object" ? players : {};
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function writeLocalPlayers(players) {
+            localStorage.setItem("dedogeium_players", JSON.stringify(players && typeof players === "object" ? players : {}));
+        }
+
+        function createLocalAuthToken(username) {
+            return `local_${username}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+        }
+
+        function isServerLookupFailure(error) {
+            const message = error && error.message ? String(error.message) : "";
+            return message.startsWith("No Dedogeium server responded.");
+        }
+
+        function handleLocalAuth(mode, username, password) {
+            const players = readLocalPlayers();
+            const existing = players[username] && typeof players[username] === "object" ? players[username] : null;
+            const now = Date.now();
+
+            if (mode === "register") {
+                if (existing && typeof existing.password === "string" && existing.password) {
+                    throw new Error("That local username is already taken on this device.");
+                }
+                players[username] = {
+                    ...(existing || {}),
+                    password,
+                    firstSeen: existing && existing.firstSeen ? existing.firstSeen : now,
+                    lastSeen: now,
+                    visits: Math.max(1, Number(existing && existing.visits) || 0),
+                };
+                writeLocalPlayers(players);
+                return {
+                    ok: true,
+                    username,
+                    token: createLocalAuthToken(username),
+                    localOnly: true,
+                };
+            }
+
+            if (!existing || !existing.password) {
+                throw new Error("No local account with that username exists on this device. Create one first or start the Dedogeium server.");
+            }
+            if (String(existing.password) !== String(password)) {
+                throw new Error("Incorrect local password for that device account.");
+            }
+
+            players[username] = {
+                ...existing,
+                lastSeen: now,
+                visits: Math.max(1, Number(existing.visits) || 0),
+            };
+            writeLocalPlayers(players);
+            return {
+                ok: true,
+                username,
+                token: createLocalAuthToken(username),
+                localOnly: true,
+            };
+        }
+
+        async function sendAuthRequest(pathname, payload) {
+            const preferredServer = serverUrlInput ? serverUrlInput.value : "";
+            const { apiBase } = await findWorkingApiBase(preferredServer);
+            const response = await fetch(`${apiBase}${pathname}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (response.ok && data && data.ok) {
+                return data;
+            }
+            throw new Error(data && data.error ? data.error : "The Dedogeium server rejected the login request.");
+        }
+
+        async function submitAuth(mode) {
+            const username = document.getElementById("Username").value.trim().toLowerCase();
+            const password = document.getElementById("Password").value;
+            if (!username || !password) {
+                setStatus("Enter both a username and password first.", true);
+                return;
+            }
+
+            setStatus(mode === "register" ? "Creating account..." : "Logging in...");
+            try {
+                let payload;
+                try {
+                    payload = await sendAuthRequest(mode === "register" ? "/auth/register" : "/auth/login", {
+                        username,
+                        password,
+                    });
+                } catch (error) {
+                    if (!isServerLookupFailure(error)) {
+                        throw error;
+                    }
+                    payload = handleLocalAuth(mode, username, password);
+                }
+                persistUsername(payload.username);
+                localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, payload.token);
+                clearStoredPasswords();
+                primeLocalPlayerRecord(payload.username);
+                if (payload.localOnly) {
+                    setStatus(mode === "register"
+                        ? "Local-only account created on this device. Redirecting..."
+                        : "Logged in with this device's local account. Redirecting...");
+                } else {
+                    setStatus(mode === "register" ? "Account created. Redirecting..." : "Login successful. Redirecting...");
+                }
+                window.location.href = getPostLoginTarget();
+            } catch (error) {
+                setStatus(error && error.message ? error.message : "Login failed.", true);
+            }
+        }
+
+        authForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+            submitAuth("login");
+        });
+
+        registerBtn.addEventListener("click", () => {
+            submitAuth("register");
+        });
+
+        if (serverUrlInput) {
+            serverUrlInput.value = getSavedServerBase();
         }
     </script>
 </body>

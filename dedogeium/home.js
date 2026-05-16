@@ -19,6 +19,8 @@ const leaderboardTableTitle = document.getElementById("leaderboard-table-title")
 const leaderboardSource = document.getElementById("leaderboard-source");
 const leaderboardList = document.getElementById("leaderboard-list");
 const music = new Audio("rick roll.mp3");
+const AUTH_TOKEN_STORAGE_KEY = "dedogeiumAuthToken";
+const LEADERBOARD_CACHE_STORAGE_KEY = "dedogeiumLeaderboardCache";
 const storedMusicVolume = Number(localStorage.getItem("musicVolume"));
 const musicVolume = Number.isFinite(storedMusicVolume) ? storedMusicVolume : 50;
 const leaderboardState = {
@@ -27,6 +29,9 @@ const leaderboardState = {
     players: {},
     sourceLabel: "Loading shared leaderboard...",
     serverAvailable: false,
+    mode: "loading",
+    claimsEnabled: false,
+    emptyMessage: "Loading leaderboard...",
     claimMessage: "",
     claimError: false,
 };
@@ -225,6 +230,88 @@ function buildApiBaseCandidates(serverBase) {
     }
 }
 
+function buildLeaderboardSourceCandidates(serverBase) {
+    const normalized = normalizeServerUrl(serverBase);
+    if (!normalized) return [];
+    try {
+        const parsed = new URL(normalized);
+        const path = parsed.pathname && parsed.pathname !== "/"
+            ? parsed.pathname.replace(/\/+$/, "")
+            : "";
+        return Array.from(new Set([
+            `${parsed.origin}${path}/leaderboard.json`,
+            `${parsed.origin}/leaderboard.json`,
+            ...buildApiBaseCandidates(normalized).map((apiBase) => `${apiBase}/leaderboard`),
+        ]));
+    } catch (error) {
+        return [`${normalized}/leaderboard.json`, `${normalized}/api/leaderboard`];
+    }
+}
+
+function getLeaderboardRecordUpdatedAt(record) {
+    if (!record || typeof record !== "object") return 0;
+    return Math.max(
+        Number(record.lastSeen) || 0,
+        Number(record.profileStats && record.profileStats.updatedAt) || 0,
+        Number(record.leaderboard && record.leaderboard.updatedAt) || 0,
+    );
+}
+
+function mergeLeaderboardPlayers(...playerMaps) {
+    const merged = {};
+    playerMaps.forEach((playerMap) => {
+        if (!playerMap || typeof playerMap !== "object") return;
+        Object.entries(playerMap).forEach(([username, record]) => {
+            if (!username || !record || typeof record !== "object") return;
+            const existing = merged[username];
+            if (!existing || getLeaderboardRecordUpdatedAt(record) >= getLeaderboardRecordUpdatedAt(existing)) {
+                merged[username] = record;
+            }
+        });
+    });
+    return merged;
+}
+
+function getLocalLeaderboardPlayers() {
+    if (!window.DedogeiumSystems || typeof window.DedogeiumSystems.readPlayerRecords !== "function") {
+        return {};
+    }
+    try {
+        const players = window.DedogeiumSystems.readPlayerRecords();
+        return players && typeof players === "object" ? players : {};
+    } catch (error) {
+        return {};
+    }
+}
+
+function readCachedLeaderboardPlayers() {
+    try {
+        const cached = JSON.parse(localStorage.getItem(LEADERBOARD_CACHE_STORAGE_KEY) || "{}");
+        return cached && cached.players && typeof cached.players === "object" ? cached.players : {};
+    } catch (error) {
+        return {};
+    }
+}
+
+function writeCachedLeaderboardPlayers(players) {
+    try {
+        localStorage.setItem(LEADERBOARD_CACHE_STORAGE_KEY, JSON.stringify({
+            players: players && typeof players === "object" ? players : {},
+            updatedAt: Date.now(),
+        }));
+    } catch (error) {
+        // Ignore cache write failures.
+    }
+}
+
+function getLeaderboardPlayersFromPayload(payload) {
+    if (!payload || typeof payload !== "object") return null;
+    if (payload.players && typeof payload.players === "object") {
+        return payload.players;
+    }
+    return null;
+}
+
 function getSiteServerCandidate() {
     const configuredSiteBase = normalizeServerUrl(window.DEDOGEIUM_SITE_SERVER_BASE || "");
     if (configuredSiteBase) return configuredSiteBase;
@@ -243,46 +330,171 @@ function getCurrentUsername() {
     return "";
 }
 
-async function fetchServerPlayers() {
+function getAuthToken() {
+    return String(localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || "").trim();
+}
+
+function getLoginUrl() {
+    const nextPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    return `../login/?next=${encodeURIComponent(nextPath)}`;
+}
+
+function redirectToDedogeiumLogin() {
+    window.location.href = getLoginUrl();
+}
+
+async function requireDedogeiumLogin() {
+    const username = getCurrentUsername();
+    const token = getAuthToken();
+    if (!username || !token) {
+        redirectToDedogeiumLogin();
+        return false;
+    }
+
     const storageKey = window.DEDOGEIUM_SERVER_STORAGE_KEY || "dedogeiumServerUrl";
     const serverBase = normalizeServerUrl(window.SERVER_URL || localStorage.getItem(storageKey) || getSiteServerCandidate());
     if (!serverBase) {
+        return true;
+    }
+
+    try {
+        for (const apiBase of buildApiBaseCandidates(serverBase)) {
+            const response = await fetch(`${apiBase}/auth/session`, {
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                },
+            });
+            if (response.ok) {
+                return true;
+            }
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+                redirectToDedogeiumLogin();
+                return false;
+            }
+        }
+    } catch (error) {
+        // Keep the page usable if the server is temporarily offline.
+    }
+
+    return true;
+}
+
+async function fetchServerPlayers() {
+    const localPlayers = getLocalLeaderboardPlayers();
+    const cachedPlayers = readCachedLeaderboardPlayers();
+    const storageKey = window.DEDOGEIUM_SERVER_STORAGE_KEY || "dedogeiumServerUrl";
+    const serverBase = normalizeServerUrl(window.SERVER_URL || localStorage.getItem(storageKey) || getSiteServerCandidate());
+    const mergedFallbackPlayers = mergeLeaderboardPlayers(cachedPlayers, localPlayers);
+
+    if (!serverBase) {
+        if (Object.keys(mergedFallbackPlayers).length) {
+            const usingCache = Object.keys(cachedPlayers).length > 0;
+            return {
+                players: mergedFallbackPlayers,
+                sourceLabel: usingCache ? "Shared leaderboard cache + this device" : "This device leaderboard",
+                serverAvailable: false,
+                mode: usingCache ? "cached" : "local",
+                claimsEnabled: true,
+                emptyMessage: usingCache
+                    ? "No cached leaderboard stats are available for this category yet."
+                    : "Play Dedogeium on this device to start filling in the leaderboard.",
+            };
+        }
         return {
             players: {},
-            sourceLabel: "Shared leaderboard unavailable",
+            sourceLabel: "Leaderboard unavailable",
             serverAvailable: false,
-            emptyMessage: "Connect to a Dedogeium server to load the shared leaderboard.",
+            mode: "offline",
+            claimsEnabled: false,
+            emptyMessage: "Open Dedogeium through a server URL or keep playing here to start tracking leaderboard stats.",
         };
     }
 
     try {
-        const apiCandidates = buildApiBaseCandidates(serverBase);
-        for (const apiBase of apiCandidates) {
-            const response = await fetch(`${apiBase}/players`);
-            if (!response.ok) {
-                continue;
+        const leaderboardCandidates = buildLeaderboardSourceCandidates(serverBase);
+        for (const requestUrl of leaderboardCandidates) {
+            try {
+                const leaderboardResponse = await fetch(requestUrl);
+                if (leaderboardResponse.ok) {
+                    const payload = await leaderboardResponse.json();
+                    const sharedPlayers = getLeaderboardPlayersFromPayload(payload);
+                    if (!sharedPlayers) {
+                        continue;
+                    }
+                    writeCachedLeaderboardPlayers(sharedPlayers);
+                    return {
+                        players: mergeLeaderboardPlayers(cachedPlayers, localPlayers, sharedPlayers),
+                        sourceLabel: requestUrl.includes("/api/")
+                            ? "Shared SQL leaderboard"
+                            : "Shared SQL leaderboard snapshot",
+                        serverAvailable: true,
+                        mode: "shared",
+                        claimsEnabled: true,
+                        emptyMessage: "No shared leaderboard stats have been recorded for this category yet.",
+                    };
+                }
+            } catch (error) {
+                // Try the next snapshot or API candidate.
             }
-            const players = await response.json();
-            return {
-                players: players && typeof players === "object" ? players : {},
-                sourceLabel: "Shared server leaderboard",
-                serverAvailable: true,
-                emptyMessage: "No shared leaderboard stats have been recorded for this category yet.",
-            };
         }
 
+        if (Object.keys(cachedPlayers).length) {
+            return {
+                players: mergedFallbackPlayers,
+                sourceLabel: "Shared leaderboard cache",
+                serverAvailable: false,
+                mode: "cached",
+                claimsEnabled: true,
+                emptyMessage: "The live server is down, so this page is showing the last synced leaderboard snapshot.",
+            };
+        }
+        if (Object.keys(localPlayers).length) {
+            return {
+                players: localPlayers,
+                sourceLabel: "This device leaderboard",
+                serverAvailable: false,
+                mode: "local",
+                claimsEnabled: true,
+                emptyMessage: "The live server is down, so this page is showing only stats from this device.",
+            };
+        }
         return {
             players: {},
-            sourceLabel: "Shared leaderboard unavailable",
+            sourceLabel: "Leaderboard unavailable",
             serverAvailable: false,
-            emptyMessage: "The shared Dedogeium server did not return leaderboard data.",
+            mode: "offline",
+            claimsEnabled: false,
+            emptyMessage: "The Dedogeium server did not return any leaderboard data.",
         };
     } catch (error) {
+        if (Object.keys(cachedPlayers).length) {
+            return {
+                players: mergedFallbackPlayers,
+                sourceLabel: "Shared leaderboard cache",
+                serverAvailable: false,
+                mode: "cached",
+                claimsEnabled: true,
+                emptyMessage: "Could not reach the live server, so this page is showing the last synced leaderboard snapshot.",
+            };
+        }
+        if (Object.keys(localPlayers).length) {
+            return {
+                players: localPlayers,
+                sourceLabel: "This device leaderboard",
+                serverAvailable: false,
+                mode: "local",
+                claimsEnabled: true,
+                emptyMessage: "Could not reach the live server, so this page is showing only stats from this device.",
+            };
+        }
         return {
             players: {},
-            sourceLabel: "Shared leaderboard unavailable",
+            sourceLabel: "Leaderboard unavailable",
             serverAvailable: false,
-            emptyMessage: "Could not reach the shared Dedogeium server right now.",
+            mode: "offline",
+            claimsEnabled: false,
+            emptyMessage: "Could not reach the Dedogeium leaderboard right now.",
         };
     }
 }
@@ -340,6 +552,7 @@ function renderLeaderboard() {
     const currentEntry = currentUsername ? entries.find((entry) => entry.username === currentUsername) : null;
     const finishedEntry = currentUsername ? claimEntries.find((entry) => entry.username === currentUsername) : null;
     const finishedPeriodLabel = getFinishedPeriodLabel(leaderboardState.scope);
+    const leaderboardUnavailable = leaderboardState.mode === "offline";
     let visibleEntries = rankedEntries.slice(0, 10);
 
     if (currentEntry && currentEntry.value > 0 && !visibleEntries.some((entry) => entry.username === currentEntry.username)) {
@@ -353,12 +566,12 @@ function renderLeaderboard() {
         leaderboardSource.textContent = leaderboardState.sourceLabel;
     }
 
-    if (!leaderboardState.serverAvailable) {
+    if (leaderboardUnavailable) {
         if (leaderboardPlayerRank) {
-            leaderboardPlayerRank.textContent = "Shared leaderboard offline";
+            leaderboardPlayerRank.textContent = "Leaderboard unavailable";
         }
         if (leaderboardPlayerValue) {
-            leaderboardPlayerValue.textContent = "Open Dedogeium through a server URL to join the shared leaderboard.";
+            leaderboardPlayerValue.textContent = leaderboardState.emptyMessage;
         }
         if (leaderboardRewardPreview) {
             leaderboardRewardPreview.textContent = "Rewards pay out after finished daily, weekly, and monthly periods.";
@@ -368,7 +581,9 @@ function renderLeaderboard() {
         }
     } else if (currentEntry && currentEntry.value > 0) {
         if (leaderboardPlayerRank) {
-            leaderboardPlayerRank.textContent = `#${currentEntry.rank} live in ${scopeLabel}`;
+            leaderboardPlayerRank.textContent = leaderboardState.serverAvailable
+                ? `#${currentEntry.rank} live in ${scopeLabel}`
+                : `#${currentEntry.rank} in ${scopeLabel}`;
         }
         if (leaderboardPlayerValue) {
             leaderboardPlayerValue.textContent = `Current ${categoryLabel}: ${formatLeaderboardValue(leaderboardState.category, currentEntry.value)}`;
@@ -389,7 +604,7 @@ function renderLeaderboard() {
             const rewardPreview = finishedEntry && finishedEntry.value > 0
                 ? window.DedogeiumSystems.getLeaderboardRewardPreview(leaderboardState.scope, finishedEntry.rank)
                 : null;
-            leaderboardClaimBtn.disabled = leaderboardState.scope === "all_time" || !rewardPreview;
+            leaderboardClaimBtn.disabled = !leaderboardState.claimsEnabled || leaderboardState.scope === "all_time" || !rewardPreview;
         }
     } else {
         if (leaderboardPlayerRank) {
@@ -416,7 +631,7 @@ function renderLeaderboard() {
             const rewardPreview = finishedEntry && finishedEntry.value > 0
                 ? window.DedogeiumSystems.getLeaderboardRewardPreview(leaderboardState.scope, finishedEntry.rank)
                 : null;
-            leaderboardClaimBtn.disabled = leaderboardState.scope === "all_time" || !rewardPreview;
+            leaderboardClaimBtn.disabled = !leaderboardState.claimsEnabled || leaderboardState.scope === "all_time" || !rewardPreview;
         }
     }
 
@@ -424,9 +639,8 @@ function renderLeaderboard() {
     if (!visibleEntries.length) {
         const empty = document.createElement("div");
         empty.className = "leaderboard-empty";
-        empty.textContent = leaderboardState.serverAvailable
-            ? "No shared leaderboard stats have been recorded for this category yet. Play some levels or arena matches to start filling it in."
-            : "The shared leaderboard is unavailable right now.";
+        empty.textContent = leaderboardState.emptyMessage
+            || "No leaderboard stats have been recorded for this category yet.";
         leaderboardList.appendChild(empty);
     } else {
         visibleEntries.forEach((entry) => {
@@ -457,6 +671,9 @@ async function refreshLeaderboard(message, isError = false) {
     leaderboardState.players = serverPayload.players || {};
     leaderboardState.sourceLabel = serverPayload.sourceLabel;
     leaderboardState.serverAvailable = Boolean(serverPayload.serverAvailable);
+    leaderboardState.mode = serverPayload.mode || "offline";
+    leaderboardState.claimsEnabled = Boolean(serverPayload.claimsEnabled);
+    leaderboardState.emptyMessage = serverPayload.emptyMessage || "No leaderboard data is available right now.";
     if (message) {
         setClaimStatus(message, isError);
     }
@@ -486,8 +703,8 @@ if (leaderboardCategorySelect) {
 
 if (leaderboardClaimBtn) {
     leaderboardClaimBtn.addEventListener("click", async () => {
-        if (!leaderboardState.serverAvailable) {
-            setClaimStatus("The shared leaderboard is offline right now, so rewards cannot be claimed yet.", true);
+        if (!leaderboardState.claimsEnabled) {
+            setClaimStatus("Leaderboard rewards are unavailable until leaderboard data loads.", true);
             return;
         }
         if (leaderboardState.scope === "all_time") {
@@ -516,7 +733,14 @@ if (leaderboardClaimBtn) {
     });
 }
 
-refreshLeaderboard();
-window.setInterval(() => {
+async function initializeHomePage() {
+    const allowed = await requireDedogeiumLogin();
+    if (!allowed) return;
+
     refreshLeaderboard();
-}, 30000);
+    window.setInterval(() => {
+        refreshLeaderboard();
+    }, 30000);
+}
+
+initializeHomePage();

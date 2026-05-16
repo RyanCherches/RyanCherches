@@ -10,6 +10,7 @@
     const EXTRA_SLOT_BASE_COST = 2500;
     const USERNAME_STORAGE_KEYS = ["Username", "Uabcd", "username", "playerName"];
     const PASSWORD_STORAGE_KEYS = ["Password", "Pabc", "password", "pass", "pwd"];
+    const AUTH_TOKEN_STORAGE_KEY = "dedogeiumAuthToken";
     const BOOST_BASE_COSTS = {
         currency: 350,
         luck: 500,
@@ -1435,6 +1436,10 @@
         return getStoredString(PASSWORD_STORAGE_KEYS);
     }
 
+    function getAuthToken() {
+        return getStoredString([AUTH_TOKEN_STORAGE_KEY]);
+    }
+
     function readPlayerRecords() {
         try {
             return JSON.parse(localStorage.getItem(PLAYER_RECORDS_STORAGE_KEY) || "{}");
@@ -1737,13 +1742,17 @@
     async function syncPlayerRecordToServer(username, record) {
         const safeUsername = normalizeUsername(username);
         const serverBase = getSyncServerBase();
-        if (!safeUsername || !serverBase || typeof fetch !== "function") return false;
+        const authToken = getAuthToken();
+        if (!safeUsername || !serverBase || typeof fetch !== "function" || !authToken) return false;
 
         for (const apiBase of buildApiBaseCandidates(serverBase)) {
             try {
                 const response = await fetch(`${apiBase}/player`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${authToken}`,
+                    },
                     body: JSON.stringify({ username: safeUsername, player: record }),
                 });
                 if (response.ok) return true;
@@ -1782,11 +1791,6 @@
         record.lastSeen = now;
         if (!record.visits) {
             record.visits = 1;
-        }
-
-        const password = getCurrentPassword();
-        if (password && !record.password) {
-            record.password = password;
         }
 
         record.inventory = getStoredInventory();

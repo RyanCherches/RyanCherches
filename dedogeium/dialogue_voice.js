@@ -2,13 +2,19 @@
     const SPOKEN_DIALOGUE_KEY = "spokenDialogueEnabled";
     const PLAYER_CHARACTER_KEY = "dedogeium-player";
     const DEFAULT_MUSIC_DUCK_MULTIPLIER = 0.32;
-    const SAFE_ENEMY_VOICE_KEYS = new Set(["level6-enemy"]);
     const ENEMY_VOICE_PROFILES = {
-        "level6-enemy": { rate: 0.92, pitch: 0.76, volume: 0.97 },
-        "level9-enemy": { rate: 0.94, pitch: 0.84, volume: 0.95 },
-        "level10-enemy": { rate: 1.01, pitch: 0.78, volume: 0.97 },
-        "level11-enemy": { rate: 0.88, pitch: 0.66, volume: 0.99 },
-        "level12-enemy": { rate: 0.82, pitch: 0.58, volume: 1 },
+        "level1-enemy": { rate: 0.98, pitch: 0.96, volume: 0.96 },
+        "level2-enemy": { rate: 0.97, pitch: 0.94, volume: 0.96 },
+        "level3-enemy": { rate: 0.96, pitch: 0.92, volume: 0.96 },
+        "level4-enemy": { rate: 0.96, pitch: 0.9, volume: 0.97 },
+        "level5-enemy": { rate: 0.99, pitch: 0.95, volume: 0.97 },
+        "level6-enemy": { rate: 0.97, pitch: 0.93, volume: 0.97 },
+        "level7-enemy": { rate: 0.96, pitch: 0.91, volume: 0.97 },
+        "level8-enemy": { rate: 0.94, pitch: 0.88, volume: 0.98 },
+        "level9-enemy": { rate: 0.99, pitch: 0.96, volume: 0.96 },
+        "level10-enemy": { rate: 1, pitch: 0.94, volume: 0.97 },
+        "level11-enemy": { rate: 0.96, pitch: 0.9, volume: 0.98 },
+        "level12-enemy": { rate: 0.94, pitch: 0.87, volume: 0.99 },
     };
     let cachedVoices = [];
     let activeSpeechToken = 0;
@@ -117,34 +123,39 @@
         return cachedVoices;
     }
 
+    function getEnglishVoicePool(voices) {
+        return voices.filter((voice) => /en/i.test(voice.lang || ""));
+    }
+
     function chooseVoice(characterKey, team) {
         const voices = getVoicePool();
         if (!voices.length) return null;
 
-        const playerIndex = hashString(`${PLAYER_CHARACTER_KEY}-voice`) % voices.length;
+        const englishVoices = getEnglishVoicePool(voices);
+        const playerVoicePool = englishVoices.length ? englishVoices : voices;
+        const selectedPlayerVoice = playerVoicePool[0] || voices[0];
+
         if (team === "player") {
-            return voices[playerIndex];
+            return selectedPlayerVoice;
         }
 
         if (voices.length === 1) {
             return voices[0];
         }
 
-        const enemyVoices = voices.filter((voice, index) => index !== playerIndex);
+        const enemyVoices = voices.filter((voice) => voice !== selectedPlayerVoice);
         if (!enemyVoices.length) {
-            return voices[playerIndex] || voices[0];
+            return selectedPlayerVoice || voices[0];
         }
 
-        const safeEnemyVoices = SAFE_ENEMY_VOICE_KEYS.has(characterKey)
-            ? enemyVoices.filter((voice) => /en/i.test(voice.lang || "")).slice(0, 4)
-            : [];
+        const safeEnemyVoices = getEnglishVoicePool(enemyVoices);
         const pool = safeEnemyVoices.length ? safeEnemyVoices : enemyVoices;
         return pool[hashString(characterKey) % pool.length];
     }
 
     function getSpeechTuning(characterKey, team) {
         if (team === "player") {
-            return { rate: 1.02, pitch: 1.04, volume: 0.92 };
+            return { rate: 1, pitch: 1, volume: 0.92 };
         }
 
         if (ENEMY_VOICE_PROFILES[characterKey]) {

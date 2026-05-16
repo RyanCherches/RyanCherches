@@ -112,9 +112,6 @@ function awardArenaWinCurrency(winnerKey) {
     const reward = 20;
     const actualReward = addArenaCurrency(reward);
     localStorage.setItem("dedogeium_lastArenaRewardKey", winnerKey);
-    if (window.DedogeiumSystems && typeof window.DedogeiumSystems.recordPvpVictory === "function") {
-        window.DedogeiumSystems.recordPvpVictory();
-    }
     showArenaRewardMessage(`Victory +${actualReward} coins!`, false);
 }
 

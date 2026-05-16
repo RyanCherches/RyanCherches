@@ -12,6 +12,9 @@ const crystal_attack = document.getElementById("crystal_attack");
 const beforeFightAudio = new Audio("before fight.mp3");
 const duringFightAudio = new Audio("during fight.mp3");
 const duringFightRickAudio = new Audio("es-hora-de-mimir.mp3");
+beforeFightAudio.preload = "auto";
+duringFightAudio.preload = "auto";
+duringFightRickAudio.preload = "auto";
 const storedMusicVolume = Number(localStorage.getItem("musicVolume"));
 const musicVolume = Number.isFinite(storedMusicVolume) ? storedMusicVolume : 50;
 const musicVolumeNormalized = Math.min(1, Math.max(0, musicVolume / 100));
@@ -143,6 +146,43 @@ function stopDialogueVoice() {
     dialogueVoice.stop();
 }
 
+function playLoopingAudio(audio) {
+    if (!audio) return;
+    audio.loop = true;
+    const playPromise = audio.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => {});
+    }
+}
+
+function pauseAndResetAudio(audio) {
+    if (!audio) return;
+    audio.pause();
+    audio.currentTime = 0;
+}
+
+function startBeforeFightMusic() {
+    pauseAndResetAudio(beforeFightAudio);
+    pauseAndResetAudio(duringFightAudio);
+    pauseAndResetAudio(duringFightRickAudio);
+    if (aprilFoolsEnabled) {
+        playLoopingAudio(duringFightRickAudio);
+        return;
+    }
+    playLoopingAudio(beforeFightAudio);
+}
+
+function startBattleMusic() {
+    pauseAndResetAudio(beforeFightAudio);
+    pauseAndResetAudio(duringFightAudio);
+    pauseAndResetAudio(duringFightRickAudio);
+    if (aprilFoolsEnabled) {
+        playLoopingAudio(duringFightRickAudio);
+        return;
+    }
+    playLoopingAudio(duringFightAudio);
+}
+
 if (aprilFoolsEnabled) {
     // April 1 only: swap main character + music to Rick Astley.
     if (playerImg) playerImg.src = "rick astley doge.png";
@@ -176,14 +216,10 @@ home.addEventListener("click", function() {
 window.onload = function() {
     if (aprilFoolsEnabled) {
         playerImg.src = "rick astley doge.png";
-        beforeFightAudio.pause();
-        duringFightAudio.pause();
-        duringFightRickAudio.loop = true;
-        duringFightRickAudio.play();
-    } else {
-        beforeFightAudio.loop = true;
-        beforeFightAudio.play();
     }
+    beforeFightAudio.load();
+    duringFightAudio.load();
+    duringFightRickAudio.load();
 }
 
 // Rarity bonuses for equipped items
@@ -518,16 +554,7 @@ function endCutsceneAndStartBattle() {
     if (battleSkills) battleSkills.startBattle();
     startPlayerTurn();
     
-    if (aprilFoolsEnabled) {
-        beforeFightAudio.pause();
-        duringFightAudio.pause();
-        duringFightRickAudio.loop = true;
-        duringFightRickAudio.play();
-    } else {
-        beforeFightAudio.pause();
-        duringFightAudio.loop = true;
-        duringFightAudio.play();
-    }
+    startBattleMusic();
 }
 
 yes_btn.addEventListener("click", function (){
@@ -541,6 +568,7 @@ yes_btn.addEventListener("click", function (){
     // duringFightAudio.play();
     yes_no.style.display = "none";
     speech();
+    startBeforeFightMusic();
     startCutscene();
 });
 

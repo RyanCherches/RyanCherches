@@ -1,7 +1,9 @@
+const crypto = require('crypto');
 const express = require('express');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { DatabaseSync } = require('node:sqlite');
 
 const app = express();
 
@@ -10,8 +12,10 @@ const PROGRAM_DATA = process.env.PROGRAMDATA || (process.platform === 'win32' ? 
 const DEFAULT_DATA_DIR = path.join(PROGRAM_DATA, 'dedogeium_server_data');
 const LOCAL_FALLBACK_DATA_DIR = path.join(__dirname, 'data');
 const DATA_DIR = resolveWritableDataDir();
-const PLAYERS_FILE = path.join(DATA_DIR, 'players.json');
+const LEGACY_PLAYERS_FILE = path.join(DATA_DIR, 'players.json');
 const ARENA_FILE = path.join(DATA_DIR, 'arena.json');
+const DATABASE_FILE = path.join(DATA_DIR, 'dedogeium.sqlite');
+const LEADERBOARD_SNAPSHOT_FILE = path.join(DATA_DIR, 'leaderboard.json');
 const port = process.env.PORT || 3000;
 
 const PRESENCE_TTL_MS = 30 * 1000;
@@ -20,12 +24,15 @@ const RESOLVED_CHALLENGE_TTL_MS = 10 * 60 * 1000;
 const MATCH_RETENTION_MS = 6 * 60 * 60 * 1000;
 const SPECIAL_METER_MAX = 100;
 const NORMAL_ATTACK_SPECIAL_GAIN = 25;
+const PLAYER_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const PASSWORD_KEY_LENGTH = 64;
+const MIN_PASSWORD_LENGTH = 4;
 
 app.use(express.json());
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
@@ -33,6 +40,9 @@ app.use((req, res, next) => {
 // Optional Basic auth: set ADMIN_USER and ADMIN_PASS env vars to enable.
 const ADMIN_USER = process.env.ADMIN_USER || null;
 const ADMIN_PASS = process.env.ADMIN_PASS || null;
+
+const db = openDatabase();
+refreshLeaderboardSnapshot();
 
 function resolveWritableDataDir() {
   const candidates = [];
@@ -56,6 +66,104 @@ function resolveWritableDataDir() {
   throw lastError || new Error('Could not find a writable data directory for Dedogeium.');
 }
 
+function openDatabase() {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  const database = new DatabaseSync(DATABASE_FILE);
+  database.exec(`
+    PRAGMA journal_mode = WAL;
+    PRAGMA foreign_keys = ON;
+
+    CREATE TABLE IF NOT EXISTS users (
+      username TEXT PRIMARY KEY,
+      password_hash TEXT,
+      password_salt TEXT,
+      player_json TEXT NOT NULL DEFAULT '{}',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      last_login_at INTEGER
+    );
+
+    CREATE TABLE IF NOT EXISTS auth_tokens (
+      token TEXT PRIMARY KEY,
+      username TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      expires_at INTEGER NOT NULL,
+      FOREIGN KEY(username) REFERENCES users(username) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_auth_tokens_username ON auth_tokens(username);
+    CREATE INDEX IF NOT EXISTS idx_auth_tokens_expiry ON auth_tokens(expires_at);
+  `);
+
+  migrateLegacyPlayers(database);
+  return database;
+}
+
+function migrateLegacyPlayers(database) {
+  if (!fs.existsSync(LEGACY_PLAYERS_FILE)) return;
+
+  let legacyPlayers;
+  try {
+    legacyPlayers = JSON.parse(fs.readFileSync(LEGACY_PLAYERS_FILE, 'utf8') || '{}');
+  } catch (error) {
+    return;
+  }
+
+  if (!legacyPlayers || typeof legacyPlayers !== 'object') return;
+
+  const selectUser = database.prepare('SELECT username, password_hash, password_salt, player_json, created_at, updated_at, last_login_at FROM users WHERE username = ?');
+  const insertUser = database.prepare(`
+    INSERT INTO users (username, password_hash, password_salt, player_json, created_at, updated_at, last_login_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+  const updateUser = database.prepare(`
+    UPDATE users
+    SET password_hash = ?,
+        password_salt = ?,
+        player_json = ?,
+        updated_at = ?,
+        last_login_at = ?
+    WHERE username = ?
+  `);
+
+  const runMigration = database.transaction(() => {
+    Object.entries(legacyPlayers).forEach(([username, rawRecord]) => {
+      const safeUsername = normalizeUsername(username);
+      if (!safeUsername) return;
+
+      const legacyRecord = rawRecord && typeof rawRecord === 'object' ? { ...rawRecord } : {};
+      const legacyPassword = typeof legacyRecord.password === 'string' && legacyRecord.password
+        ? legacyRecord.password
+        : null;
+      delete legacyRecord.password;
+
+      const existingRow = selectUser.get(safeUsername);
+      const mergedRecord = mergePlayerRecords(existingRow ? parsePlayerRecord(existingRow.player_json, safeUsername) : null, legacyRecord, safeUsername);
+      const createdAt = Number(mergedRecord.firstSeen) || Number(legacyRecord.firstSeen) || Date.now();
+      const updatedAt = Number(mergedRecord.lastSeen) || Number(legacyRecord.lastSeen) || Date.now();
+      const loginAt = Number(existingRow && existingRow.last_login_at) || updatedAt;
+      const currentHash = existingRow && existingRow.password_hash ? String(existingRow.password_hash) : null;
+      const currentSalt = existingRow && existingRow.password_salt ? String(existingRow.password_salt) : null;
+      let passwordHash = currentHash;
+      let passwordSalt = currentSalt;
+
+      if (!passwordHash && legacyPassword) {
+        const hashed = hashPassword(legacyPassword);
+        passwordHash = hashed.hash;
+        passwordSalt = hashed.salt;
+      }
+
+      if (existingRow) {
+        updateUser.run(passwordHash, passwordSalt, JSON.stringify(mergedRecord), Date.now(), loginAt, safeUsername);
+      } else {
+        insertUser.run(safeUsername, passwordHash, passwordSalt, JSON.stringify(mergedRecord), createdAt, updatedAt, loginAt);
+      }
+    });
+  });
+
+  runMigration();
+}
+
 function getLanUrls(listenPort) {
   const interfaces = os.networkInterfaces();
   const urls = [];
@@ -70,8 +178,8 @@ function getLanUrls(listenPort) {
   return Array.from(new Set(urls)).sort();
 }
 
-function requireAuth(req, res, next) {
-  if (!ADMIN_USER || !ADMIN_PASS) return next(); // auth disabled
+function requireAdminAuth(req, res, next) {
+  if (!ADMIN_USER || !ADMIN_PASS) return next();
   const auth = req.headers.authorization;
   if (!auth) {
     res.setHeader('WWW-Authenticate', 'Basic realm="Dedogeium"');
@@ -82,7 +190,7 @@ function requireAuth(req, res, next) {
   let creds;
   try {
     creds = Buffer.from(parts[1], 'base64').toString('utf8');
-  } catch (e) {
+  } catch (error) {
     return res.status(400).json({ error: 'Invalid auth encoding' });
   }
   const idx = creds.indexOf(':');
@@ -94,29 +202,54 @@ function requireAuth(req, res, next) {
   return res.status(401).json({ error: 'Invalid credentials' });
 }
 
-function ensureDataFiles() {
+function parseBearerToken(req) {
+  const auth = String(req.headers.authorization || '');
+  const parts = auth.split(' ');
+  if (parts.length !== 2 || parts[0] !== 'Bearer' || !parts[1]) return '';
+  return parts[1].trim();
+}
+
+function requirePlayerAuth(req, res, next) {
+  pruneExpiredTokens();
+  const token = parseBearerToken(req);
+  if (!token) {
+    return res.status(401).json({ error: 'Login required' });
+  }
+  const authRow = db.prepare('SELECT username, expires_at FROM auth_tokens WHERE token = ?').get(token);
+  if (!authRow || Number(authRow.expires_at) <= Date.now()) {
+    if (authRow) {
+      db.prepare('DELETE FROM auth_tokens WHERE token = ?').run(token);
+    }
+    return res.status(401).json({ error: 'Session expired. Please log in again.' });
+  }
+
+  const userRow = getUserRow(authRow.username);
+  if (!userRow) {
+    db.prepare('DELETE FROM auth_tokens WHERE token = ?').run(token);
+    return res.status(401).json({ error: 'Account not found' });
+  }
+
+  req.player = {
+    token,
+    username: normalizeUsername(authRow.username),
+    userRow,
+  };
+  next();
+}
+
+function ensureArenaFile() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(PLAYERS_FILE)) fs.writeFileSync(PLAYERS_FILE, JSON.stringify({}), 'utf8');
   if (!fs.existsSync(ARENA_FILE)) {
     fs.writeFileSync(ARENA_FILE, JSON.stringify({ presence: {}, challenges: {}, matches: {} }, null, 2), 'utf8');
   }
 }
 
-function readPlayers() {
-  try {
-    const raw = fs.readFileSync(PLAYERS_FILE, 'utf8');
-    return JSON.parse(raw || '{}');
-  } catch (e) {
-    return {};
-  }
-}
-
-function writePlayers(obj) {
-  fs.writeFileSync(PLAYERS_FILE, JSON.stringify(obj, null, 2), 'utf8');
-}
-
 function normalizeUsername(value) {
   return String(value || '').trim().toLowerCase();
+}
+
+function isValidUsername(username) {
+  return /^[a-z0-9_-]{3,32}$/.test(username);
 }
 
 function makeId(prefix) {
@@ -145,6 +278,327 @@ function sanitizeProfile(profile, username) {
     avatar,
     title,
   };
+}
+
+function getDefaultLeaderboardDay() {
+  return {
+    peakAttack: 0,
+    peakHealth: 0,
+    victoriesPeople: 0,
+    victoriesComputer: 0,
+    timePlayedMs: 0,
+  };
+}
+
+function getDefaultLeaderboardAllTime() {
+  return {
+    peakAttack: 0,
+    peakHealth: 0,
+    victoriesPeople: 0,
+    victoriesComputer: 0,
+    timePlayedMs: 0,
+  };
+}
+
+function normalizeLeaderboardDay(rawDay) {
+  const source = rawDay && typeof rawDay === 'object' ? rawDay : {};
+  return {
+    peakAttack: Math.max(0, Math.round(Number(source.peakAttack) || 0)),
+    peakHealth: Math.max(0, Math.round(Number(source.peakHealth) || 0)),
+    victoriesPeople: Math.max(0, Math.round(Number(source.victoriesPeople) || 0)),
+    victoriesComputer: Math.max(0, Math.round(Number(source.victoriesComputer) || 0)),
+    timePlayedMs: Math.max(0, Math.round(Number(source.timePlayedMs) || 0)),
+  };
+}
+
+function normalizeLeaderboardAllTime(rawAllTime) {
+  const source = rawAllTime && typeof rawAllTime === 'object' ? rawAllTime : {};
+  return {
+    peakAttack: Math.max(0, Math.round(Number(source.peakAttack) || 0)),
+    peakHealth: Math.max(0, Math.round(Number(source.peakHealth) || 0)),
+    victoriesPeople: Math.max(0, Math.round(Number(source.victoriesPeople) || 0)),
+    victoriesComputer: Math.max(0, Math.round(Number(source.victoriesComputer) || 0)),
+    timePlayedMs: Math.max(0, Math.round(Number(source.timePlayedMs) || 0)),
+  };
+}
+
+function normalizeLeaderboardState(rawState) {
+  const source = rawState && typeof rawState === 'object' ? rawState : {};
+  const days = {};
+  Object.entries(source.days && typeof source.days === 'object' ? source.days : {}).forEach(([dateKey, rawDay]) => {
+    days[dateKey] = normalizeLeaderboardDay(rawDay);
+  });
+  return {
+    days,
+    allTime: normalizeLeaderboardAllTime(source.allTime),
+    claimedRewards: source.claimedRewards && typeof source.claimedRewards === 'object' ? { ...source.claimedRewards } : {},
+    updatedAt: Math.max(0, Math.round(Number(source.updatedAt) || 0)),
+  };
+}
+
+function normalizeProfileStats(rawProfile, username) {
+  const source = rawProfile && typeof rawProfile === 'object' ? rawProfile : {};
+  const safeUsername = normalizeUsername(username || source.username || source.displayName || 'doge');
+  return {
+    username: safeUsername,
+    displayName: String(source.displayName || safeUsername || 'doge').slice(0, 32),
+    title: typeof source.title === 'string' ? source.title.slice(0, 64) : '',
+    attack: Math.max(0, Math.round(Number(source.attack) || 0)),
+    health: Math.max(0, Math.round(Number(source.health) || 0)),
+    avatar: typeof source.avatar === 'string' ? source.avatar : '',
+    updatedAt: Math.max(0, Math.round(Number(source.updatedAt) || 0)),
+  };
+}
+
+function ensurePlayerRecordShape(rawRecord, username) {
+  const source = rawRecord && typeof rawRecord === 'object' ? { ...rawRecord } : {};
+  delete source.password;
+  const safeUsername = normalizeUsername(username || source.username || (source.profileStats && source.profileStats.username) || '');
+
+  return {
+    ...source,
+    firstSeen: Number.isFinite(Number(source.firstSeen)) ? Number(source.firstSeen) : null,
+    lastSeen: Number.isFinite(Number(source.lastSeen)) ? Number(source.lastSeen) : null,
+    visits: Math.max(0, Math.round(Number(source.visits) || 0)),
+    inventory: Array.isArray(source.inventory) ? source.inventory : [],
+    profileStats: normalizeProfileStats(source.profileStats, safeUsername),
+    leaderboard: normalizeLeaderboardState(source.leaderboard),
+  };
+}
+
+function parsePlayerRecord(rawJson, username) {
+  try {
+    return ensurePlayerRecordShape(JSON.parse(rawJson || '{}'), username);
+  } catch (error) {
+    return ensurePlayerRecordShape({}, username);
+  }
+}
+
+function getBasePlayerRecord() {
+  return {
+    firstSeen: null,
+    lastSeen: null,
+    visits: 0,
+    inventory: [],
+    profileStats: normalizeProfileStats({}, ''),
+    leaderboard: normalizeLeaderboardState({}),
+  };
+}
+
+function mergePlayerRecords(existingRecord, incomingRecord, username) {
+  const safeUsername = normalizeUsername(username);
+  const existing = ensurePlayerRecordShape(existingRecord || getBasePlayerRecord(), safeUsername);
+  const incoming = incomingRecord && typeof incomingRecord === 'object' ? { ...incomingRecord } : {};
+  delete incoming.password;
+
+  const merged = ensurePlayerRecordShape(existing, safeUsername);
+  merged.firstSeen = merged.firstSeen
+    ? Math.min(merged.firstSeen, Number(incoming.firstSeen) || merged.firstSeen)
+    : (Number(incoming.firstSeen) || merged.firstSeen);
+  merged.lastSeen = merged.lastSeen
+    ? Math.max(merged.lastSeen, Number(incoming.lastSeen) || merged.lastSeen)
+    : (Number(incoming.lastSeen) || merged.lastSeen);
+  merged.visits = Math.max(merged.visits || 0, Number(incoming.visits) || 0);
+
+  const existingInv = Array.isArray(merged.inventory) ? merged.inventory : [];
+  const newInv = Array.isArray(incoming.inventory) ? incoming.inventory : [];
+  const inventoryById = {};
+  existingInv.concat(newInv).forEach((item) => {
+    if (item && item.id) inventoryById[item.id] = item;
+  });
+  merged.inventory = Object.values(inventoryById);
+
+  if (incoming.profileStats && typeof incoming.profileStats === 'object') {
+    const existingUpdated = Number(merged.profileStats && merged.profileStats.updatedAt) || 0;
+    const incomingUpdated = Number(incoming.profileStats.updatedAt) || 0;
+    if (!merged.profileStats || incomingUpdated >= existingUpdated) {
+      merged.profileStats = normalizeProfileStats(incoming.profileStats, safeUsername);
+    }
+  }
+
+  if (incoming.leaderboard && typeof incoming.leaderboard === 'object') {
+    const existingUpdated = Number(merged.leaderboard && merged.leaderboard.updatedAt) || 0;
+    const incomingUpdated = Number(incoming.leaderboard.updatedAt) || 0;
+    if (!merged.leaderboard || incomingUpdated >= existingUpdated) {
+      merged.leaderboard = normalizeLeaderboardState(incoming.leaderboard);
+    }
+  }
+
+  return merged;
+}
+
+function getLocalDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getArenaProfileStatsFromPlayer(player, username, now) {
+  return normalizeProfileStats({
+    username,
+    displayName: player && player.displayName ? player.displayName : username,
+    title: player && player.title ? player.title : 'Arena Fighter',
+    attack: player && player.damage ? player.damage : 20,
+    health: player && player.maxHealth ? player.maxHealth : 500,
+    avatar: player && player.avatar ? player.avatar : 'Im just a chill guy no background.png',
+    updatedAt: now,
+  }, username);
+}
+
+function upsertUserRecord(username, record, options = {}) {
+  const safeUsername = normalizeUsername(username);
+  if (!safeUsername) return null;
+
+  const safeRecord = ensurePlayerRecordShape(record, safeUsername);
+  const existing = getUserRow(safeUsername);
+  const now = Date.now();
+  if (existing) {
+    db.prepare('UPDATE users SET player_json = ?, updated_at = ? WHERE username = ?')
+      .run(JSON.stringify(safeRecord), now, safeUsername);
+    refreshLeaderboardSnapshot();
+    return safeRecord;
+  }
+
+  db.prepare(`
+    INSERT INTO users (username, password_hash, password_salt, player_json, created_at, updated_at, last_login_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    safeUsername,
+    options.passwordHash || null,
+    options.passwordSalt || null,
+    JSON.stringify(safeRecord),
+    Number(safeRecord.firstSeen) || now,
+    now,
+    options.lastLoginAt || null,
+  );
+  refreshLeaderboardSnapshot();
+  return safeRecord;
+}
+
+function recordArenaPvpVictory(username, arenaPlayer) {
+  const safeUsername = normalizeUsername(username);
+  if (!safeUsername) return;
+
+  const now = Date.now();
+  const existing = getStoredPlayerRecord(safeUsername);
+  const record = ensurePlayerRecordShape(existing || getBasePlayerRecord(), safeUsername);
+  const dateKey = getLocalDateKey(new Date(now));
+  const day = normalizeLeaderboardDay(record.leaderboard.days[dateKey]);
+  const profileStats = getArenaProfileStatsFromPlayer(arenaPlayer, safeUsername, now);
+
+  day.peakAttack = Math.max(day.peakAttack, profileStats.attack);
+  day.peakHealth = Math.max(day.peakHealth, profileStats.health);
+  day.victoriesPeople += 1;
+
+  record.leaderboard.days[dateKey] = day;
+  record.leaderboard.allTime.peakAttack = Math.max(record.leaderboard.allTime.peakAttack, profileStats.attack);
+  record.leaderboard.allTime.peakHealth = Math.max(record.leaderboard.allTime.peakHealth, profileStats.health);
+  record.leaderboard.allTime.victoriesPeople += 1;
+  record.leaderboard.updatedAt = now;
+  record.profileStats = profileStats;
+  record.profileStats.updatedAt = now;
+  record.firstSeen = record.firstSeen || now;
+  record.lastSeen = now;
+  record.visits = Math.max(1, Number(record.visits) || 0);
+
+  upsertUserRecord(safeUsername, record);
+}
+
+function hashPassword(password, saltHex) {
+  const salt = saltHex ? Buffer.from(saltHex, 'hex') : crypto.randomBytes(16);
+  const derivedKey = crypto.scryptSync(String(password), salt, PASSWORD_KEY_LENGTH);
+  return {
+    salt: salt.toString('hex'),
+    hash: derivedKey.toString('hex'),
+  };
+}
+
+function verifyPassword(password, saltHex, hashHex) {
+  if (!saltHex || !hashHex) return false;
+  const calculated = hashPassword(password, saltHex).hash;
+  const left = Buffer.from(calculated, 'hex');
+  const right = Buffer.from(hashHex, 'hex');
+  return left.length === right.length && crypto.timingSafeEqual(left, right);
+}
+
+function createAuthToken(username) {
+  pruneExpiredTokens();
+  const token = crypto.randomBytes(32).toString('hex');
+  const now = Date.now();
+  const expiresAt = now + PLAYER_TOKEN_TTL_MS;
+  db.prepare('INSERT INTO auth_tokens (token, username, created_at, expires_at) VALUES (?, ?, ?, ?)').run(
+    token,
+    normalizeUsername(username),
+    now,
+    expiresAt,
+  );
+  return {
+    token,
+    expiresAt,
+  };
+}
+
+function pruneExpiredTokens() {
+  db.prepare('DELETE FROM auth_tokens WHERE expires_at <= ?').run(Date.now());
+}
+
+function getUserRow(username) {
+  const safeUsername = normalizeUsername(username);
+  if (!safeUsername) return null;
+  return db.prepare('SELECT username, password_hash, password_salt, player_json, created_at, updated_at, last_login_at FROM users WHERE username = ?')
+    .get(safeUsername) || null;
+}
+
+function getStoredPlayerRecord(username) {
+  const row = getUserRow(username);
+  if (!row) return null;
+  return parsePlayerRecord(row.player_json, row.username);
+}
+
+function getAllPlayerRecords() {
+  const rows = db.prepare('SELECT username, player_json FROM users ORDER BY username ASC').all();
+  return rows.reduce((accumulator, row) => {
+    const safeUsername = normalizeUsername(row.username);
+    if (!safeUsername) return accumulator;
+    accumulator[safeUsername] = parsePlayerRecord(row.player_json, safeUsername);
+    return accumulator;
+  }, {});
+}
+
+function getPublicLeaderboardPayload() {
+  const rows = db.prepare('SELECT username, player_json FROM users ORDER BY username ASC').all();
+  return rows.reduce((accumulator, row) => {
+    const safeUsername = normalizeUsername(row.username);
+    if (!safeUsername) return accumulator;
+    const record = parsePlayerRecord(row.player_json, safeUsername);
+    accumulator[safeUsername] = {
+      profileStats: record.profileStats,
+      leaderboard: record.leaderboard,
+    };
+    return accumulator;
+  }, {});
+}
+
+function buildLeaderboardSnapshotPayload() {
+  return {
+    ok: true,
+    players: getPublicLeaderboardPayload(),
+    updatedAt: Date.now(),
+  };
+}
+
+function refreshLeaderboardSnapshot() {
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(
+      LEADERBOARD_SNAPSHOT_FILE,
+      JSON.stringify(buildLeaderboardSnapshotPayload(), null, 2),
+      'utf8',
+    );
+  } catch (error) {
+    console.error('Could not update leaderboard snapshot:', error && error.message ? error.message : error);
+  }
 }
 
 function ensureArenaShape(state) {
@@ -201,7 +655,7 @@ function readArenaState() {
   try {
     const raw = fs.readFileSync(ARENA_FILE, 'utf8');
     return pruneArenaState(JSON.parse(raw || '{}'));
-  } catch (e) {
+  } catch (error) {
     return pruneArenaState({ presence: {}, challenges: {}, matches: {} });
   }
 }
@@ -425,86 +879,165 @@ function updatePresence(state, username, profile, req) {
   };
 }
 
-ensureDataFiles();
+ensureArenaFile();
 
-app.get('/api/players', requireAuth, (req, res) => {
-  res.json(readPlayers());
+app.post('/api/auth/register', (req, res) => {
+  pruneExpiredTokens();
+  const username = normalizeUsername(req.body && req.body.username);
+  const password = String(req.body && req.body.password || '');
+
+  if (!isValidUsername(username)) {
+    return res.status(400).json({ error: 'Username must be 3-32 characters and only use letters, numbers, underscores, or hyphens.' });
+  }
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` });
+  }
+
+  const existing = getUserRow(username);
+  const hashed = hashPassword(password);
+  const now = Date.now();
+  let record = existing ? parsePlayerRecord(existing.player_json, username) : getBasePlayerRecord();
+  record.firstSeen = record.firstSeen || now;
+  record.lastSeen = now;
+  record.visits = Math.max(1, Number(record.visits) || 0);
+  if (!record.profileStats || !record.profileStats.username) {
+    record.profileStats = normalizeProfileStats({
+      username,
+      displayName: username,
+      updatedAt: now,
+    }, username);
+  }
+
+  if (existing && existing.password_hash && existing.password_salt) {
+    return res.status(409).json({ error: 'That username is already taken.' });
+  }
+
+  if (existing) {
+    db.prepare(`
+      UPDATE users
+      SET password_hash = ?,
+          password_salt = ?,
+          player_json = ?,
+          updated_at = ?,
+          last_login_at = ?
+      WHERE username = ?
+    `).run(
+      hashed.hash,
+      hashed.salt,
+      JSON.stringify(ensurePlayerRecordShape(record, username)),
+      now,
+      now,
+      username,
+    );
+  } else {
+    upsertUserRecord(username, record, {
+      passwordHash: hashed.hash,
+      passwordSalt: hashed.salt,
+      lastLoginAt: now,
+    });
+    db.prepare('UPDATE users SET last_login_at = ? WHERE username = ?').run(now, username);
+  }
+
+  const session = createAuthToken(username);
+  res.json({
+    ok: true,
+    username,
+    token: session.token,
+    expiresAt: session.expiresAt,
+  });
 });
 
-app.post('/api/player', requireAuth, (req, res) => {
+app.post('/api/auth/login', (req, res) => {
+  pruneExpiredTokens();
+  const username = normalizeUsername(req.body && req.body.username);
+  const password = String(req.body && req.body.password || '');
+
+  if (!username || !password) {
+    return res.status(400).json({ error: 'username and password required' });
+  }
+
+  const userRow = getUserRow(username);
+  if (!userRow || !userRow.password_hash || !userRow.password_salt) {
+    return res.status(401).json({ error: 'Invalid username or password' });
+  }
+  if (!verifyPassword(password, String(userRow.password_salt), String(userRow.password_hash))) {
+    return res.status(401).json({ error: 'Invalid username or password' });
+  }
+
+  const record = parsePlayerRecord(userRow.player_json, username);
+  const now = Date.now();
+  record.firstSeen = record.firstSeen || now;
+  record.lastSeen = now;
+  record.visits = Math.max(1, Number(record.visits) || 0);
+  upsertUserRecord(username, record);
+  db.prepare('UPDATE users SET last_login_at = ? WHERE username = ?').run(now, username);
+
+  const session = createAuthToken(username);
+  res.json({
+    ok: true,
+    username,
+    token: session.token,
+    expiresAt: session.expiresAt,
+  });
+});
+
+app.get('/api/auth/session', requirePlayerAuth, (req, res) => {
+  res.json({
+    ok: true,
+    username: req.player.username,
+    expiresAt: db.prepare('SELECT expires_at FROM auth_tokens WHERE token = ?').get(req.player.token).expires_at,
+  });
+});
+
+app.post('/api/auth/logout', requirePlayerAuth, (req, res) => {
+  db.prepare('DELETE FROM auth_tokens WHERE token = ?').run(req.player.token);
+  res.json({ ok: true });
+});
+
+app.get('/leaderboard.json', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  refreshLeaderboardSnapshot();
+  if (fs.existsSync(LEADERBOARD_SNAPSHOT_FILE)) {
+    return res.sendFile(LEADERBOARD_SNAPSHOT_FILE);
+  }
+  res.json(buildLeaderboardSnapshotPayload());
+});
+
+app.get('/api/leaderboard', (req, res) => {
+  res.json({
+    ok: true,
+    players: getPublicLeaderboardPayload(),
+  });
+});
+
+app.get('/api/players', requireAdminAuth, (req, res) => {
+  res.json(getAllPlayerRecords());
+});
+
+app.post('/api/player', requirePlayerAuth, (req, res) => {
   const { username, player } = req.body || {};
   if (!username || !player) return res.status(400).json({ error: 'username and player required' });
-  const name = normalizeUsername(username);
-  const players = readPlayers();
-  const np = player || {};
-  const ep = players[name] || { firstSeen: null, lastSeen: null, visits: 0, inventory: [] };
 
-  ep.firstSeen = ep.firstSeen ? Math.min(ep.firstSeen, np.firstSeen || ep.firstSeen) : (np.firstSeen || ep.firstSeen);
-  ep.lastSeen = ep.lastSeen ? Math.max(ep.lastSeen, np.lastSeen || ep.lastSeen) : (np.lastSeen || ep.lastSeen);
-  ep.visits = Math.max(ep.visits || 0, np.visits || 0);
-  if (!ep.password && np.password) ep.password = np.password;
-
-  const existingInv = ep.inventory || [];
-  const newInv = np.inventory || [];
-  const map = {};
-  existingInv.concat(newInv).forEach((it) => {
-    if (it && it.id) map[it.id] = it;
-  });
-  ep.inventory = Object.values(map);
-  if (np.profileStats && typeof np.profileStats === 'object') {
-    const existingUpdated = Number(ep.profileStats && ep.profileStats.updatedAt) || 0;
-    const incomingUpdated = Number(np.profileStats.updatedAt) || 0;
-    if (!ep.profileStats || incomingUpdated >= existingUpdated) {
-      ep.profileStats = np.profileStats;
-    }
-  }
-  if (np.leaderboard && typeof np.leaderboard === 'object') {
-    const existingUpdated = Number(ep.leaderboard && ep.leaderboard.updatedAt) || 0;
-    const incomingUpdated = Number(np.leaderboard.updatedAt) || 0;
-    if (!ep.leaderboard || incomingUpdated >= existingUpdated) {
-      ep.leaderboard = np.leaderboard;
-    }
+  const safeUsername = normalizeUsername(username);
+  if (safeUsername !== req.player.username) {
+    return res.status(403).json({ error: 'You can only update your own player record.' });
   }
 
-  players[name] = ep;
-  writePlayers(players);
-  res.json({ ok: true, player: ep });
+  const existing = getStoredPlayerRecord(safeUsername);
+  const merged = mergePlayerRecords(existing, player, safeUsername);
+  upsertUserRecord(safeUsername, merged);
+  res.json({ ok: true, player: merged });
 });
 
-app.post('/api/merge', requireAuth, (req, res) => {
+app.post('/api/merge', requireAdminAuth, (req, res) => {
   const payload = req.body || {};
-  const players = readPlayers();
-  Object.keys(payload).forEach((name) => {
-    const np = payload[name] || {};
-    const ep = players[name] || { firstSeen: null, lastSeen: null, visits: 0, inventory: [] };
-    ep.firstSeen = ep.firstSeen ? Math.min(ep.firstSeen, np.firstSeen || ep.firstSeen) : (np.firstSeen || ep.firstSeen);
-    ep.lastSeen = ep.lastSeen ? Math.max(ep.lastSeen, np.lastSeen || ep.lastSeen) : (np.lastSeen || ep.lastSeen);
-    ep.visits = Math.max(ep.visits || 0, np.visits || 0);
-    if (!ep.password && np.password) ep.password = np.password;
-    const existingInv = ep.inventory || [];
-    const newInv = np.inventory || [];
-    const map = {};
-    existingInv.concat(newInv).forEach((it) => {
-      if (it && it.id) map[it.id] = it;
-    });
-    ep.inventory = Object.values(map);
-    if (np.profileStats && typeof np.profileStats === 'object') {
-      const existingUpdated = Number(ep.profileStats && ep.profileStats.updatedAt) || 0;
-      const incomingUpdated = Number(np.profileStats.updatedAt) || 0;
-      if (!ep.profileStats || incomingUpdated >= existingUpdated) {
-        ep.profileStats = np.profileStats;
-      }
-    }
-    if (np.leaderboard && typeof np.leaderboard === 'object') {
-      const existingUpdated = Number(ep.leaderboard && ep.leaderboard.updatedAt) || 0;
-      const incomingUpdated = Number(np.leaderboard.updatedAt) || 0;
-      if (!ep.leaderboard || incomingUpdated >= existingUpdated) {
-        ep.leaderboard = np.leaderboard;
-      }
-    }
-    players[name] = ep;
+  Object.keys(payload).forEach((username) => {
+    const safeUsername = normalizeUsername(username);
+    if (!safeUsername) return;
+    const existing = getStoredPlayerRecord(safeUsername);
+    const merged = mergePlayerRecords(existing, payload[username], safeUsername);
+    upsertUserRecord(safeUsername, merged);
   });
-  writePlayers(players);
   res.json({ ok: true });
 });
 
@@ -683,6 +1216,11 @@ app.post('/api/arena/match/:id/attack', (req, res) => {
   const result = applyArenaAttack(match, safeUser, 'normal');
   if (result.error) return res.status(result.status || 400).json({ error: result.error });
 
+  if (match.status === 'finished' && match.winner) {
+    const winnerPlayer = match.players.one.username === match.winner ? match.players.one : match.players.two;
+    recordArenaPvpVictory(match.winner, winnerPlayer);
+  }
+
   writeArenaState(state);
   res.json({ ok: true, match: publicMatch(match, safeUser) });
 });
@@ -697,6 +1235,11 @@ app.post('/api/arena/match/:id/special', (req, res) => {
   if (!match) return res.status(404).json({ error: 'Match not found' });
   const result = applyArenaAttack(match, safeUser, 'special');
   if (result.error) return res.status(result.status || 400).json({ error: result.error });
+
+  if (match.status === 'finished' && match.winner) {
+    const winnerPlayer = match.players.one.username === match.winner ? match.players.one : match.players.two;
+    recordArenaPvpVictory(match.winner, winnerPlayer);
+  }
 
   writeArenaState(state);
   res.json({ ok: true, match: publicMatch(match, safeUser) });
@@ -732,6 +1275,8 @@ app.post('/api/arena/match/:id/forfeit', (req, res) => {
     at: match.updatedAt,
   });
 
+  recordArenaPvpVictory(winner, victor);
+
   writeArenaState(state);
   res.json({ ok: true, match: publicMatch(match, safeUser) });
 });
@@ -761,4 +1306,5 @@ app.listen(port, '0.0.0.0', () => {
     console.log(`Arena: ${lanUrls[0]}/arena/`);
   }
   console.log(`Data:  ${DATA_DIR}`);
+  console.log(`DB:    ${DATABASE_FILE}`);
 });

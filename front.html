@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RyanCherches.com</title>
+    <style>
+        :root {
+            --bg-top: #07111c;
+            --bg-bottom: #14081c;
+            --panel: rgba(9, 15, 31, 0.72);
+            --panel-strong: rgba(12, 20, 41, 0.88);
+            --border: rgba(255, 255, 255, 0.12);
+            --text: #f7f3ea;
+            --muted: #c8d0e5;
+            --gold: #ffd36b;
+            --orange: #ff8c5a;
+            --cyan: #64e6ef;
+            --pink: #ff7da8;
+            --shadow: rgba(0, 0, 0, 0.36);
+            --shift-x: 0px;
+            --shift-y: 0px;
+            --article-shift-x: 0px;
+            --article-shift-y: 0px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            min-height: 100%;
+        }
+
+        body {
+            overflow-x: hidden;
+            overflow-y: auto;
+            font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at 18% 18%, rgba(100, 230, 239, 0.16), transparent 20%),
+                radial-gradient(circle at 80% 12%, rgba(255, 140, 90, 0.18), transparent 22%),
+                radial-gradient(circle at 52% 110%, rgba(255, 125, 168, 0.14), transparent 28%),
+                linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+        }
+
+        body::before,
+        body::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        body::before {
+            background:
+                radial-gradient(circle at 30% 75%, rgba(255, 211, 107, 0.15), transparent 16%),
+                radial-gradient(circle at 82% 76%, rgba(100, 230, 239, 0.12), transparent 17%),
+                radial-gradient(circle at 50% -5%, rgba(255, 255, 255, 0.08), transparent 26%);
+            filter: blur(24px);
+            animation: aurora 14s ease-in-out infinite alternate;
+        }
+
+        body::after {
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 74px 74px;
+            mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.72), transparent 88%);
+            opacity: 0.45;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .scene {
+            position: relative;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .starfield {
+            position: absolute;
+            inset: 0;
+        }
+
+        .star {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
+            animation: twinkle 4s ease-in-out infinite;
+        }
+
+        .scene-glow {
+            position: absolute;
+            inset: auto;
+            border-radius: 50%;
+            filter: blur(8px);
+            opacity: 0.28;
+        }
+
+        .glow-one {
+            width: 320px;
+            height: 320px;
+            top: 10%;
+            left: -60px;
+            background: rgba(100, 230, 239, 0.18);
+            transform: translate(calc(var(--shift-x) * -0.7), calc(var(--shift-y) * -0.5));
+        }
+
+        .glow-two {
+            width: 280px;
+            height: 280px;
+            right: -40px;
+            bottom: 8%;
+            background: rgba(255, 140, 90, 0.18);
+            transform: translate(calc(var(--shift-x) * 0.6), calc(var(--shift-y) * 0.5));
+        }
+
+        .scene-zone {
+            position: absolute;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 28px;
+            background: rgba(8, 12, 26, 0.28);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+            overflow: hidden;
+        }
+
+        .zone-cap {
+            left: 4.5vw;
+            bottom: 9vh;
+            width: min(28vw, 330px);
+            height: min(44vh, 400px);
+            min-width: 240px;
+            min-height: 300px;
+            transform: translate(calc(var(--shift-x) * -0.08), calc(var(--shift-y) * 0.04));
+        }
+
+        .zone-articles {
+            left: 50%;
+            top: 54%;
+            width: min(34vw, 420px);
+            height: min(40vh, 350px);
+            min-width: 280px;
+            min-height: 270px;
+            transform: translate(calc(-50% + var(--article-shift-x)), calc(-50% + var(--article-shift-y)));
+        }
+
+        .zone-doge {
+            right: 4.5vw;
+            bottom: 8vh;
+            width: min(31vw, 380px);
+            height: min(46vh, 420px);
+            min-width: 260px;
+            min-height: 320px;
+            transform: translate(calc(var(--shift-x) * 0.08), calc(var(--shift-y) * 0.04));
+        }
+
+        .zone-label {
+            position: absolute;
+            top: 18px;
+            left: 18px;
+            z-index: 2;
+            display: inline-flex;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--gold);
+            font-size: 0.74rem;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        .hero-shell {
+            position: absolute;
+            inset: 0;
+            z-index: 3;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            min-height: 100%;
+            padding: 26px;
+            pointer-events: none;
+        }
+
+        .hero-panel {
+            width: min(700px, calc(100vw - 32px));
+            margin-top: clamp(10px, 3vh, 34px);
+            padding: clamp(24px, 4vw, 40px);
+            border: 1px solid var(--border);
+            border-radius: 32px;
+            background: linear-gradient(180deg, rgba(14, 21, 41, 0.84), rgba(8, 12, 28, 0.7));
+            box-shadow:
+                0 28px 90px rgba(0, 0, 0, 0.32),
+                inset 0 1px 0 rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(14px);
+            pointer-events: auto;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--gold);
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.26em;
+            text-transform: uppercase;
+        }
+
+        .eyebrow::after {
+            content: "";
+            width: 46px;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(255, 211, 107, 0.9), transparent);
+        }
+
+        h1 {
+            margin-top: 16px;
+            font-family: Impact, Haettenschweiler, "Arial Black", sans-serif;
+            font-size: clamp(3rem, 8vw, 5.8rem);
+            line-height: 0.92;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            text-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+        }
+
+        .hero-copy {
+            margin-top: 18px;
+            max-width: 560px;
+            color: var(--muted);
+            font-size: clamp(1rem, 2.3vw, 1.16rem);
+            line-height: 1.7;
+        }
+
+        .hero-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-top: 28px;
+        }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 52px;
+            padding: 0 24px;
+            border-radius: 999px;
+            border: 0;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+            cursor: pointer;
+            font: inherit;
+        }
+
+        .button-primary {
+            background: linear-gradient(135deg, var(--gold), var(--orange));
+            color: #20160d;
+            box-shadow: 0 18px 36px rgba(255, 140, 90, 0.28);
+        }
+
+        .button-secondary {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+        }
+
+        .button:hover,
+        .button:focus-visible {
+            transform: translateY(-3px);
+            filter: saturate(1.06);
+            outline: none;
+        }
+
+        .hero-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 24px;
+        }
+
+        .hero-pills span {
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: rgba(247, 243, 234, 0.92);
+            font-size: 0.92rem;
+        }
+
+        .interaction-bar {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        .interaction-button {
+            min-height: 48px;
+            padding: 0 16px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text);
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+        }
+
+        .interaction-button:hover,
+        .interaction-button:focus-visible {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 211, 107, 0.35);
+            outline: none;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .status-card {
+            padding: 14px 16px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .status-card span {
+            display: block;
+            color: var(--gold);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+        }
+
+        .status-card strong {
+            display: block;
+            margin-top: 8px;
+            font-size: 0.98rem;
+            line-height: 1.35;
+        }
+
+        .snippet-panel {
+            margin-top: 18px;
+            padding: 18px;
+            border-radius: 22px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .snippet-panel span {
+            display: block;
+            color: var(--gold);
+            font-size: 0.74rem;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        .snippet-panel strong {
+            display: block;
+            margin-top: 8px;
+            font-size: 1.1rem;
+        }
+
+        .snippet-panel p {
+            margin-top: 10px;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .snippet-panel a {
+            display: inline-flex;
+            margin-top: 12px;
+            color: var(--gold);
+            font-weight: 700;
+        }
+
+        .cap-stage {
+            position: absolute;
+            inset: 0;
+        }
+
+        .click-counter {
+            position: absolute;
+            top: 56px;
+            right: 18px;
+            z-index: 3;
+            padding: 12px 14px;
+            border-radius: 18px;
+            background: rgba(8, 12, 26, 0.78);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            text-align: right;
+        }
+
+        .click-counter span {
+            display: block;
+            color: rgba(255, 255, 255, 0.72);
+            font-size: 0.72rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+        }
+
+        .click-counter strong {
+            display: block;
+            margin-top: 4px;
+            color: var(--gold);
+            font-family: Impact, Haettenschweiler, "Arial Black", sans-serif;
+            font-size: clamp(1.5rem, 4vw, 2rem);
+        }
+
+        .cap-floor {
+            position: absolute;
+            left: 8%;
+            right: 8%;
+            bottom: 36px;
+            height: 22px;
+            border-radius: 999px;
+            background: radial-gradient(circle at center, rgba(100, 230, 239, 0.28), rgba(255, 140, 90, 0.22), rgba(0, 0, 0, 0));
+        }
+
+        .capybara {
+            position: absolute;
+            bottom: 52px;
+            transform-origin: center bottom;
+            filter: drop-shadow(0 18px 32px rgba(0, 0, 0, 0.28));
+            animation: floaty 4s ease-in-out infinite;
+            cursor: pointer;
+        }
+
+        .capybara-left {
+            left: 18px;
+            width: min(48%, 170px);
+            animation-duration: 4.4s;
+        }
+
+        .capybara-right {
+            right: 18px;
+            width: min(44%, 150px);
+            animation-duration: 4.8s;
+            animation-delay: 0.3s;
+        }
+
+        .capybara-left.is-clicked {
+            animation: none;
+            transform: translateY(-8px) rotate(-4deg) scale(1.06);
+        }
+
+        .capybara-right.is-clicked {
+            animation: none;
+            transform: translateY(3px) scale(0.98);
+        }
+
+        .pet-paw {
+            position: absolute;
+            left: 47%;
+            bottom: 134px;
+            width: 58px;
+            height: 26px;
+            border-radius: 999px;
+            background: linear-gradient(180deg, #a86b3b, #8b552d);
+            box-shadow:
+                0 10px 22px rgba(0, 0, 0, 0.22),
+                inset 0 3px 0 rgba(255, 255, 255, 0.12);
+            transform: rotate(-12deg);
+            transform-origin: left center;
+            cursor: pointer;
+            animation: pawHover 2.8s ease-in-out infinite;
+        }
+
+        .pet-paw::before,
+        .pet-paw::after {
+            content: "";
+            position: absolute;
+            top: -8px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #9e6235;
+        }
+
+        .pet-paw::before {
+            left: 16px;
+        }
+
+        .pet-paw::after {
+            left: 34px;
+        }
+
+        .pet-paw.is-patting {
+            animation: none;
+            transform: rotate(18deg) translateY(8px) scale(1.06);
+        }
+
+        .pet-hearts {
+            position: absolute;
+            right: 44px;
+            bottom: 154px;
+            color: var(--pink);
+            font-size: 1.4rem;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .pet-hearts.show {
+            animation: heartsRise 0.9s ease;
+        }
+
+        .click-pop {
+            position: absolute;
+            font-weight: 700;
+            color: var(--gold);
+            text-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+            pointer-events: none;
+            animation: popFloat 1s ease forwards;
+        }
+
+        .articles-stage {
+            position: absolute;
+            inset: 0;
+        }
+
+        .globe {
+            position: absolute;
+            left: 50%;
+            bottom: 26px;
+            width: min(24%, 88px);
+            transform: translateX(-50%);
+            filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.24));
+            animation: spinSlow 9s linear infinite;
+        }
+
+        .article-card {
+            position: absolute;
+            width: min(52%, 200px);
+            min-height: 120px;
+            padding: 16px;
+            border-radius: 20px;
+            background: linear-gradient(180deg, rgba(247, 243, 234, 0.94), rgba(234, 228, 214, 0.92));
+            color: #1f2232;
+            box-shadow: 0 20px 34px rgba(0, 0, 0, 0.22);
+            transform-origin: center center;
+            transition: transform 260ms ease, box-shadow 260ms ease, opacity 260ms ease;
+            cursor: pointer;
+        }
+
+        .article-card small {
+            display: block;
+            color: #8a5729;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+        }
+
+        .article-card strong {
+            display: block;
+            margin-top: 8px;
+            font-size: 1.05rem;
+        }
+
+        .article-card p {
+            margin-top: 10px;
+            color: #4c5167;
+            font-size: 0.92rem;
+            line-height: 1.45;
+        }
+
+        .article-card::after {
+            content: "";
+            display: block;
+            width: 52%;
+            height: 6px;
+            margin-top: 14px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(100, 230, 239, 0.7), rgba(255, 140, 90, 0.2));
+        }
+
+        .article-card.one {
+            left: 16px;
+            top: 82px;
+            transform: rotate(-8deg);
+        }
+
+        .article-card.two {
+            right: 18px;
+            top: 70px;
+            transform: rotate(7deg);
+        }
+
+        .article-card.three {
+            left: 50%;
+            bottom: 70px;
+            transform: translateX(-50%) rotate(-2deg);
+        }
+
+        .article-card.is-active {
+            transform: translateY(-10px) scale(1.04) rotate(0deg);
+            box-shadow: 0 24px 44px rgba(0, 0, 0, 0.28);
+        }
+
+        .article-card.one.is-active {
+            transform: rotate(-2deg) translateY(-10px) scale(1.04);
+        }
+
+        .article-card.two.is-active {
+            transform: rotate(2deg) translateY(-10px) scale(1.04);
+        }
+
+        .article-card.three.is-active {
+            transform: translateX(-50%) translateY(-12px) scale(1.05);
+        }
+
+        .reader-note {
+            position: absolute;
+            right: 20px;
+            bottom: 18px;
+            padding: 10px 14px;
+            border-radius: 16px;
+            background: rgba(8, 12, 26, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: rgba(247, 243, 234, 0.88);
+            font-size: 0.9rem;
+        }
+
+        .doge-stage {
+            position: absolute;
+            inset: 0;
+        }
+
+        .arena-glow {
+            position: absolute;
+            left: 10%;
+            right: 10%;
+            bottom: 28px;
+            height: 34px;
+            border-radius: 999px;
+            background: radial-gradient(circle at center, rgba(255, 140, 90, 0.34), rgba(100, 230, 239, 0.16), rgba(0, 0, 0, 0));
+        }
+
+        .doge {
+            position: absolute;
+            bottom: 42px;
+            width: min(42%, 155px);
+            filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.28));
+            transform-origin: center bottom;
+            cursor: pointer;
+        }
+
+        .doge-main {
+            left: 24px;
+            transform: scaleX(-1);
+        }
+
+        .doge-enemy {
+            right: 24px;
+        }
+
+        .doge-main.attack-right {
+            animation: mainAttack 0.9s ease;
+        }
+
+        .doge-enemy.attack-left {
+            animation: enemyAttack 0.9s ease;
+        }
+
+        .doge-main.hit-from-right {
+            animation: getHitMain 0.7s ease;
+        }
+
+        .doge-enemy.hit-from-left {
+            animation: getHitEnemy 0.7s ease;
+        }
+
+        .impact-ring {
+            position: absolute;
+            left: 50%;
+            bottom: 150px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 211, 107, 0.85);
+            transform: translateX(-50%) scale(0.2);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .impact-ring.show {
+            animation: impactPulse 0.65s ease;
+        }
+
+        .fight-badge {
+            position: absolute;
+            left: 50%;
+            top: 64px;
+            transform: translateX(-50%);
+            z-index: 3;
+            min-width: 180px;
+            padding: 12px 14px;
+            border-radius: 18px;
+            background: rgba(8, 12, 26, 0.78);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            text-align: center;
+        }
+
+        .fight-badge span {
+            display: block;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.72rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+        }
+
+        .fight-badge strong {
+            display: block;
+            margin-top: 6px;
+            color: var(--gold);
+            font-size: 1rem;
+        }
+
+        .mini-links {
+            position: absolute;
+            right: 26px;
+            top: 28px;
+            z-index: 4;
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+        }
+
+        .mini-links a {
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(247, 243, 234, 0.9);
+            font-size: 0.92rem;
+        }
+
+        @keyframes aurora {
+            from {
+                transform: translate3d(-1.2%, -1.2%, 0) scale(1);
+            }
+            to {
+                transform: translate3d(1.3%, 1.2%, 0) scale(1.04);
+            }
+        }
+
+        @keyframes twinkle {
+            0%, 100% {
+                opacity: 0.25;
+                transform: scale(0.8);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.15);
+            }
+        }
+
+        @keyframes floaty {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-12px);
+            }
+        }
+
+        @keyframes pawHover {
+            0%, 100% {
+                transform: rotate(-12deg) translateY(0);
+            }
+            50% {
+                transform: rotate(2deg) translateY(-5px);
+            }
+        }
+
+        @keyframes popFloat {
+            from {
+                opacity: 1;
+                transform: translateY(0) scale(0.9);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(-52px) scale(1.18);
+            }
+        }
+
+        @keyframes spinSlow {
+            from {
+                transform: translateX(-50%) rotate(0deg);
+            }
+            to {
+                transform: translateX(-50%) rotate(360deg);
+            }
+        }
+
+        @keyframes mainAttack {
+            0% {
+                transform: translateX(0) scaleX(-1) scale(1);
+            }
+            42% {
+                transform: translateX(88px) scaleX(-1) scale(1.09);
+            }
+            100% {
+                transform: translateX(0) scaleX(-1) scale(1);
+            }
+        }
+
+        @keyframes enemyAttack {
+            0% {
+                transform: translateX(0) scale(1);
+            }
+            42% {
+                transform: translateX(-88px) scale(1.09);
+            }
+            100% {
+                transform: translateX(0) scale(1);
+            }
+        }
+
+        @keyframes getHitEnemy {
+            0%, 100% {
+                transform: translateX(0);
+                filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.28));
+            }
+            35% {
+                transform: translateX(16px) rotate(-5deg);
+                filter: drop-shadow(0 18px 30px rgba(255, 211, 107, 0.3));
+            }
+        }
+
+        @keyframes getHitMain {
+            0%, 100% {
+                transform: scaleX(-1) translateX(0);
+                filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.28));
+            }
+            35% {
+                transform: scaleX(-1) translateX(-16px) rotate(5deg);
+                filter: drop-shadow(0 18px 30px rgba(255, 211, 107, 0.3));
+            }
+        }
+
+        @keyframes impactPulse {
+            0% {
+                opacity: 0.95;
+                transform: translateX(-50%) scale(0.25);
+            }
+            100% {
+                opacity: 0;
+                transform: translateX(-50%) scale(3.6);
+            }
+        }
+
+        @keyframes heartsRise {
+            0% {
+                opacity: 0;
+                transform: translateY(10px) scale(0.8);
+            }
+            25% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-34px) scale(1.12);
+            }
+        }
+
+        @media (max-width: 1080px) {
+            .hero-shell {
+                position: relative;
+                inset: auto;
+                padding: 18px 18px 26px;
+                pointer-events: auto;
+            }
+
+            .hero-panel {
+                margin: 0 auto;
+                width: min(720px, 100%);
+            }
+
+            .mini-links {
+                position: static;
+                justify-content: center;
+                margin-top: 14px;
+            }
+
+            .scene {
+                min-height: 760px;
+            }
+
+            .zone-cap {
+                left: 18px;
+                top: 540px;
+                bottom: auto;
+                width: min(42vw, 340px);
+            }
+
+            .zone-articles {
+                top: 720px;
+                width: min(48vw, 420px);
+                transform: translate(calc(-50% + var(--article-shift-x)), var(--article-shift-y));
+            }
+
+            .zone-doge {
+                right: 18px;
+                top: 500px;
+                bottom: auto;
+                width: min(42vw, 350px);
+            }
+        }
+
+        @media (max-width: 760px) {
+            .scene {
+                min-height: 1220px;
+            }
+
+            .hero-shell {
+                display: block;
+                padding: 16px 12px 22px;
+            }
+
+            .hero-panel {
+                width: 100%;
+                margin: 0;
+                border-radius: 24px;
+            }
+
+            .hero-actions,
+            .hero-pills,
+            .interaction-bar {
+                flex-direction: column;
+            }
+
+            .interaction-bar {
+                display: flex;
+            }
+
+            .button {
+                width: 100%;
+            }
+
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .mini-links {
+                position: static;
+                flex-wrap: wrap;
+                justify-content: center;
+                margin-top: 14px;
+            }
+
+            .scene-zone {
+                position: absolute;
+                left: 12px;
+                right: 12px;
+                width: auto;
+                min-width: 0;
+                transform: none;
+            }
+
+            .zone-doge {
+                top: 468px;
+                height: 300px;
+                min-height: 300px;
+            }
+
+            .zone-articles {
+                top: 794px;
+                transform: translate(-50%, 0);
+                height: 280px;
+                min-height: 280px;
+            }
+
+            .zone-cap {
+                top: 1096px;
+                height: 300px;
+                min-height: 300px;
+            }
+
+            .article-card {
+                width: 46%;
+                padding: 14px;
+            }
+
+            .article-card strong {
+                font-size: 0.96rem;
+            }
+
+            .article-card p {
+                font-size: 0.82rem;
+            }
+
+            .fight-badge {
+                min-width: 0;
+                width: calc(100% - 48px);
+            }
+
+            .snippet-panel {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="scene">
+        <div class="starfield" id="starfield"></div>
+        <div class="scene-glow glow-one"></div>
+        <div class="scene-glow glow-two"></div>
+
+        <section class="scene-zone zone-cap">
+            <div class="zone-label">Capybara Clicker</div>
+            <div class="cap-stage">
+                <div class="click-counter">
+                    <span>Pets</span>
+                    <strong id="clickCount">0</strong>
+                </div>
+                <img class="capybara capybara-left" id="capybaraLead" src="cappybara clicker/real_cappy.png" alt="Capybara petting another capybara">
+                <div class="pet-paw" id="petPaw" aria-hidden="true"></div>
+                <div class="pet-hearts" id="petHearts" aria-hidden="true">❤</div>
+                <img class="capybara capybara-right" id="capybaraFriend" src="cappybara clicker/real_cappy.png" alt="Capybara being petted">
+                <div class="cap-floor"></div>
+            </div>
+        </section>
+
+        <section class="scene-zone zone-articles">
+            <div class="zone-label">Articles in Motion</div>
+            <div class="articles-stage">
+                <article class="article-card one is-active" data-read="Reading about space right now." data-title="Space" data-snippet="Big questions, cool facts, and the feeling of exploring something massive. This page leans into wonder and science at the same time." data-link="space.html">
+                    <small>Article</small>
+                    <strong>Space</strong>
+                    <p>Big questions, cool facts, and the feeling of exploring something massive.</p>
+                </article>
+                <article class="article-card two" data-read="Flipping through family and about-me stories." data-title="About Me" data-snippet="Ryan, family, and the personal pages that make the site feel like a real place instead of just a pile of links." data-link="me.html">
+                    <small>Personal</small>
+                    <strong>About Me</strong>
+                    <p>Ryan, family, and the personal pages that make the site feel like a real place.</p>
+                </article>
+                <article class="article-card three" data-read="Switching over to Anne Frank and Worldle pages." data-title="History + Worldle" data-snippet="School projects, geography fun, and pages that turn curiosity into something interactive, from Anne Frank to Worldle." data-link="Anne.html">
+                    <small>Learning</small>
+                    <strong>History + Worldle</strong>
+                    <p>School projects, geography fun, and pages that turn curiosity into something interactive.</p>
+                </article>
+                <img class="globe" src="images/world-svgrepo-com.svg" alt="World and geography icon">
+                <div class="reader-note" id="readerNote">Reading about space right now.</div>
+            </div>
+        </section>
+
+        <section class="scene-zone zone-doge">
+            <div class="zone-label">DeDogeium Energy</div>
+            <div class="doge-stage">
+                <div class="fight-badge">
+                    <span>Fight Feed</span>
+                    <strong id="fightBadge">Main Doge attacks first.</strong>
+                </div>
+                <img class="doge doge-main" id="mainDoge" src="main doge.png" alt="Main Doge fighter">
+                <img class="doge doge-enemy" id="enemyDoge" src="ememy doge.png" alt="Enemy Doge fighter">
+                <div class="impact-ring" id="impactRing"></div>
+                <div class="arena-glow"></div>
+            </div>
+        </section>
+    </div>
+
+    <main class="hero-shell">
+        <section class="hero-panel">
+            <div class="eyebrow">RyanCherches.com Intro</div>
+            <h1>One Site. A Lot Happening.</h1>
+            <p class="hero-copy">
+                This page is a live intro to RyanCherches.com. Instead of showing a gallery, it lets the different parts of the site happen behind the welcome screen: doges fight, the capybara clicker keeps getting tapped, and the article world keeps turning in the middle.
+            </p>
+            <div class="hero-actions">
+                <a href="index.html" class="button button-primary">Enter the Site</a>
+                <a href="login.html" class="button button-secondary">Login</a>
+            </div>
+            <div class="interaction-bar">
+                <button type="button" class="interaction-button" id="helpMainButton">Help Main Doge</button>
+                <button type="button" class="interaction-button" id="helpEnemyButton">Help Enemy Doge</button>
+                <button type="button" class="interaction-button" id="wakeSceneButton">Wake the Scene</button>
+            </div>
+            <div class="hero-pills">
+                <span>Games alive in the background</span>
+                <span>Articles floating through the scene</span>
+                <span>Projects, experiments, and stories in one intro</span>
+            </div>
+            <div class="status-grid">
+                <div class="status-card">
+                    <span>Doges</span>
+                    <strong id="fightStatus">Main Doge attacks first.</strong>
+                </div>
+                <div class="status-card">
+                    <span>Clicker</span>
+                    <strong id="clickStatus">Capybara is getting ready to pet.</strong>
+                </div>
+                <div class="status-card">
+                    <span>Reading</span>
+                    <strong id="readStatus">Reading about space right now.</strong>
+                </div>
+            </div>
+            <div class="snippet-panel">
+                <span>Article Snippet</span>
+                <strong id="snippetTitle">Space</strong>
+                <p id="snippetText">Big questions, cool facts, and the feeling of exploring something massive. This page leans into wonder and science at the same time.</p>
+                <a id="snippetLink" href="space.html">Read More</a>
+            </div>
+            <div class="mini-links">
+                <a href="dedogeium/index.html">DeDogeium</a>
+                <a href="cappybara clicker/index.html">Cappybara Clicker</a>
+                <a href="space.html">Articles</a>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const starfield = document.getElementById("starfield");
+        const mainDoge = document.getElementById("mainDoge");
+        const enemyDoge = document.getElementById("enemyDoge");
+        const impactRing = document.getElementById("impactRing");
+        const fightBadge = document.getElementById("fightBadge");
+        const fightStatus = document.getElementById("fightStatus");
+        const capybaraLead = document.getElementById("capybaraLead");
+        const capybaraFriend = document.getElementById("capybaraFriend");
+        const petPaw = document.getElementById("petPaw");
+        const petHearts = document.getElementById("petHearts");
+        const clickCount = document.getElementById("clickCount");
+        const clickStatus = document.getElementById("clickStatus");
+        const readStatus = document.getElementById("readStatus");
+        const readerNote = document.getElementById("readerNote");
+        const articleCards = Array.from(document.querySelectorAll(".article-card"));
+        const helpMainButton = document.getElementById("helpMainButton");
+        const helpEnemyButton = document.getElementById("helpEnemyButton");
+        const wakeSceneButton = document.getElementById("wakeSceneButton");
+        const snippetTitle = document.getElementById("snippetTitle");
+        const snippetText = document.getElementById("snippetText");
+        const snippetLink = document.getElementById("snippetLink");
+        const root = document.documentElement;
+
+        function buildStars() {
+            const total = window.innerWidth < 760 ? 34 : 58;
+            starfield.innerHTML = "";
+
+            for (let i = 0; i < total; i += 1) {
+                const star = document.createElement("span");
+                const size = Math.random() * 2.4 + 1.2;
+                star.className = "star";
+                star.style.left = `${Math.random() * 100}%`;
+                star.style.top = `${Math.random() * 100}%`;
+                star.style.width = `${size}px`;
+                star.style.height = `${size}px`;
+                star.style.opacity = `${0.25 + Math.random() * 0.65}`;
+                star.style.animationDelay = `${Math.random() * 4}s`;
+                star.style.animationDuration = `${3 + Math.random() * 4}s`;
+                starfield.appendChild(star);
+            }
+        }
+
+        let mainTurn = true;
+        const fightLines = [
+            "Main Doge attacks first.",
+            "Enemy Doge fires back.",
+            "Such battle. Much hype.",
+            "The arena is still going."
+        ];
+        let fightLineIndex = 0;
+
+        function resetFightClasses() {
+            mainDoge.classList.remove("attack-right", "hit-from-right");
+            enemyDoge.classList.remove("attack-left", "hit-from-left");
+            impactRing.classList.remove("show");
+        }
+
+        function runFight(forcedTurn = null, customLine = "") {
+            if (forcedTurn !== null) {
+                mainTurn = forcedTurn;
+            }
+
+            resetFightClasses();
+            void mainDoge.offsetWidth;
+
+            const line = customLine || fightLines[fightLineIndex % fightLines.length];
+            if (!customLine) {
+                fightLineIndex += 1;
+            }
+            fightBadge.textContent = line;
+            fightStatus.textContent = line;
+
+            if (mainTurn) {
+                mainDoge.classList.add("attack-right");
+                enemyDoge.classList.add("hit-from-left");
+            } else {
+                enemyDoge.classList.add("attack-left");
+                mainDoge.classList.add("hit-from-right");
+            }
+
+            impactRing.classList.add("show");
+            mainTurn = !mainTurn;
+        }
+
+        let clicks = 0;
+        const clickLines = [
+            "Capybara is getting ready to pet.",
+            "Gentle pet delivered.",
+            "Another soft pet lands.",
+            "These capybaras are best friends."
+        ];
+
+        function spawnClickPop() {
+            const pop = document.createElement("div");
+            pop.className = "click-pop";
+            pop.textContent = clicks % 4 === 0 ? "so wholesome" : "+1 pet";
+            pop.style.left = `${50 + Math.random() * 20}%`;
+            pop.style.bottom = `${176 + Math.random() * 46}px`;
+            document.querySelector(".zone-cap").appendChild(pop);
+            setTimeout(() => pop.remove(), 950);
+        }
+
+        function pulseCapybara() {
+            clicks += 1;
+            clickCount.textContent = clicks;
+            clickStatus.textContent = clickLines[clicks % clickLines.length];
+
+            capybaraLead.classList.remove("is-clicked");
+            capybaraFriend.classList.remove("is-clicked");
+            petPaw.classList.remove("is-patting");
+            petHearts.classList.remove("show");
+            void capybaraLead.offsetWidth;
+            capybaraLead.classList.add("is-clicked");
+            capybaraFriend.classList.add("is-clicked");
+            petPaw.classList.add("is-patting");
+            petHearts.classList.add("show");
+            spawnClickPop();
+
+            setTimeout(() => {
+                capybaraLead.classList.remove("is-clicked");
+                capybaraFriend.classList.remove("is-clicked");
+                petPaw.classList.remove("is-patting");
+                petHearts.classList.remove("show");
+            }, 240);
+        }
+
+        let activeArticle = 0;
+
+        function cycleArticles() {
+            articleCards.forEach((card, index) => {
+                card.classList.toggle("is-active", index === activeArticle);
+            });
+
+            const activeCard = articleCards[activeArticle];
+            const note = activeCard.dataset.read;
+            readerNote.textContent = note;
+            readStatus.textContent = note;
+            setSnippet(activeCard);
+            activeArticle = (activeArticle + 1) % articleCards.length;
+        }
+
+        function setSnippet(card) {
+            snippetTitle.textContent = card.dataset.title;
+            snippetText.textContent = card.dataset.snippet;
+            snippetLink.href = card.dataset.link;
+            snippetLink.textContent = `Read ${card.dataset.title}`;
+        }
+
+        function nudgeScene() {
+            pulseCapybara();
+            cycleArticles();
+            runFight(mainTurn, "You shook the whole intro scene.");
+            const shiftX = (Math.random() - 0.5) * 18;
+            const shiftY = (Math.random() - 0.5) * 12;
+            root.style.setProperty("--shift-x", `${shiftX}px`);
+            root.style.setProperty("--shift-y", `${shiftY}px`);
+            root.style.setProperty("--article-shift-x", `${shiftX * 0.55}px`);
+            root.style.setProperty("--article-shift-y", `${shiftY * 0.4}px`);
+        }
+
+        function updateBackgroundFromPointer(clientX, clientY) {
+            const normalizedX = clientX / window.innerWidth - 0.5;
+            const normalizedY = clientY / window.innerHeight - 0.5;
+            const shiftX = normalizedX * 20;
+            const shiftY = normalizedY * 14;
+
+            root.style.setProperty("--shift-x", `${shiftX}px`);
+            root.style.setProperty("--shift-y", `${shiftY}px`);
+            root.style.setProperty("--article-shift-x", `${shiftX * 0.55}px`);
+            root.style.setProperty("--article-shift-y", `${shiftY * 0.42}px`);
+        }
+
+        buildStars();
+        cycleArticles();
+        runFight();
+        pulseCapybara();
+
+        window.addEventListener("resize", buildStars);
+        window.addEventListener("pointermove", (event) => {
+            updateBackgroundFromPointer(event.clientX, event.clientY);
+        });
+        window.addEventListener("pointerleave", () => {
+            updateBackgroundFromPointer(window.innerWidth / 2, window.innerHeight / 2);
+        });
+
+        capybaraLead.addEventListener("click", pulseCapybara);
+        capybaraFriend.addEventListener("click", pulseCapybara);
+        petPaw.addEventListener("click", pulseCapybara);
+        mainDoge.addEventListener("click", () => runFight(true, "You helped Main Doge strike."));
+        enemyDoge.addEventListener("click", () => runFight(false, "You helped Enemy Doge counter."));
+        helpMainButton.addEventListener("click", () => runFight(true, "You helped Main Doge strike."));
+        helpEnemyButton.addEventListener("click", () => runFight(false, "You helped Enemy Doge counter."));
+        wakeSceneButton.addEventListener("click", nudgeScene);
+
+        articleCards.forEach((card, index) => {
+            card.addEventListener("click", () => {
+                activeArticle = index;
+                articleCards.forEach((entry, entryIndex) => {
+                    entry.classList.toggle("is-active", entryIndex === index);
+                });
+                readerNote.textContent = card.dataset.read;
+                readStatus.textContent = card.dataset.read;
+                setSnippet(card);
+            });
+        });
+
+        setInterval(runFight, 1800);
+        setInterval(pulseCapybara, 1150);
+        setInterval(cycleArticles, 2300);
+    </script>
+</body>
+</html>

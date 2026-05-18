@@ -57,6 +57,25 @@ function closePopup() {
     if (promoInput) promoInput.value = "";
 }
 
+function escapeLeaderboardText(value) {
+    return String(value || "").replace(/[&<>"']/g, (character) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;",
+    }[character]));
+}
+
+function getLeaderboardEntryTitle(entry) {
+    if (!entry || typeof entry !== "object") return "";
+    const title = entry.title
+        || (entry.record && entry.record.profileStats && entry.record.profileStats.title)
+        || (entry.record && entry.record.title)
+        || "";
+    return String(title || "").trim();
+}
+
 if (promoCodeImg) {
     promoCodeImg.addEventListener("click", openPopup);
 }
@@ -644,13 +663,17 @@ function renderLeaderboard() {
         leaderboardList.appendChild(empty);
     } else {
         visibleEntries.forEach((entry) => {
+            const entryTitle = getLeaderboardEntryTitle(entry);
+            const metaLabel = entry.username === currentUsername
+                ? (entryTitle ? `You - ${entryTitle}` : "You")
+                : (entryTitle || "Leaderboard contender");
             const row = document.createElement("div");
             row.className = `leaderboard-row ${entry.username === currentUsername ? "is-current-player" : ""}`;
             row.innerHTML = `
                 <span class="leaderboard-rank">#${entry.rank}</span>
                 <div>
-                    <p class="leaderboard-player-name">${entry.displayName}</p>
-                    <p class="leaderboard-player-meta">${entry.username === currentUsername ? "You" : "Leaderboard contender"}</p>
+                    <p class="leaderboard-player-name">${escapeLeaderboardText(entry.displayName)}</p>
+                    <p class="leaderboard-player-meta">${escapeLeaderboardText(metaLabel)}</p>
                 </div>
                 <div class="leaderboard-value">${formatLeaderboardValue(leaderboardState.category, entry.value)}</div>
             `;

@@ -58,7 +58,13 @@
             <br><br>
         </div>
     </main>
+    <script src="server_config.js"></script>
+    <script src="game_systems.js"></script>
     <script>
+        function normalizePlayerTitle(value) {
+            return String(value || "").trim().slice(0, 64);
+        }
+
         function getCurrentUsername() {
             const keys = ["Username", "Uabcd", "username", "playerName"];
             for (const key of keys) {
@@ -84,6 +90,12 @@
                 const players = JSON.parse(localStorage.getItem("dedogeium_players") || "{}");
                 if (!players[username]) players[username] = {};
                 players[username].title = title;
+                players[username].profileStats = {
+                    ...(players[username].profileStats || {}),
+                    title,
+                    updatedAt: Date.now(),
+                };
+                players[username].lastSeen = Date.now();
                 localStorage.setItem("dedogeium_players", JSON.stringify(players));
             } catch (error) {
                 // ignore
@@ -110,7 +122,10 @@
                         return;
                     }
                     saveStoredTitle(username, title);
-                    feedback.textContent = `Title saved: ${title}`;
+                    if (window.DedogeiumSystems && typeof window.DedogeiumSystems.recordCurrentProfileSnapshot === "function") {
+                        window.DedogeiumSystems.recordCurrentProfileSnapshot();
+                    }
+                    feedback.textContent = `Title saved: ${title}. It will show on the leaderboard after the next sync.`;
                 });
             }
 
@@ -143,5 +158,4 @@
     </script>
 </body>
 </html>
-
 

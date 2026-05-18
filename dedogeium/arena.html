@@ -14,7 +14,7 @@
             <div class="brand">
                 <img src="Im just a chill guy no background.png" alt="Doge fighter" class="brand-image">
                 <div>
-                    <p class="eyebrow">Dedogeium LAN</p>
+                    <p class="eyebrow">Dedogeium Online Arena</p>
                     <h1>Combat Arena</h1>
                 </div>
             </div>
@@ -33,7 +33,7 @@
                         <p class="eyebrow">Your Fighter</p>
                         <h2 id="player-name">Not logged in</h2>
                     </div>
-                    <button id="refresh-btn" type="button">Search LAN Players</button>
+                    <button id="refresh-btn" type="button">Find Players</button>
                 </div>
                 <div class="player-card">
                     <img id="player-avatar" src="Im just a chill guy no background.png" alt="Your fighter">
@@ -52,23 +52,40 @@
                     <div class="server-config-row">
                         <input id="server-url" type="text" placeholder="https://your-server.example">
                         <button id="save-server-btn" type="button">Save Server</button>
+                        <button id="copy-arena-link-btn" type="button" class="secondary">Copy Invite Link</button>
+                    </div>
+                    <p id="arena-share-status" class="share-status">Use a public server or tunnel link to play with people outside your network.</p>
+                </div>
+                <div class="computer-config">
+                    <button id="toggle-comp-mode" type="button" class="secondary">Play Computer</button>
+                    <div id="computer-mode" class="computer-mode" style="display:none; margin-top: 1rem;">
+                        <label for="computer-difficulty">Choose computer difficulty</label>
+                        <select id="computer-difficulty">
+                            <option value="easy">Easy</option>
+                            <option value="medium">Medium</option>
+                            <option value="hard">Hard</option>
+                            <option value="impossible">Impossible</option>
+                        </select>
+                        <p id="computer-difficulty-preview" class="difficulty-preview">CPU Health: 800 HP</p>
+                        <button id="fight-comp-btn" type="button">Fight CPU</button>
+                        <p class="helper-text" style="margin-top:0.5rem;">Easy = 1 point, Medium = 2 points, Hard = 3 points, Impossible = 4 points.</p>
                     </div>
                 </div>
                 <p class="helper-text">
-                    The arena now prefers the same address you opened this page from. For free cross-network play, open it through a Tailscale, tunnel, or public link, and it should auto-use that server.
+                    For cross-network play, everyone must use the same public server or tunnel link. Local links like 127.0.0.1 only work on this computer.
                 </p>
             </section>
 
             <section class="panel players-panel">
                 <div class="panel-title-row">
                     <div>
-                        <p class="eyebrow">Players Nearby</p>
-                        <h2>LAN Search Results</h2>
+                        <p class="eyebrow">Players Online</p>
+                        <h2>Arena Search Results</h2>
                     </div>
                     <span id="players-online" class="badge">0 online</span>
                 </div>
                 <div id="players-list" class="list-stack empty-state">
-                    Search the LAN to look for active fighters.
+                    Find online fighters using the current arena server.
                 </div>
             </section>
 

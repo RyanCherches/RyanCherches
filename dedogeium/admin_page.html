@@ -43,8 +43,21 @@
         .admin-panel { display:flex; gap:20px; margin-top:20px; }
         .players-list { width:260px; background:#111; padding:12px; border-radius:6px; max-height:420px; overflow:auto; }
         .players-list button { display:block; width:100%; text-align:left; margin-bottom:6px; }
+        .players-list button.is-banned { border-left:4px solid #ff5c5c; color:#ffdcdc; }
         .player-detail { flex:1; background:#0b0b0b; padding:12px; border-radius:6px; max-height:420px; overflow:auto; }
         .inv-item { padding:6px; border-bottom:1px solid #222; }
+        .ban-badge { color:#ffb4b4; font-weight:bold; }
+        .leaderboard-ban-panel { margin:12px 0; padding:12px; border:1px solid #552222; border-radius:8px; background:#170707; }
+        .quick-ban-panel { width:min(720px, calc(100% - 32px)); }
+        .leaderboard-ban-panel h4 { margin:0 0 8px; }
+        .leaderboard-ban-panel label { display:block; margin:8px 0 4px; color:#ddd; }
+        .leaderboard-ban-panel input,
+        .leaderboard-ban-panel select,
+        .leaderboard-ban-panel textarea { width:100%; box-sizing:border-box; padding:8px; border-radius:6px; border:1px solid #333; background:#070707; color:#fff; }
+        .ban-duration-row { display:flex; gap:8px; }
+        .ban-duration-row input,
+        .ban-duration-row select { flex:1; }
+        .admin-status { min-height:18px; color:#bbb; }
     </style>
     <script>
         // Show a helpful warning when pages are opened via file:// (localStorage may be isolated)
@@ -171,89 +184,270 @@
         }
 
         // ===== Players admin functions =====
+        let adminPlayers = {};
+        let selectedAdminPlayer = "";
+
+        function escapeHtml(value) {
+            return String(value ?? "").replace(/[&<>"']/g, character => ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                "\"": "&quot;",
+                "'": "&#39;",
+            }[character]));
+        }
+
+        function getAdminServerBase() {
+            const allowOriginServer = typeof window.DEDOGEIUM_ALLOW_ORIGIN_SERVER === "boolean"
+                ? window.DEDOGEIUM_ALLOW_ORIGIN_SERVER
+                : true;
+            const originServer = allowOriginServer && window.location.origin && window.location.origin !== "null"
+                ? window.location.origin
+                : "";
+            return (window.SERVER_URL || localStorage.getItem(window.DEDOGEIUM_SERVER_STORAGE_KEY || "dedogeiumServerUrl") || originServer || "").replace(/\/$/, "");
+        }
+
+        async function adminApi(path, options = {}) {
+            const server = getAdminServerBase();
+            if (!server) throw new Error("No Dedogeium server is configured.");
+            const response = await fetch(server + path, {
+                method: options.method || "GET",
+                headers: { "Content-Type": "application/json" },
+                body: options.body ? JSON.stringify(options.body) : undefined,
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(data && data.error ? data.error : "The admin server request failed.");
+            }
+            return data;
+        }
+
+        function saveAdminPlayers(players) {
+            adminPlayers = players && typeof players === "object" ? players : {};
+        }
+
+        function normalizeLeaderboardBan(rawBan) {
+            if (!rawBan || typeof rawBan !== "object") return null;
+            const permanent = rawBan.permanent === true;
+            const until = permanent ? null : Math.max(0, Math.round(Number(rawBan.until) || 0));
+            const active = rawBan.active !== false && (permanent || until > 0);
+            if (!active && !rawBan.reason && !rawBan.bannedAt) return null;
+            return {
+                active,
+                permanent,
+                until,
+                reason: typeof rawBan.reason === "string" ? rawBan.reason : "",
+                bannedAt: Math.max(0, Math.round(Number(rawBan.bannedAt) || 0)),
+                bannedBy: typeof rawBan.bannedBy === "string" ? rawBan.bannedBy : "admin",
+            };
+        }
+
+        function isLeaderboardBanActive(rawBan) {
+            const ban = normalizeLeaderboardBan(rawBan);
+            if (!ban || ban.active === false) return false;
+            return ban.permanent || (Number(ban.until) || 0) > Date.now();
+        }
+
+        function getLeaderboardBanLabel(rawBan) {
+            const ban = normalizeLeaderboardBan(rawBan);
+            if (!ban) return "Not banned from leaderboard.";
+            if (isLeaderboardBanActive(ban)) {
+                return ban.permanent
+                    ? `Permanently banned${ban.reason ? ` - ${ban.reason}` : ""}.`
+                    : `Banned until ${new Date(ban.until).toLocaleString()}${ban.reason ? ` - ${ban.reason}` : ""}.`;
+            }
+            return `Previous ban expired${ban.until ? ` on ${new Date(ban.until).toLocaleString()}` : ""}.`;
+        }
+
+        function getDurationMsFromControls() {
+            const amount = Math.max(1, Number(document.getElementById("leaderboard-ban-duration")?.value) || 1);
+            const unit = document.getElementById("leaderboard-ban-unit")?.value || "hours";
+            const multipliers = {
+                minutes: 60 * 1000,
+                hours: 60 * 60 * 1000,
+                days: 24 * 60 * 60 * 1000,
+            };
+            return Math.round(amount * (multipliers[unit] || multipliers.hours));
+        }
+
+        function updateStoredPlayer(name, player) {
+            if (!name || !player) return;
+            const players = { ...adminPlayers, [name]: player };
+            saveAdminPlayers(players);
+        }
+
+        function setBanFeedback(message, isError) {
+            const el = document.getElementById("leaderboard-ban-feedback");
+            if (!el) return;
+            el.textContent = message || "";
+            el.style.color = isError ? "#ffb4b4" : "#b7ffb7";
+        }
+
+        function setQuickBanFeedback(message, isError) {
+            const el = document.getElementById("quick-leaderboard-ban-feedback");
+            if (!el) return;
+            el.textContent = message || "";
+            el.style.color = isError ? "#ffb4b4" : "#b7ffb7";
+        }
+
+        function updateQuickBanPlayerList(names) {
+            const select = document.getElementById("quick-leaderboard-ban-username");
+            if (!select) return;
+            const previous = select.value;
+            select.innerHTML = '<option value="">Select a player</option>';
+            names.forEach((name) => {
+                const option = document.createElement("option");
+                option.value = name;
+                const player = adminPlayers[name] || {};
+                option.textContent = `${name}${isLeaderboardBanActive(player.leaderboardBan) ? " (leaderboard banned)" : ""}`;
+                select.appendChild(option);
+            });
+            if (previous && names.includes(previous)) {
+                select.value = previous;
+            }
+        }
+
+        function getQuickBanUsername() {
+            return String(document.getElementById("quick-leaderboard-ban-username")?.value || "").trim().toLowerCase();
+        }
+
+        function getQuickBanDurationMs() {
+            const amount = Math.max(1, Number(document.getElementById("quick-leaderboard-ban-duration")?.value) || 1);
+            const unit = document.getElementById("quick-leaderboard-ban-unit")?.value || "hours";
+            const multipliers = {
+                minutes: 60 * 1000,
+                hours: 60 * 60 * 1000,
+                days: 24 * 60 * 60 * 1000,
+            };
+            return Math.round(amount * (multipliers[unit] || multipliers.hours));
+        }
+
+        async function quickBanLeaderboardPlayer() {
+            const name = getQuickBanUsername();
+            if (!name) {
+                setQuickBanFeedback("Enter a username first.", true);
+                return;
+            }
+            const permanent = Boolean(document.getElementById("quick-leaderboard-ban-permanent")?.checked);
+            const reason = document.getElementById("quick-leaderboard-ban-reason")?.value.trim() || "";
+            const durationMs = permanent ? 0 : getQuickBanDurationMs();
+            try {
+                const data = await adminApi("/api/admin/leaderboard-ban", {
+                    method: "POST",
+                    body: { username: name, permanent, durationMs, reason },
+                });
+                updateStoredPlayer(name, data.player);
+                setQuickBanFeedback(`${name} is now banned from the SQL leaderboard.`, false);
+            } catch (error) {
+                setQuickBanFeedback(`SQL ban failed: ${error.message}`, true);
+                return;
+            }
+            await loadPlayers();
+            showPlayer(name);
+        }
+
+        async function quickUnbanLeaderboardPlayer() {
+            const name = getQuickBanUsername();
+            if (!name) {
+                setQuickBanFeedback("Enter a username first.", true);
+                return;
+            }
+            try {
+                const data = await adminApi("/api/admin/leaderboard-unban", {
+                    method: "POST",
+                    body: { username: name },
+                });
+                updateStoredPlayer(name, data.player);
+                setQuickBanFeedback(`${name} is unbanned from the SQL leaderboard.`, false);
+            } catch (error) {
+                setQuickBanFeedback(`SQL unban failed: ${error.message}`, true);
+                return;
+            }
+            await loadPlayers();
+            showPlayer(name);
+        }
+
+        async function banLeaderboardPlayer(name) {
+            const permanent = Boolean(document.getElementById("leaderboard-ban-permanent")?.checked);
+            const reason = document.getElementById("leaderboard-ban-reason")?.value.trim() || "";
+            const durationMs = permanent ? 0 : getDurationMsFromControls();
+            const payload = { username: name, permanent, durationMs, reason };
+            try {
+                const data = await adminApi("/api/admin/leaderboard-ban", { method: "POST", body: payload });
+                updateStoredPlayer(name, data.player);
+                setBanFeedback("Leaderboard ban saved on the SQL server.", false);
+            } catch (error) {
+                setBanFeedback(`SQL ban failed: ${error.message}`, true);
+                return;
+            }
+            await loadPlayers();
+            showPlayer(name);
+        }
+
+        async function unbanLeaderboardPlayer(name) {
+            try {
+                const data = await adminApi("/api/admin/leaderboard-unban", { method: "POST", body: { username: name } });
+                updateStoredPlayer(name, data.player);
+                setBanFeedback("Leaderboard ban removed on the SQL server.", false);
+            } catch (error) {
+                setBanFeedback(`SQL unban failed: ${error.message}`, true);
+                return;
+            }
+            await loadPlayers();
+            showPlayer(name);
+        }
+
+        function appendLeaderboardBanControls(detail, name, player) {
+            const wrapper = document.createElement("div");
+            wrapper.className = "leaderboard-ban-panel";
+            wrapper.innerHTML = `
+                <h4>Leaderboard Ban</h4>
+                <p>Current: <span class="${isLeaderboardBanActive(player.leaderboardBan) ? "ban-badge" : ""}">${escapeHtml(getLeaderboardBanLabel(player.leaderboardBan))}</span></p>
+                <label><input id="leaderboard-ban-permanent" type="checkbox"> Permanent ban</label>
+                <label>Temporary ban length</label>
+                <div class="ban-duration-row">
+                    <input id="leaderboard-ban-duration" type="number" min="1" value="24">
+                    <select id="leaderboard-ban-unit">
+                        <option value="minutes">minutes</option>
+                        <option value="hours" selected>hours</option>
+                        <option value="days">days</option>
+                    </select>
+                </div>
+                <label for="leaderboard-ban-reason">Reason shown to admins</label>
+                <textarea id="leaderboard-ban-reason" rows="2" placeholder="Optional reason"></textarea>
+                <div>
+                    <button id="ban-leaderboard-btn" type="button">Ban From Leaderboard</button>
+                    <button id="unban-leaderboard-btn" type="button">Unban From Leaderboard</button>
+                </div>
+                <p id="leaderboard-ban-feedback" class="admin-status"></p>
+            `;
+            detail.appendChild(wrapper);
+            document.getElementById("ban-leaderboard-btn").addEventListener("click", () => banLeaderboardPlayer(name));
+            document.getElementById("unban-leaderboard-btn").addEventListener("click", () => unbanLeaderboardPlayer(name));
+        }
+
         async function loadPlayers() {
-                    // try central server first (configurable)
-                    let players = {};
-                    try {
-                        const allowOriginServer = typeof window.DEDOGEIUM_ALLOW_ORIGIN_SERVER === "boolean"
-                            ? window.DEDOGEIUM_ALLOW_ORIGIN_SERVER
-                            : true;
-                        const originServer = allowOriginServer && window.location.origin && window.location.origin !== "null"
-                            ? window.location.origin
-                            : "";
-                        const server = (window.SERVER_URL || localStorage.getItem(window.DEDOGEIUM_SERVER_STORAGE_KEY || "dedogeiumServerUrl") || originServer || '').replace(/\/$/, '');
-                        if (!server) throw new Error('No server configured');
-                        const res = await fetch(server + '/api/players');
-                        if (res.ok) players = await res.json();
-                    } catch (e) {
-                        // fallback to localStorage
-                        players = JSON.parse(localStorage.getItem('dedogeium_players')) || {};
-                    }
-            // also import any inventory_<name> keys present in localStorage
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (!key) continue;
-                if (key.startsWith('inventory_')) {
-                    const name = key.slice('inventory_'.length);
-                    try {
-                        const inv = JSON.parse(localStorage.getItem(key)) || [];
-                        if (!players[name]) {
-                            players[name] = { firstSeen: null, lastSeen: null, visits: 0, inventory: inv };
-                        } else {
-                            // only set inventory if not present
-                            players[name].inventory = players[name].inventory || inv;
-                        }
-                    } catch (e) { /* ignore malformed */ }
-                }
-            }
-
-            // If no players recorded, or to ensure current session keys are included,
-            // prioritize the exact `Username` / `Password` variables saved by the login page.
-            const sessionName = localStorage.getItem('Username');
-            if (sessionName) {
-                try {
-                    const name = String(sessionName).trim().toLowerCase();
-                    if (name && !players[name]) {
-                        const invKey = 'inventory_' + name;
-                        let inv = [];
-                        try { inv = JSON.parse(localStorage.getItem(invKey)) || JSON.parse(localStorage.getItem('inventory')) || []; } catch(e) { inv = []; }
-                        const pwd = localStorage.getItem('Password') || null;
-                        players[name] = { firstSeen: null, lastSeen: Date.now(), visits: 1, inventory: inv, password: pwd };
-                    }
-                } catch (e) { /* ignore */ }
-            }
-
-            // If still empty, attempt broader discovery using common keys and inventory_* entries
-            if (Object.keys(players).length === 0) {
-                const usernameKeys = ['Uabcd','username','user','playerName','signup_user','name'];
-                const passKeys = ['Pabc','password','pass','pwd'];
-                for (let k of usernameKeys) {
-                    const v = localStorage.getItem(k);
-                    if (!v) continue;
-                    const name = String(v).trim().toLowerCase();
-                    if (!name) continue;
-                    if (!players[name]) {
-                        let inv = [];
-                        try { inv = JSON.parse(localStorage.getItem('inventory_' + name)) || JSON.parse(localStorage.getItem('inventory')) || []; } catch(e) { inv = [] }
-                        let pwd = null;
-                        for (let pk of passKeys) {
-                            const pv = localStorage.getItem(pk);
-                            if (pv) { pwd = pv; break; }
-                        }
-                        players[name] = { firstSeen: null, lastSeen: null, visits: 1, inventory: inv, password: pwd };
-                    }
-                }
-            }
             const list = document.getElementById('players-list');
             const detail = document.getElementById('player-detail');
             list.innerHTML = '';
             detail.innerHTML = '<p>Select a player to view inventory.</p>';
+            list.innerHTML = '<p style="color:#bbb">Loading SQL players...</p>';
 
-            // place import/export UI above player list if not already present
-            const container = document.getElementById('players-list-container');
-            if (container) return; // already inserted
+            let players = {};
+            try {
+                players = await adminApi('/api/players');
+            } catch (error) {
+                saveAdminPlayers({});
+                updateQuickBanPlayerList([]);
+                list.innerHTML = `<p style="color:#ffb4b4">Could not load SQL players: ${escapeHtml(error.message)}. Start the Dedogeium server and open this page from the server URL.</p>`;
+                return;
+            }
+
+            saveAdminPlayers(players);
+            list.innerHTML = '';
 
             const names = Object.keys(players).sort((a,b)=> (players[b].lastSeen||0) - (players[a].lastSeen||0));
+            updateQuickBanPlayerList(names);
             if (names.length === 0) {
                 list.innerHTML = '<p style="color:#bbb">No players recorded yet.</p>';
                 return;
@@ -262,54 +456,54 @@
             names.forEach(name => {
                 const p = players[name];
                 const btn = document.createElement('button');
-                btn.textContent = `${name} (${p.visits || 1})`;
+                btn.textContent = `${name} (${p.visits || 1})${isLeaderboardBanActive(p.leaderboardBan) ? ' - leaderboard banned' : ''}`;
+                if (isLeaderboardBanActive(p.leaderboardBan)) btn.classList.add('is-banned');
                 btn.addEventListener('click', () => showPlayer(name));
                 list.appendChild(btn);
             });
         }
 
-        // Export dedogeium_players as a JSON file
-        function exportPlayers() {
-            const players = JSON.parse(localStorage.getItem('dedogeium_players')) || {};
+        // Export the SQL players as a JSON file.
+        async function exportPlayers() {
+            let players = adminPlayers;
+            try {
+                players = await adminApi('/api/players');
+                saveAdminPlayers(players);
+                updateQuickBanPlayerList(Object.keys(players).sort((a,b)=> (players[b].lastSeen||0) - (players[a].lastSeen||0)));
+            } catch (error) {
+                alert('SQL export failed: ' + error.message);
+                return;
+            }
             const blob = new Blob([JSON.stringify(players, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'dedogeium_players.json';
+            a.download = 'dedogeium_sql_players.json';
             document.body.appendChild(a);
             a.click();
             a.remove();
             URL.revokeObjectURL(url);
         }
 
-        // Merge players object into localStorage
-        function mergePlayers(newPlayers) {
-            const existing = JSON.parse(localStorage.getItem('dedogeium_players')) || {};
-            Object.keys(newPlayers).forEach(name => {
-                const np = newPlayers[name] || {};
-                const ep = existing[name] || { firstSeen: null, lastSeen: null, visits: 0, inventory: [] };
+        // Merge a players object into SQL through the admin server.
+        async function mergePlayers(newPlayers) {
+            if (!newPlayers || typeof newPlayers !== 'object' || Array.isArray(newPlayers)) {
+                alert('Import JSON must be a players object.');
+                return false;
+            }
 
-                // merge timestamps and visits
-                ep.firstSeen = ep.firstSeen ? Math.min(ep.firstSeen, np.firstSeen || ep.firstSeen) : (np.firstSeen || ep.firstSeen);
-                ep.lastSeen = ep.lastSeen ? Math.max(ep.lastSeen, np.lastSeen || ep.lastSeen) : (np.lastSeen || ep.lastSeen);
-                ep.visits = (ep.visits || 0) + (np.visits || 0);
-
-                // prefer password if we don't have one
-                if (!ep.password && np.password) ep.password = np.password;
-
-                // merge inventories by id
-                const existingInv = ep.inventory || [];
-                const newInv = np.inventory || [];
-                const map = {};
-                existingInv.concat(newInv).forEach(it => { if (it && it.id) map[it.id] = it; });
-                ep.inventory = Object.values(map);
-
-                existing[name] = ep;
-                // also store inventory_<name>
-                try { localStorage.setItem('inventory_' + name, JSON.stringify(ep.inventory)); } catch (e) {}
-            });
-            localStorage.setItem('dedogeium_players', JSON.stringify(existing));
-            loadPlayers();
+            try {
+                await adminApi('/api/merge', {
+                    method: 'POST',
+                    body: newPlayers,
+                });
+                await loadPlayers();
+                alert('SQL import complete.');
+                return true;
+            } catch (error) {
+                alert('SQL import failed: ' + error.message);
+                return false;
+            }
         }
 
         // Import players from uploaded file input
@@ -317,11 +511,10 @@
             const file = e.target.files && e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = function() {
+            reader.onload = async function() {
                 try {
                     const parsed = JSON.parse(reader.result);
-                    mergePlayers(parsed);
-                    alert('Import complete.');
+                    await mergePlayers(parsed);
                 } catch (err) { alert('Failed to parse JSON'); }
             };
             reader.readAsText(file);
@@ -330,29 +523,30 @@
         }
 
         // Import players from pasted JSON textarea
-        function importPlayersFromText() {
+        async function importPlayersFromText() {
             const ta = document.getElementById('players-import-text');
             if (!ta) return;
             try {
                 const parsed = JSON.parse(ta.value);
-                mergePlayers(parsed);
-                ta.value = '';
-                alert('Import complete.');
+                const ok = await mergePlayers(parsed);
+                if (ok) ta.value = '';
             } catch (err) { alert('Invalid JSON'); }
         }
 
         function showPlayer(name) {
-            const players = JSON.parse(localStorage.getItem('dedogeium_players')) || {};
+            selectedAdminPlayer = name;
+            const players = adminPlayers || {};
             const p = players[name];
             const detail = document.getElementById('player-detail');
             detail.innerHTML = '';
-            if (!p) { detail.innerHTML = '<p>Player not found.</p>'; return; }
+            if (!p) { detail.innerHTML = '<p>Player not found in SQL. Reload players and try again.</p>'; return; }
 
             const meta = document.createElement('div');
-            meta.innerHTML = `<h3>${name}</h3><p>First: ${p.firstSeen ? new Date(p.firstSeen).toLocaleString() : 'n/a'}</p><p>Last: ${p.lastSeen ? new Date(p.lastSeen).toLocaleString() : 'n/a'}</p><p>Visits: ${p.visits || 1}</p><p>Password: ${p.password ? p.password : 'n/a'}</p><hr>`;
+            meta.innerHTML = `<h3>${escapeHtml(name)}</h3><p>First: ${p.firstSeen ? new Date(p.firstSeen).toLocaleString() : 'n/a'}</p><p>Last: ${p.lastSeen ? new Date(p.lastSeen).toLocaleString() : 'n/a'}</p><p>Visits: ${p.visits || 1}</p><p>Password: ${p.password ? escapeHtml(p.password) : 'n/a'}</p><p>Leaderboard: <span class="${isLeaderboardBanActive(p.leaderboardBan) ? 'ban-badge' : ''}">${escapeHtml(getLeaderboardBanLabel(p.leaderboardBan))}</span></p><hr>`;
             detail.appendChild(meta);
+            appendLeaderboardBanControls(detail, name, p);
 
-            const inv = p.inventory || JSON.parse(localStorage.getItem('inventory_' + name)) || [];
+            const inv = Array.isArray(p.inventory) ? p.inventory : [];
             if (inv.length === 0) {
                 const n = document.createElement('p'); n.textContent = 'No inventory recorded.'; detail.appendChild(n); return;
             }
@@ -368,6 +562,31 @@
 </head>
 <body>
     <a href="customize/" class="link">Go to customize page</a>
+    <div class="leaderboard-ban-panel quick-ban-panel">
+        <h3>Quick Leaderboard Ban</h3>
+        <p>Type a username here to ban or unban someone from the leaderboard without selecting them first.</p>
+        <label for="quick-leaderboard-ban-username">Player</label>
+        <select id="quick-leaderboard-ban-username">
+            <option value="">Loading players...</option>
+        </select>
+        <label><input id="quick-leaderboard-ban-permanent" type="checkbox"> Permanent ban</label>
+        <label>Temporary ban length</label>
+        <div class="ban-duration-row">
+            <input id="quick-leaderboard-ban-duration" type="number" min="1" value="24">
+            <select id="quick-leaderboard-ban-unit">
+                <option value="minutes">minutes</option>
+                <option value="hours" selected>hours</option>
+                <option value="days">days</option>
+            </select>
+        </div>
+        <label for="quick-leaderboard-ban-reason">Reason shown to admins</label>
+        <textarea id="quick-leaderboard-ban-reason" rows="2" placeholder="Optional reason"></textarea>
+        <div>
+            <button id="quick-ban-leaderboard-btn" type="button">Ban From Leaderboard</button>
+            <button id="quick-unban-leaderboard-btn" type="button">Unban From Leaderboard</button>
+        </div>
+        <p id="quick-leaderboard-ban-feedback" class="admin-status"></p>
+    </div>
     <div class="admin-panel">
         <div>
             <!-- <div style="margin-bottom:8px; display:flex; gap:8px; align-items:center;">
@@ -376,7 +595,7 @@
                 <button onclick="(function(){ const ta = document.getElementById('players-import-text'); ta.style.display = ta.style.display === 'block' ? 'none' : 'block'; })()">Toggle Paste Import</button>
             </div> -->
             <div id="players-import-hint" style="color:#bbb; font-size:12px; margin-bottom:6px;"></div>
-            <textarea id="players-import-text" placeholder='Paste dedogeium_players JSON here' style="width:240px; height:80px; display:none;"></textarea>
+            <textarea id="players-import-text" placeholder='Paste SQL players JSON here' style="width:240px; height:80px; display:none;"></textarea>
             <!-- <div style="margin-top:6px;"><button onclick="importPlayersFromText()">Import Pasted JSON</button></div> -->
             <div class="players-list" id="players-list">Loading players...</div>
         </div>
@@ -397,6 +616,11 @@
         // initialize players panel after DOM ready
         document.addEventListener('DOMContentLoaded', function() {
             try { loadPlayers(); } catch (e) { console.error(e); }
+            document.getElementById("quick-ban-leaderboard-btn")?.addEventListener("click", quickBanLeaderboardPlayer);
+            document.getElementById("quick-unban-leaderboard-btn")?.addEventListener("click", quickUnbanLeaderboardPlayer);
+            document.getElementById("quick-leaderboard-ban-username")?.addEventListener("change", (event) => {
+                if (event.target.value) showPlayer(event.target.value);
+            });
         });
     </script>
 </body>

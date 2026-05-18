@@ -22,10 +22,12 @@ const battleLogEl = document.getElementById("battle-log");
 const recentMatchesEl = document.getElementById("recent-matches");
 const serverUrlInput = document.getElementById("server-url");
 const saveServerBtn = document.getElementById("save-server-btn");
+const copyArenaLinkBtn = document.getElementById("copy-arena-link-btn");
+const arenaShareStatusEl = document.getElementById("arena-share-status");
 const toggleCompModeBtn = document.getElementById("toggle-comp-mode");
 const compModeContainer = document.getElementById("computer-mode");
-const compDamageInput = document.getElementById("comp-damage");
-const compHealthInput = document.getElementById("comp-health");
+const compDifficultySelect = document.getElementById("computer-difficulty");
+const compDifficultyPreview = document.getElementById("computer-difficulty-preview");
 const fightCompBtn = document.getElementById("fight-comp-btn");
 
 const pageOrigin = window.location.origin && window.location.origin !== "null" ? window.location.origin : "";
@@ -48,6 +50,7 @@ const arenaState = {
     lastWinnerKey: null,
     audioContext: null,
     battleMusic: null,
+    computerTurnTimer: null,
 };
 
 const rarityBonuses = {
@@ -115,6 +118,20 @@ function awardArenaWinCurrency(winnerKey) {
     showArenaRewardMessage(`Victory +${actualReward} coins!`, false);
 }
 
+function clearPendingComputerTurn() {
+    if (!arenaState.computerTurnTimer) return;
+    window.clearTimeout(arenaState.computerTurnTimer);
+    arenaState.computerTurnTimer = null;
+}
+
+function scheduleComputerTurn(delayMs = 800) {
+    clearPendingComputerTurn();
+    arenaState.computerTurnTimer = window.setTimeout(() => {
+        arenaState.computerTurnTimer = null;
+        runComputerTurn();
+    }, delayMs);
+}
+
 function normalizeServerUrl(value) {
     const trimmed = String(value || "").trim();
     if (!trimmed) return "";
@@ -127,6 +144,36 @@ function normalizeServerUrl(value) {
         return `${parsed.protocol}//${parsed.host}${normalizedPath}`;
     } catch (error) {
         return "";
+    }
+}
+
+function joinUrl(base, path) {
+    const cleanBase = String(base || "").replace(/\/+$/, "");
+    const cleanPath = String(path || "").replace(/^\/+/, "");
+    return cleanPath ? `${cleanBase}/${cleanPath}` : cleanBase;
+}
+
+function isPrivateNetworkHost(hostname) {
+    const host = String(hostname || "").toLowerCase();
+    if (!host) return true;
+    if (host === "localhost" || host === "127.0.0.1" || host === "::1" || host.endsWith(".local")) return true;
+    const match = host.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+    if (!match) return false;
+    const first = Number(match[1]);
+    const second = Number(match[2]);
+    return first === 10
+        || first === 127
+        || (first === 192 && second === 168)
+        || (first === 172 && second >= 16 && second <= 31);
+}
+
+function isPrivateNetworkUrl(value) {
+    const normalized = normalizeServerUrl(value);
+    if (!normalized) return true;
+    try {
+        return isPrivateNetworkHost(new URL(normalized).hostname);
+    } catch (error) {
+        return true;
     }
 }
 
@@ -294,9 +341,91 @@ function setConnectionStatus(message, isError) {
     connectionStatusEl.style.color = isError ? "#b91c1c" : "#124559";
 }
 
+function setArenaShareStatus(message, state = "") {
+    if (!arenaShareStatusEl) return;
+    arenaShareStatusEl.textContent = message || "";
+    arenaShareStatusEl.classList.toggle("is-error", state === "error");
+    arenaShareStatusEl.classList.toggle("is-ready", state === "ready");
+}
+
+function getActiveInviteServer() {
+    return normalizeServerUrl(serverBase || (serverUrlInput ? serverUrlInput.value : "") || getSiteServerCandidate());
+}
+
+function buildArenaInviteLink() {
+    const inviteServer = getActiveInviteServer();
+    if (!inviteServer) return "";
+
+    try {
+        const currentUrl = new URL(window.location.href);
+        const currentOrigin = normalizeServerUrl(currentUrl.origin);
+        const pageIsHttp = currentUrl.protocol === "http:" || currentUrl.protocol === "https:";
+        const pageUrl = pageIsHttp && currentOrigin && !isPrivateNetworkUrl(currentOrigin)
+            ? `${currentUrl.origin}${currentUrl.pathname}`
+            : joinUrl(inviteServer, "arena/");
+        const inviteUrl = new URL(pageUrl, window.location.href);
+        inviteUrl.searchParams.set("server", inviteServer);
+        return inviteUrl.toString();
+    } catch (error) {
+        return `${joinUrl(inviteServer, "arena/")}?server=${encodeURIComponent(inviteServer)}`;
+    }
+}
+
+function updateArenaShareStatus() {
+    if (!arenaShareStatusEl) return;
+    const inviteServer = getActiveInviteServer();
+    if (!inviteServer) {
+        setArenaShareStatus("Connect to an arena server first, then copy an invite link.", "error");
+        return;
+    }
+    if (isPrivateNetworkUrl(inviteServer)) {
+        setArenaShareStatus("This server URL is local or LAN-only. Outside players need a public tunnel or hosted server first.", "error");
+        return;
+    }
+    setArenaShareStatus("This server looks public. Copy the invite link and share it with another player.", "ready");
+}
+
+async function writeInviteLinkToClipboard(inviteLink) {
+    if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(inviteLink);
+        return true;
+    }
+
+    const textarea = document.createElement("textarea");
+    textarea.value = inviteLink;
+    textarea.setAttribute("readonly", "readonly");
+    textarea.style.position = "fixed";
+    textarea.style.left = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.select();
+    const copied = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    return copied;
+}
+
+async function copyArenaInviteLink() {
+    const inviteServer = getActiveInviteServer();
+    const inviteLink = buildArenaInviteLink();
+    if (!inviteServer || !inviteLink) {
+        setArenaShareStatus("Connect to an arena server first, then copy an invite link.", "error");
+        return;
+    }
+
+    try {
+        const copied = await writeInviteLinkToClipboard(inviteLink);
+        const localWarning = isPrivateNetworkUrl(inviteServer)
+            ? " This is still a local/LAN server, so outside players need a public tunnel first."
+            : " Share it with another player to use this same arena server.";
+        setArenaShareStatus(copied ? `Invite link copied.${localWarning}` : `Invite link: ${inviteLink}`, copied && !isPrivateNetworkUrl(inviteServer) ? "ready" : "error");
+    } catch (error) {
+        setArenaShareStatus(`Invite link: ${inviteLink}`, isPrivateNetworkUrl(inviteServer) ? "error" : "ready");
+    }
+}
+
 function syncServerInput() {
     if (!serverUrlInput) return;
     serverUrlInput.value = serverBase || "";
+    updateArenaShareStatus();
 }
 
 function saveServerUrl() {
@@ -420,21 +549,81 @@ function getOtherPlayer(match, username) {
     return match.players.one.username === username ? match.players.two : match.players.one;
 }
 
-function createLocalComputerProfile(damage, maxHealth) {
+function rollLocalAttackDamage(baseDamage) {
+    const spread = Math.max(3, Math.round(baseDamage * 0.25));
+    const variance = Math.floor(Math.random() * (spread * 2 + 1)) - spread;
+    return Math.max(1, Math.round(baseDamage + variance));
+}
+
+function rollLocalSpecialDamage(baseDamage) {
+    const minDamage = Math.round(baseDamage * 1.7);
+    const maxDamage = Math.round(baseDamage * 2.35);
+    const spread = Math.max(6, maxDamage - minDamage);
+    return minDamage + Math.floor(Math.random() * (spread + 1));
+}
+
+const computerDifficultyLevels = {
+    easy: {
+        label: "Easy",
+        damage: 15,
+        health: 800,
+        points: 1,
+        specialChance: 0.15,
+    },
+    medium: {
+        label: "Medium",
+        damage: 20,
+        health: 1800,
+        points: 2,
+        specialChance: 0.35,
+    },
+    hard: {
+        label: "Hard",
+        damage: 26,
+        health: 4200,
+        points: 3,
+        specialChance: 0.55,
+    },
+    impossible: {
+        label: "Impossible",
+        damage: 34,
+        health: 10000,
+        points: 4,
+        specialChance: 0.75,
+    },
+};
+
+function getSelectedComputerDifficulty() {
+    const selected = compDifficultySelect && compDifficultySelect.value ? compDifficultySelect.value : "easy";
+    return computerDifficultyLevels[selected] || computerDifficultyLevels.easy;
+}
+
+function updateComputerDifficultyPreview() {
+    if (!compDifficultyPreview) return;
+    const difficulty = getSelectedComputerDifficulty();
+    const healthLabel = Number(difficulty.health || 0).toLocaleString();
+    compDifficultyPreview.textContent = `CPU Health: ${healthLabel} HP | Damage: ${difficulty.damage} | Reward: ${difficulty.points} point${difficulty.points === 1 ? "" : "s"}`;
+}
+
+function createLocalComputerProfile(damage, maxHealth, difficulty) {
     return {
         username: "arena-computer",
         displayName: "Arena CPU",
-        title: "Computer Challenger",
+        title: `Computer Challenger (${difficulty.label})`,
         damage: Math.max(1, Number(damage) || 20),
         maxHealth: Math.max(1, Number(maxHealth) || 500),
         currentHealth: Math.max(1, Number(maxHealth) || 500),
         specialMeter: 0,
         avatar: assetUrl("doge attack.png"),
         equippedCount: 0,
+        difficulty: difficulty.label,
+        difficultyPoints: difficulty.points,
+        specialChance: difficulty.specialChance,
     };
 }
 
-function createLocalComputerMatch(profile, computerDamage, computerHealth) {
+function createLocalComputerMatch(profile, computerDamage, computerHealth, difficulty) {
+    const startedAt = Date.now();
     const player = {
         username: profile.username || "local-player",
         displayName: profile.displayName || "you",
@@ -446,19 +635,21 @@ function createLocalComputerMatch(profile, computerDamage, computerHealth) {
         avatar: profile.avatar || assetUrl("Im just a chill guy no background.png"),
         equippedCount: profile.equippedCount || 0,
     };
-    const computer = createLocalComputerProfile(computerDamage, computerHealth);
+    const computer = createLocalComputerProfile(computerDamage, computerHealth, difficulty);
 
     return {
-        id: LOCAL_MATCH_ID,
+        id: `${LOCAL_MATCH_ID}-${startedAt}`,
         status: "active",
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
+        createdAt: startedAt,
+        updatedAt: startedAt,
+        startedAt,
         currentTurn: player.username,
         canAttack: true,
         canSpecial: false,
         winner: null,
         log: [
-            { type: "system", text: "A local computer match has started." },
+            { type: "system", text: `A local computer match has started against ${computer.title}.`, at: startedAt },
+            { type: "system", text: `${player.displayName} attacks first.`, at: startedAt },
         ],
         players: {
             one: player,
@@ -475,33 +666,56 @@ function updateLocalMatchState(match) {
     match.updatedAt = Date.now();
 }
 
-function addLocalMatchLog(match, text) {
-    match.log.push({ type: "attack", text });
+function addLocalMatchLog(match, attacker, defender, damage, kind = "normal") {
+    const attackAt = Date.now();
+    const isSpecial = kind === "special";
+    match.updatedAt = attackAt;
+    match.log.push({
+        type: "attack",
+        kind,
+        attacker: attacker.username,
+        defender: defender.username,
+        damage,
+        text: isSpecial
+            ? `${attacker.displayName} unleashed a special attack on ${defender.displayName} for ${damage}.`
+            : `${attacker.displayName} hit ${defender.displayName} for ${damage}.`,
+        at: attackAt,
+    });
+    if (match.log.length > 20) match.log.shift();
+}
+
+function addLocalSystemLog(match, text) {
+    const entryAt = Date.now();
+    match.updatedAt = entryAt;
+    match.log.push({ type: "system", text, at: entryAt });
     if (match.log.length > 20) match.log.shift();
 }
 
 function finalizeLocalMatch(match, winnerUsername) {
+    clearPendingComputerTurn();
     match.status = "finished";
     match.winner = winnerUsername;
     match.currentTurn = null;
     match.canAttack = false;
     match.canSpecial = false;
-    match.updatedAt = Date.now();
-    const opponent = getOtherPlayer(match, winnerUsername);
     const winner = winnerUsername === match.players.one.username ? match.players.one : match.players.two;
-    match.log.push({ type: "system", text: `${winner.displayName} wins the match!` });
+    addLocalSystemLog(match, `${winner.displayName} wins the match!`);
 
     if (winnerUsername === match.players.one.username) {
         const earned = addArenaCurrency(100);
-        showArenaRewardMessage(`Victory +${earned} coins!`, false);
+        const difficultyPoints = match.players.two.difficultyPoints || 1;
+        if (window.DedogeiumSystems && typeof window.DedogeiumSystems.recordComputerVictory === "function") {
+            window.DedogeiumSystems.recordComputerVictory(difficultyPoints);
+        }
+        showArenaRewardMessage(`Victory +${earned} coins! +${difficultyPoints} computer victory point${difficultyPoints === 1 ? "" : "s"}.`, false);
     } else {
         showArenaRewardMessage("You were defeated by the Arena CPU.", true);
     }
     localRecentMatches.unshift({
         players: match.players,
         winner: winnerUsername,
-        updatedAt: Date.now(),
-        id: `local-${Date.now()}`,
+        updatedAt: match.updatedAt,
+        id: match.id,
     });
     if (localRecentMatches.length > 10) localRecentMatches.pop();
 }
@@ -510,18 +724,21 @@ function runComputerTurn() {
     if (!localMatch || localMatch.status !== "active") return;
     const cpu = localMatch.players.two;
     const player = localMatch.players.one;
-    const useSpecial = cpu.specialMeter >= 100;
-    const actionType = useSpecial ? "special" : "attack";
-    const damage = actionType === "special"
-        ? Math.round(cpu.damage * 1.7)
-        : cpu.damage;
+    if (localMatch.currentTurn !== cpu.username) return;
+    const canSpecial = cpu.specialMeter >= 100;
+    const useSpecial = canSpecial && Math.random() < (cpu.specialChance || 0.35);
+    const actionType = useSpecial ? "special" : "normal";
+    const damage = useSpecial
+        ? rollLocalSpecialDamage(cpu.damage)
+        : rollLocalAttackDamage(cpu.damage);
     player.currentHealth = Math.max(0, player.currentHealth - damage);
     cpu.specialMeter = useSpecial ? 0 : Math.min(100, cpu.specialMeter + 30);
-    addLocalMatchLog(localMatch, `CPU ${actionType} hits ${player.displayName} for ${damage} damage.`);
+    addLocalMatchLog(localMatch, cpu, player, damage, actionType);
 
     if (player.currentHealth <= 0) {
         finalizeLocalMatch(localMatch, cpu.username);
         renderBattle(localMatch, arenaState.profile);
+        renderRecentMatches(localRecentMatches);
         return;
     }
 
@@ -536,24 +753,26 @@ function processLocalBattleAction(kind) {
     const cpu = localMatch.players.two;
     if (localMatch.currentTurn !== player.username) return;
 
-    const isSpecial = kind === "special" && player.specialMeter >= 100;
-    const damage = isSpecial ? Math.round(player.damage * 1.7) : player.damage;
+    const isSpecial = kind === "special";
+    if (isSpecial && player.specialMeter < 100) return;
+    const damage = isSpecial
+        ? rollLocalSpecialDamage(player.damage)
+        : rollLocalAttackDamage(player.damage);
     cpu.currentHealth = Math.max(0, cpu.currentHealth - damage);
     player.specialMeter = isSpecial ? 0 : Math.min(100, player.specialMeter + 30);
-    addLocalMatchLog(localMatch, `${player.displayName} ${isSpecial ? "special" : "attacks"} for ${damage} damage.`);
+    addLocalMatchLog(localMatch, player, cpu, damage, isSpecial ? "special" : "normal");
 
     if (cpu.currentHealth <= 0) {
         finalizeLocalMatch(localMatch, player.username);
         renderBattle(localMatch, arenaState.profile);
+        renderRecentMatches(localRecentMatches);
         return;
     }
 
     localMatch.currentTurn = cpu.username;
     updateLocalMatchState(localMatch);
     renderBattle(localMatch, arenaState.profile);
-    window.setTimeout(() => {
-        runComputerTurn();
-    }, 800);
+    scheduleComputerTurn();
 }
 
 function startLocalComputerMatch() {
@@ -561,18 +780,25 @@ function startLocalComputerMatch() {
         setConnectionStatus("Log in first so you can save the match result.", true);
         return;
     }
+    clearPendingComputerTurn();
     arenaState.profile = buildProfile();
     renderSelf(arenaState.profile);
-    localMatch = createLocalComputerMatch(arenaState.profile, compDamageInput ? compDamageInput.value : 20, compHealthInput ? compHealthInput.value : 500);
-    arenaState.activeMatchId = LOCAL_MATCH_ID;
+    const difficulty = getSelectedComputerDifficulty();
+    localMatch = createLocalComputerMatch(arenaState.profile, difficulty.damage, difficulty.health, difficulty);
+    arenaState.activeMatchId = localMatch.id;
+    arenaState.lastMatchId = null;
+    arenaState.lastAnimatedAttackKey = null;
+    arenaState.lastWinnerKey = null;
     renderBattle(localMatch, arenaState.profile);
+    renderRecentMatches(localRecentMatches);
+    setConnectionStatus(`${difficulty.label} CPU match ready. Win for ${difficulty.points} computer victory point${difficulty.points === 1 ? "" : "s"}.`, false);
 }
 
 function forfeitLocalMatch() {
     if (!localMatch) return;
-    const player = localMatch.players.one;
     finalizeLocalMatch(localMatch, localMatch.players.two.username);
     renderBattle(localMatch, arenaState.profile);
+    renderRecentMatches(localRecentMatches);
 }
 
 function saveArenaTitle() {
@@ -589,6 +815,9 @@ function saveArenaTitle() {
     }
     setStoredPlayerTitle(username, title);
     arenaState.profile.title = title;
+    if (window.DedogeiumSystems && typeof window.DedogeiumSystems.recordCurrentProfileSnapshot === "function") {
+        window.DedogeiumSystems.recordCurrentProfileSnapshot();
+    }
     renderSelf(arenaState.profile);
     setConnectionStatus(`Title set to '${title}'.`, false);
 }
@@ -1038,9 +1267,9 @@ async function refreshArena(manual) {
     }
 
     if (!arenaState.username) {
-        setConnectionStatus("Log in first so the arena can announce you to the LAN server.", true);
+        setConnectionStatus("Log in first so the arena can announce you to the arena server.", true);
         playersListEl.innerHTML = "";
-        playersListEl.appendChild(createEmptyState("Login is required before you can search for nearby players."));
+        playersListEl.appendChild(createEmptyState("Login is required before you can find online players."));
         incomingListEl.innerHTML = "";
         incomingListEl.appendChild(createEmptyState("Login is required before you can receive challenges."));
         outgoingListEl.innerHTML = "";
@@ -1209,14 +1438,21 @@ forfeitBtn.addEventListener("click", forfeitMatch);
 if (saveServerBtn) {
     saveServerBtn.addEventListener("click", saveServerUrl);
 }
+if (copyArenaLinkBtn) {
+    copyArenaLinkBtn.addEventListener("click", copyArenaInviteLink);
+}
 if (toggleCompModeBtn && compModeContainer) {
     toggleCompModeBtn.addEventListener("click", () => {
-        if (compModeContainer.style.display === "none") {
-            compModeContainer.style.display = "block";
-        } else {
-            compModeContainer.style.display = "none";
+        const shouldShow = compModeContainer.style.display === "none";
+        compModeContainer.style.display = shouldShow ? "block" : "none";
+        toggleCompModeBtn.textContent = shouldShow ? "Hide Computer" : "Play Computer";
+        if (shouldShow) {
+            updateComputerDifficultyPreview();
         }
     });
+}
+if (compDifficultySelect) {
+    compDifficultySelect.addEventListener("change", updateComputerDifficultyPreview);
 }
 if (fightCompBtn) {
     fightCompBtn.addEventListener("click", startLocalComputerMatch);
@@ -1233,7 +1469,10 @@ if (serverUrlInput) {
     });
 }
 
-window.addEventListener("beforeunload", stopBattleMusic);
+window.addEventListener("beforeunload", () => {
+    clearPendingComputerTurn();
+    stopBattleMusic();
+});
 
 window.addEventListener("DOMContentLoaded", () => {
     initializeServerBase();
@@ -1241,6 +1480,7 @@ window.addEventListener("DOMContentLoaded", () => {
     arenaState.profile = buildProfile();
     renderSelf(arenaState.profile);
     syncServerInput();
+    updateComputerDifficultyPreview();
     refreshArena(true);
     startAutoRefresh();
 });

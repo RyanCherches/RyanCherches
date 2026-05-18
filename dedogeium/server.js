@@ -286,6 +286,10 @@ function clampNumber(value, min, max, fallback) {
   return Math.max(min, Math.min(max, num));
 }
 
+function normalizePlayerTitle(value) {
+  return typeof value === 'string' && value.trim() ? value.trim().slice(0, 64) : '';
+}
+
 function sanitizeProfile(profile, username) {
   const source = profile || {};
   const safeName = normalizeUsername(username || source.username || source.displayName || 'doge');
@@ -293,7 +297,7 @@ function sanitizeProfile(profile, username) {
   const damage = Math.round(clampNumber(source.damage, 10, 600, 20));
   const maxHealth = Math.round(clampNumber(source.maxHealth, 100, 5000, 500));
   const avatar = typeof source.avatar === 'string' && source.avatar ? source.avatar : 'Im just a chill guy no background.png';
-  const title = typeof source.title === 'string' && source.title ? source.title.slice(0, 64) : 'Arena Fighter';
+  const title = normalizePlayerTitle(source.title) || 'Arena Fighter';
   return {
     username: safeName,
     displayName,
@@ -360,13 +364,54 @@ function normalizeLeaderboardState(rawState) {
   };
 }
 
+function normalizeLeaderboardBan(rawBan) {
+  if (!rawBan || typeof rawBan !== 'object') return null;
+  const permanent = rawBan.permanent === true;
+  const until = permanent ? null : Math.max(0, Math.round(Number(rawBan.until) || 0));
+  const active = rawBan.active !== false && (permanent || until > 0);
+  if (!active && !rawBan.reason && !rawBan.bannedAt) return null;
+  return {
+    active,
+    permanent,
+    until,
+    reason: typeof rawBan.reason === 'string' ? rawBan.reason.slice(0, 160) : '',
+    bannedAt: Math.max(0, Math.round(Number(rawBan.bannedAt) || 0)),
+    bannedBy: typeof rawBan.bannedBy === 'string' ? rawBan.bannedBy.slice(0, 64) : 'admin',
+  };
+}
+
+function isLeaderboardBanActive(rawBan, now = Date.now()) {
+  const ban = normalizeLeaderboardBan(rawBan);
+  if (!ban || ban.active === false) return false;
+  return ban.permanent || (Number(ban.until) || 0) > now;
+}
+
+function createLeaderboardBan(options = {}) {
+  const now = Date.now();
+  const permanent = options.permanent === true;
+  const durationMs = Math.max(0, Math.round(Number(options.durationMs) || 0));
+  const requestedUntil = Math.max(0, Math.round(Number(options.until) || 0));
+  const until = permanent ? null : (requestedUntil || (durationMs ? now + durationMs : 0));
+  if (!permanent && (!until || until <= now)) {
+    throw new Error('Temporary leaderboard bans need a future expiration time.');
+  }
+  return {
+    active: true,
+    permanent,
+    until,
+    reason: typeof options.reason === 'string' ? options.reason.trim().slice(0, 160) : '',
+    bannedAt: now,
+    bannedBy: typeof options.bannedBy === 'string' && options.bannedBy ? options.bannedBy.slice(0, 64) : 'admin',
+  };
+}
+
 function normalizeProfileStats(rawProfile, username) {
   const source = rawProfile && typeof rawProfile === 'object' ? rawProfile : {};
   const safeUsername = normalizeUsername(username || source.username || source.displayName || 'doge');
   return {
     username: safeUsername,
     displayName: String(source.displayName || safeUsername || 'doge').slice(0, 32),
-    title: typeof source.title === 'string' ? source.title.slice(0, 64) : '',
+    title: normalizePlayerTitle(source.title),
     attack: Math.max(0, Math.round(Number(source.attack) || 0)),
     health: Math.max(0, Math.round(Number(source.health) || 0)),
     avatar: typeof source.avatar === 'string' ? source.avatar : '',
@@ -378,6 +423,13 @@ function ensurePlayerRecordShape(rawRecord, username) {
   const source = rawRecord && typeof rawRecord === 'object' ? { ...rawRecord } : {};
   delete source.password;
   const safeUsername = normalizeUsername(username || source.username || (source.profileStats && source.profileStats.username) || '');
+  const recordTitle = normalizePlayerTitle(source.title);
+  const rawProfileStats = source.profileStats && typeof source.profileStats === 'object' ? source.profileStats : {};
+  const profileStats = normalizeProfileStats({
+    ...rawProfileStats,
+    title: rawProfileStats.title || recordTitle,
+  }, safeUsername);
+  const resolvedTitle = recordTitle || profileStats.title;
 
   return {
     ...source,
@@ -385,8 +437,13 @@ function ensurePlayerRecordShape(rawRecord, username) {
     lastSeen: Number.isFinite(Number(source.lastSeen)) ? Number(source.lastSeen) : null,
     visits: Math.max(0, Math.round(Number(source.visits) || 0)),
     inventory: Array.isArray(source.inventory) ? source.inventory : [],
-    profileStats: normalizeProfileStats(source.profileStats, safeUsername),
+    title: resolvedTitle,
+    profileStats: {
+      ...profileStats,
+      title: profileStats.title || resolvedTitle,
+    },
     leaderboard: normalizeLeaderboardState(source.leaderboard),
+    leaderboardBan: normalizeLeaderboardBan(source.leaderboardBan),
   };
 }
 
@@ -414,6 +471,7 @@ function mergePlayerRecords(existingRecord, incomingRecord, username) {
   const existing = ensurePlayerRecordShape(existingRecord || getBasePlayerRecord(), safeUsername);
   const incoming = incomingRecord && typeof incomingRecord === 'object' ? { ...incomingRecord } : {};
   delete incoming.password;
+  delete incoming.leaderboardBan;
 
   const merged = ensurePlayerRecordShape(existing, safeUsername);
   merged.firstSeen = merged.firstSeen
@@ -438,6 +496,15 @@ function mergePlayerRecords(existingRecord, incomingRecord, username) {
     if (!merged.profileStats || incomingUpdated >= existingUpdated) {
       merged.profileStats = normalizeProfileStats(incoming.profileStats, safeUsername);
     }
+  }
+
+  const incomingTitle = normalizePlayerTitle(incoming.title || (incoming.profileStats && incoming.profileStats.title));
+  if (incomingTitle) {
+    merged.title = incomingTitle;
+    merged.profileStats = {
+      ...normalizeProfileStats(merged.profileStats, safeUsername),
+      title: incomingTitle,
+    };
   }
 
   if (incoming.leaderboard && typeof incoming.leaderboard === 'object') {
@@ -596,8 +663,14 @@ function getPublicLeaderboardPayload() {
     const safeUsername = normalizeUsername(row.username);
     if (!safeUsername) return accumulator;
     const record = parsePlayerRecord(row.player_json, safeUsername);
+    if (isLeaderboardBanActive(record.leaderboardBan)) return accumulator;
+    const title = record.profileStats.title || record.title || '';
     accumulator[safeUsername] = {
-      profileStats: record.profileStats,
+      title,
+      profileStats: {
+        ...record.profileStats,
+        title,
+      },
       leaderboard: record.leaderboard,
     };
     return accumulator;
@@ -1038,6 +1111,53 @@ app.get('/api/players', requireAdminAuth, (req, res) => {
   res.json(getAllPlayerRecords());
 });
 
+app.post('/api/admin/leaderboard-ban', requireAdminAuth, (req, res) => {
+  const safeUsername = normalizeUsername(req.body && req.body.username);
+  if (!safeUsername) {
+    return res.status(400).json({ error: 'username required' });
+  }
+
+  const existing = getStoredPlayerRecord(safeUsername);
+  if (!existing) {
+    return res.status(404).json({ error: 'Player not found' });
+  }
+
+  let leaderboardBan;
+  try {
+    leaderboardBan = createLeaderboardBan({
+      permanent: req.body && req.body.permanent === true,
+      until: req.body && req.body.until,
+      durationMs: req.body && req.body.durationMs,
+      reason: req.body && req.body.reason,
+      bannedBy: ADMIN_USER || 'admin',
+    });
+  } catch (error) {
+    return res.status(400).json({ error: error && error.message ? error.message : 'Invalid leaderboard ban' });
+  }
+
+  const record = ensurePlayerRecordShape(existing, safeUsername);
+  record.leaderboardBan = leaderboardBan;
+  const player = upsertUserRecord(safeUsername, record);
+  res.json({ ok: true, username: safeUsername, leaderboardBan: player.leaderboardBan, player });
+});
+
+app.post('/api/admin/leaderboard-unban', requireAdminAuth, (req, res) => {
+  const safeUsername = normalizeUsername(req.body && req.body.username);
+  if (!safeUsername) {
+    return res.status(400).json({ error: 'username required' });
+  }
+
+  const existing = getStoredPlayerRecord(safeUsername);
+  if (!existing) {
+    return res.status(404).json({ error: 'Player not found' });
+  }
+
+  const record = ensurePlayerRecordShape(existing, safeUsername);
+  record.leaderboardBan = null;
+  const player = upsertUserRecord(safeUsername, record);
+  res.json({ ok: true, username: safeUsername, leaderboardBan: null, player });
+});
+
 app.post('/api/player', requirePlayerAuth, (req, res) => {
   const { username, player } = req.body || {};
   if (!username || !player) return res.status(400).json({ error: 'username and player required' });
@@ -1123,7 +1243,7 @@ app.post('/api/arena/challenge', (req, res) => {
 
   const state = readArenaState();
   if (!state.presence[safeTo]) {
-    return res.status(404).json({ error: 'Target player is not currently active on this LAN server' });
+    return res.status(404).json({ error: 'Target player is not currently active on this arena server' });
   }
   if (findActiveMatchForUsername(state, safeFrom) || findActiveMatchForUsername(state, safeTo)) {
     return res.status(400).json({ error: 'One of these players is already in an active match' });

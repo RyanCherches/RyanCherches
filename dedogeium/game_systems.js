@@ -1540,6 +1540,9 @@
     function getCurrentCombatProfile() {
         const username = getCurrentUsername();
         const displayName = getStoredString(["Username", "username", "playerName", "Uabcd"]) || username || "doge";
+        const players = readPlayerRecords();
+        const playerRecord = username && players[username] && typeof players[username] === "object" ? players[username] : {};
+        const title = normalizePlayerTitle(playerRecord.title || (playerRecord.profileStats && playerRecord.profileStats.title));
         const equippedItems = getStoredEquippedItems();
         let attack = 20;
         let health = 500;
@@ -1555,6 +1558,7 @@
         return {
             username,
             displayName,
+            title,
             attack: Math.max(0, Math.round(attack)),
             health: Math.max(0, Math.round(health)),
             equippedCount: equippedItems.length,
@@ -1645,6 +1649,7 @@
         return {
             username: normalizeUsername(safeStats.username || fallbackUsername),
             displayName: String(safeStats.displayName || fallbackUsername || "doge"),
+            title: normalizePlayerTitle(safeStats.title),
             attack: Math.max(0, Math.floor(Number(safeStats.attack) || 0)),
             health: Math.max(0, Math.floor(Number(safeStats.health) || 0)),
             equippedCount: Math.max(0, Math.floor(Number(safeStats.equippedCount) || 0)),
@@ -1653,9 +1658,42 @@
         };
     }
 
+    function normalizePlayerTitle(value) {
+        return typeof value === "string" && value.trim() ? value.trim().slice(0, 64) : "";
+    }
+
+    function normalizeLeaderboardBan(rawBan) {
+        if (!rawBan || typeof rawBan !== "object") return null;
+        const permanent = rawBan.permanent === true;
+        const until = permanent ? null : Math.max(0, Math.round(Number(rawBan.until) || 0));
+        const active = rawBan.active !== false && (permanent || until > 0);
+        if (!active && !rawBan.reason && !rawBan.bannedAt) return null;
+        return {
+            active,
+            permanent,
+            until,
+            reason: typeof rawBan.reason === "string" ? rawBan.reason.slice(0, 160) : "",
+            bannedAt: Math.max(0, Math.round(Number(rawBan.bannedAt) || 0)),
+            bannedBy: typeof rawBan.bannedBy === "string" ? rawBan.bannedBy.slice(0, 64) : "admin",
+        };
+    }
+
+    function isLeaderboardBanActive(rawBan, now = Date.now()) {
+        const ban = normalizeLeaderboardBan(rawBan);
+        if (!ban || ban.active === false) return false;
+        return ban.permanent || (Number(ban.until) || 0) > now;
+    }
+
     function ensurePlayerRecordShape(rawRecord, username) {
         const safeRecord = rawRecord && typeof rawRecord === "object" ? rawRecord : {};
         const safeUsername = normalizeUsername(username || safeRecord.username);
+        const recordTitle = normalizePlayerTitle(safeRecord.title);
+        const rawProfileStats = safeRecord.profileStats && typeof safeRecord.profileStats === "object" ? safeRecord.profileStats : {};
+        const profileStats = normalizeProfileStats({
+            ...rawProfileStats,
+            title: rawProfileStats.title || recordTitle,
+        }, safeUsername);
+        const resolvedTitle = recordTitle || profileStats.title;
         return {
             ...safeRecord,
             firstSeen: Number.isFinite(Number(safeRecord.firstSeen)) ? Number(safeRecord.firstSeen) : null,
@@ -1663,9 +1701,13 @@
             visits: Math.max(0, Math.floor(Number(safeRecord.visits) || 0)),
             inventory: Array.isArray(safeRecord.inventory) ? safeRecord.inventory : [],
             password: typeof safeRecord.password === "string" ? safeRecord.password : "",
-            title: typeof safeRecord.title === "string" ? safeRecord.title : "",
-            profileStats: normalizeProfileStats(safeRecord.profileStats, safeUsername),
+            title: resolvedTitle,
+            profileStats: {
+                ...profileStats,
+                title: profileStats.title || resolvedTitle,
+            },
             leaderboard: normalizeLeaderboardState(safeRecord.leaderboard),
+            leaderboardBan: normalizeLeaderboardBan(safeRecord.leaderboardBan),
         };
     }
 
@@ -1846,12 +1888,13 @@
         });
     }
 
-    function recordComputerVictory() {
+    function recordComputerVictory(amount = 1) {
+        const points = Math.max(0, Math.floor(Number(amount) || 0));
         return updateCurrentPlayerRecord((record, now) => {
             const dateKey = getLocalDateKey(new Date(now));
             const day = applyProfilePeaks(record, dateKey);
-            day.victoriesComputer += 1;
-            record.leaderboard.allTime.victoriesComputer += 1;
+            day.victoriesComputer += points;
+            record.leaderboard.allTime.victoriesComputer += points;
             return { ok: true };
         });
     }
@@ -1982,11 +2025,13 @@
     function buildLeaderboardEntries(playerMap, scope, category, now = new Date()) {
         const safePlayers = playerMap && typeof playerMap === "object" ? playerMap : {};
         return Object.entries(safePlayers)
+            .filter(([, record]) => !isLeaderboardBanActive(record && record.leaderboardBan))
             .map(([username, record]) => {
                 const safeRecord = ensurePlayerRecordShape(record, username);
                 return {
                     username,
                     displayName: safeRecord.profileStats.displayName || username,
+                    title: safeRecord.profileStats.title || safeRecord.title || "",
                     value: getLeaderboardMetricValueForRecord(safeRecord, scope, category, now),
                     record: safeRecord,
                 };

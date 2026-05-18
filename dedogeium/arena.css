@@ -235,8 +235,35 @@ button:disabled {
     border-color: #1f8f7c;
 }
 
+.share-status {
+    margin: 10px 0 0;
+    color: #44515f;
+    line-height: 1.45;
+}
+
+.share-status.is-error {
+    color: #b91c1c;
+}
+
+.share-status.is-ready {
+    color: #166534;
+}
+
 .helper-text {
     color: #44515f;
+}
+
+.difficulty-preview {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0 12px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(31, 143, 124, 0.12);
+    color: #123b36;
+    font-weight: 800;
+    line-height: 1.35;
 }
 
 .list-stack {

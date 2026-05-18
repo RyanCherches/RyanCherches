@@ -1,17 +1,17 @@
 {
   "presence": {
-    "player2": {
-      "username": "player2",
+    "67coolryry": {
+      "username": "67coolryry",
       "profile": {
-        "username": "player2",
-        "displayName": "player2",
-        "damage": 25,
-        "maxHealth": 619,
+        "username": "67coolryry",
+        "displayName": "67coolryry",
+        "damage": 418,
+        "maxHealth": 4759,
         "avatar": "http://127.0.0.1:3000/Im%20just%20a%20chill%20guy%20no%20background.png",
         "title": "Geared Arena Fighter"
       },
-      "displayName": "player2",
-      "lastSeen": 1775135916212,
+      "displayName": "67coolryry",
+      "lastSeen": 1778954210656,
       "ip": "127.0.0.1"
     }
   },

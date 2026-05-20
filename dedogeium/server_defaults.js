@@ -3,9 +3,10 @@
     // Example:
     // window.DEDOGEIUM_DEFAULT_SERVER_URL = "https://your-domain.com/dedogeium";
     //
-    // Leave this empty to keep using ?server=... or the last saved server.
+    // Everyone should use the same public SQL-backed server.
     //
     // Note: Cloudflare Quick Tunnel URLs are temporary and change each time.
     // For a truly constant public URL, use a real hosted server or a named tunnel.
-    window.DEDOGEIUM_DEFAULT_SERVER_URL = "";
+    window.DEDOGEIUM_DEFAULT_SERVER_URL = "https://api.ryancherches.com";
+    window.DEDOGEIUM_FORCE_DEFAULT_SERVER = true;
 })();

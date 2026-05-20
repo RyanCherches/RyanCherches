@@ -212,6 +212,12 @@ main {
     color: var(--skills-text);
 }
 
+.skill-preview {
+    margin: 10px 0 0;
+    color: var(--skills-accent-2);
+    font-size: 14px;
+}
+
 .action-btn {
     background: linear-gradient(135deg, var(--skills-accent), var(--skills-accent-2));
     color: #08101c;
@@ -258,9 +264,32 @@ main {
     gap: 10px;
 }
 
+.skill-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
 .tiny-note {
     font-size: 13px;
     color: var(--skills-muted);
+}
+
+.upgrade-note,
+.skill-maxed {
+    font-size: 13px;
+}
+
+.upgrade-note {
+    margin-top: 10px;
+    color: var(--skills-muted);
+}
+
+.skill-maxed {
+    color: var(--skills-accent);
+    font-weight: 700;
 }
 
 .rule-row {

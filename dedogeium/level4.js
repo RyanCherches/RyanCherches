@@ -740,11 +740,13 @@ function handlePlayerStop() {
     const rawHit = calculateDamage(damage, acc) + skillBonus;
     const attackResult = applyPlayerAttackAdjustments(rawHit);
     if (battleEffects) battleEffects.triggerBattleAnimation("player", attackResult.hit, acc);
+    const dealtDamage = Math.min(enemy_health, attackResult.hit);
     enemy_health = Math.max(0, enemy_health - attackResult.hit);
+    const lifestealResult = battleSkills ? battleSkills.applyPlayerLifesteal(dealtDamage) : { healed: 0, lifestealPercent: 0 };
     loadhealth();
 
     const message = document.getElementById("combat-message");
-    if (message) message.innerText = `You hit ${attackResult.hit} (accuracy ${Math.round(acc * 100)}%).${attackResult.weakened ? " The enemy special softened the blow." : ""}`;
+    if (message) message.innerText = `You hit ${attackResult.hit} (accuracy ${Math.round(acc * 100)}%).${attackResult.weakened ? " The enemy special softened the blow." : ""}${lifestealResult.healed > 0 ? ` Lifesteal restored ${lifestealResult.healed} health.` : ""}`;
 
     if (enemy_health <= 0) {
         finishBattle(true);

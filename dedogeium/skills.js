@@ -60,10 +60,13 @@ window.addEventListener("DOMContentLoaded", function() {
             card.innerHTML = `
                 <h4>${skill.label}</h4>
                 <div class="skill-meta">
-                    <span class="skill-badge">Cost ${skill.cost}</span>
+                    <span class="skill-badge">${skill.kindLabel}</span>
                     <span class="skill-badge">Unlock turn ${skill.unlockTurn}</span>
+                    <span class="skill-badge">${owned ? `Level ${skill.currentLevel}/${skill.maxLevel}` : `Cost ${skill.cost}`}</span>
                 </div>
                 <p>${skill.description}</p>
+                <p class="skill-preview">${skill.effectSummary}</p>
+                ${owned ? `<p class="tiny-note">${skill.isMaxLevel ? "Max level reached." : `Upgrade it in Owned Skills for ${skill.nextUpgradeCost} currency.`}</p>` : ""}
                 <button type="button" class="action-btn buy-skill-btn" data-skill-id="${skill.id}" ${owned ? "disabled" : ""}>
                     ${owned ? "Bought" : "Buy skill"}
                 </button>
@@ -91,10 +94,18 @@ window.addEventListener("DOMContentLoaded", function() {
             card.innerHTML = `
                 <h4>${skill.label}</h4>
                 <div class="skill-meta">
+                    <span class="skill-badge">Level ${skill.currentLevel}/${skill.maxLevel}</span>
                     <span class="skill-badge">Unlock turn ${skill.unlockTurn}</span>
-                    <span class="skill-badge">${skill.kind}</span>
+                    <span class="skill-badge">${skill.kindLabel}</span>
                 </div>
                 <p>${skill.description}</p>
+                <p class="skill-preview">${skill.effectSummary}</p>
+                <div class="skill-actions">
+                    ${skill.isMaxLevel
+                        ? `<span class="skill-maxed">Max level reached</span>`
+                        : `<button type="button" class="action-btn upgrade-skill-btn" data-skill-id="${skill.id}">Upgrade for ${skill.nextUpgradeCost}</button>`}
+                </div>
+                ${skill.nextEffectSummary ? `<p class="upgrade-note">Next level: ${skill.nextEffectSummary}</p>` : ""}
                 <div class="rule-row">
                     <label>
                         <input type="checkbox" class="auto-rule-enabled" data-skill-id="${skill.id}" ${rule.enabled ? "checked" : ""}>
@@ -150,7 +161,7 @@ window.addEventListener("DOMContentLoaded", function() {
             card.className = "loadout-card";
             card.innerHTML = `
                 <h4>${skill.label}</h4>
-                <p>Unlocks on turn ${skill.unlockTurn}. ${skill.description}</p>
+                <p>Lv ${skill.currentLevel}/${skill.maxLevel}. Unlocks on turn ${skill.unlockTurn}. ${skill.effectSummary}</p>
                 <button type="button" class="chip-btn manual-toggle-btn ${selected ? "active" : ""}" data-skill-id="${skill.id}" ${atCapacity ? "disabled" : ""}>
                     ${selected ? "Selected" : "Select"}
                 </button>
@@ -186,7 +197,22 @@ window.addEventListener("DOMContentLoaded", function() {
             if (!result.ok) {
                 setMessage(result.error || "That skill could not be bought.", "error");
             } else {
-                setMessage("Skill bought. You can now configure it below.", "success");
+                setMessage("Skill bought. You can now upgrade and configure it below.", "success");
+            }
+            renderPage();
+        });
+    }
+
+    if (ownedList) {
+        ownedList.addEventListener("click", function(event) {
+            const button = event.target.closest(".upgrade-skill-btn");
+            if (!button) return;
+            const result = systems.upgradeSkill(button.dataset.skillId);
+            if (!result.ok) {
+                setMessage(result.error || "That skill could not be upgraded.", "error");
+            } else {
+                const upgraded = result.catalog.find((entry) => entry.id === button.dataset.skillId);
+                setMessage(`${upgraded ? upgraded.label : "Skill"} upgraded to level ${result.newLevel}.`, "success");
             }
             renderPage();
         });

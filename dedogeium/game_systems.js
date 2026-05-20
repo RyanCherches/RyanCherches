@@ -284,6 +284,7 @@
     };
     const SKILL_STATE_STORAGE_KEY = "dedogeiumSkillStateV1";
     const SKILL_MODE_OPTIONS = ["auto", "manual"];
+    const SKILL_UPGRADE_COST_MULTIPLIER = 1.55;
     const SKILL_CATALOG = [
         {
             id: "healing_pulse",
@@ -291,8 +292,11 @@
             description: "Restore a chunk of your health when the fight gets rough.",
             kind: "heal",
             cost: 220,
+            upgradeBaseCost: 180,
+            maxLevel: 5,
             unlockTurn: 2,
             healAmount: 140,
+            healAmountPerLevel: 55,
         },
         {
             id: "iron_guard",
@@ -300,8 +304,11 @@
             description: "Brace yourself and cut the next enemy hit down hard.",
             kind: "shield",
             cost: 520,
+            upgradeBaseCost: 280,
+            maxLevel: 4,
             unlockTurn: 2,
             enemyMultiplier: 0.45,
+            enemyMultiplierPerLevel: -0.07,
         },
         {
             id: "rage_drive",
@@ -309,8 +316,23 @@
             description: "Charge your next strike with a heavy damage boost.",
             kind: "empower",
             cost: 980,
+            upgradeBaseCost: 420,
+            maxLevel: 5,
             unlockTurn: 3,
             bonusDamage: 150,
+            bonusDamagePerLevel: 75,
+        },
+        {
+            id: "blood_fang",
+            label: "Blood Fang",
+            description: "Prime your next strike to siphon health from the damage it deals.",
+            kind: "lifesteal",
+            cost: 1450,
+            upgradeBaseCost: 520,
+            maxLevel: 4,
+            unlockTurn: 4,
+            lifestealPercent: 5,
+            lifestealPercentPerLevel: 5,
         },
         {
             id: "phoenix_core",
@@ -318,9 +340,13 @@
             description: "A rare late-fight surge that heals you and powers the next swing.",
             kind: "hybrid",
             cost: 2200,
+            upgradeBaseCost: 880,
+            maxLevel: 4,
             unlockTurn: 5,
             healAmount: 200,
+            healAmountPerLevel: 70,
             bonusDamage: 240,
+            bonusDamagePerLevel: 85,
         },
     ];
     const DEFAULT_AUTO_SKILL_SETTINGS = {
@@ -484,6 +510,7 @@
         return {
             mode: "auto",
             ownedSkills: [],
+            skillLevels: {},
             manualLoadout: [],
             autoSettings: { ...DEFAULT_AUTO_SKILL_SETTINGS },
             autoRules: {},
@@ -510,6 +537,140 @@
         return Math.max(0, Math.min(max, Math.round(Number.isFinite(Number(value)) ? Number(value) : fallback)));
     }
 
+    function getSkillMaxLevel(definition) {
+        return Math.max(1, clampPositiveInt(definition && definition.maxLevel, 1, 10));
+    }
+
+    function getSkillKindLabel(kind) {
+        if (kind === "heal") return "Heal";
+        if (kind === "shield") return "Shield";
+        if (kind === "empower") return "Damage";
+        if (kind === "lifesteal") return "Lifesteal";
+        return "Hybrid";
+    }
+
+    function scaleSkillValue(baseValue, perLevel, level, options = {}) {
+        const safeBaseValue = Number(baseValue);
+        if (!Number.isFinite(safeBaseValue)) return 0;
+        const safePerLevel = Number.isFinite(Number(perLevel)) ? Number(perLevel) : 0;
+        const safeLevel = Math.max(1, Math.round(Number(level) || 1));
+        let nextValue = safeBaseValue + (safePerLevel * (safeLevel - 1));
+        if (Number.isFinite(Number(options.min))) {
+            nextValue = Math.max(Number(options.min), nextValue);
+        }
+        if (Number.isFinite(Number(options.max))) {
+            nextValue = Math.min(Number(options.max), nextValue);
+        }
+        if (Number.isFinite(Number(options.precision))) {
+            nextValue = Number(nextValue.toFixed(Number(options.precision)));
+        } else {
+            nextValue = Math.round(nextValue);
+        }
+        return nextValue;
+    }
+
+    function joinSkillPhrases(parts) {
+        if (!parts.length) return "";
+        if (parts.length === 1) return parts[0];
+        if (parts.length === 2) return `${parts[0]} and ${parts[1]}`;
+        return `${parts.slice(0, -1).join(", ")}, and ${parts[parts.length - 1]}`;
+    }
+
+    function sentenceCase(text) {
+        if (!text) return "";
+        return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
+    }
+
+    function getSkillEffectSummary(skill) {
+        const parts = [];
+        if (Number(skill.healAmount || 0) > 0) {
+            parts.push(`restore ${skill.healAmount} health`);
+        }
+        if (Number(skill.enemyMultiplier || 0) > 0 && Number(skill.enemyMultiplier || 0) < 1) {
+            parts.push(`cut the next enemy hit to ${Math.round(Number(skill.enemyMultiplier) * 100)}% damage`);
+        }
+        if (Number(skill.bonusDamage || 0) > 0) {
+            parts.push(`add +${skill.bonusDamage} damage to the next strike`);
+        }
+        if (Number(skill.lifestealPercent || 0) > 0) {
+            parts.push(`steal ${skill.lifestealPercent}% of damage dealt as health on the next strike`);
+        }
+        return parts.length ? `${sentenceCase(joinSkillPhrases(parts))}.` : "No combat effect.";
+    }
+
+    function resolveSkillDefinition(skillOrId, level = 1) {
+        const definition = typeof skillOrId === "string" ? getSkillDefinition(skillOrId) : skillOrId;
+        if (!definition) return null;
+        const maxLevel = getSkillMaxLevel(definition);
+        const safeLevel = Math.max(1, Math.min(maxLevel, clampPositiveInt(level, 1, maxLevel)));
+        const resolved = {
+            ...definition,
+            level: safeLevel,
+            maxLevel,
+            healAmount: Number.isFinite(Number(definition.healAmount))
+                ? scaleSkillValue(definition.healAmount, definition.healAmountPerLevel, safeLevel, { min: 0 })
+                : 0,
+            enemyMultiplier: Number.isFinite(Number(definition.enemyMultiplier))
+                ? scaleSkillValue(definition.enemyMultiplier, definition.enemyMultiplierPerLevel, safeLevel, { min: 0.12, max: 1, precision: 2 })
+                : null,
+            bonusDamage: Number.isFinite(Number(definition.bonusDamage))
+                ? scaleSkillValue(definition.bonusDamage, definition.bonusDamagePerLevel, safeLevel, { min: 0 })
+                : 0,
+            lifestealPercent: Number.isFinite(Number(definition.lifestealPercent))
+                ? scaleSkillValue(definition.lifestealPercent, definition.lifestealPercentPerLevel, safeLevel, { min: 0, max: 100 })
+                : 0,
+        };
+        resolved.kindLabel = getSkillKindLabel(resolved.kind);
+        resolved.effectSummary = getSkillEffectSummary(resolved);
+        return resolved;
+    }
+
+    function getOwnedSkillLevel(state, skillId, definition = getSkillDefinition(skillId)) {
+        if (!definition || !state || !Array.isArray(state.ownedSkills) || !state.ownedSkills.includes(skillId)) {
+            return 0;
+        }
+        const maxLevel = getSkillMaxLevel(definition);
+        return Math.max(1, Math.min(maxLevel, clampPositiveInt(state.skillLevels && state.skillLevels[skillId], 1, maxLevel)));
+    }
+
+    function getResolvedOwnedSkillDefinition(state, skillId) {
+        const definition = getSkillDefinition(skillId);
+        if (!definition) return null;
+        const level = getOwnedSkillLevel(state, skillId, definition);
+        if (!level) return null;
+        return resolveSkillDefinition(definition, level);
+    }
+
+    function getSkillUpgradeCost(skillOrId, currentLevel) {
+        const definition = typeof skillOrId === "string" ? getSkillDefinition(skillOrId) : skillOrId;
+        if (!definition) return null;
+        const maxLevel = getSkillMaxLevel(definition);
+        const safeCurrentLevel = Math.max(1, Math.min(maxLevel, clampPositiveInt(currentLevel, 1, maxLevel)));
+        if (safeCurrentLevel >= maxLevel) return null;
+        const baseCost = Math.max(1, Math.round(Number(definition.upgradeBaseCost) || Math.max(120, Number(definition.cost || 0) * 0.7)));
+        return Math.round(baseCost * Math.pow(SKILL_UPGRADE_COST_MULTIPLIER, safeCurrentLevel - 1));
+    }
+
+    function buildSkillCatalogSnapshot(state) {
+        return SKILL_CATALOG.map((definition) => {
+            const owned = state.ownedSkills.includes(definition.id);
+            const currentLevel = owned ? getOwnedSkillLevel(state, definition.id, definition) : 0;
+            const currentSkill = resolveSkillDefinition(definition, currentLevel || 1);
+            const nextSkill = owned && currentLevel < currentSkill.maxLevel
+                ? resolveSkillDefinition(definition, currentLevel + 1)
+                : null;
+            return {
+                ...currentSkill,
+                owned,
+                currentLevel,
+                isMaxLevel: owned && currentLevel >= currentSkill.maxLevel,
+                nextLevel: nextSkill ? nextSkill.level : null,
+                nextUpgradeCost: nextSkill ? getSkillUpgradeCost(definition, currentLevel) : null,
+                nextEffectSummary: nextSkill ? nextSkill.effectSummary : "",
+            };
+        });
+    }
+
     function normalizeSkillRule(rawRule, definition) {
         const safeRule = rawRule && typeof rawRule === "object" ? rawRule : {};
         return {
@@ -525,14 +686,18 @@
         const ownedSkills = Array.isArray(safeState.ownedSkills)
             ? Array.from(new Set(safeState.ownedSkills.filter((skillId) => Boolean(getSkillDefinition(skillId)))))
             : [];
+        const skillLevels = {};
         const autoRules = {};
         ownedSkills.forEach((skillId) => {
-            autoRules[skillId] = normalizeSkillRule(safeState.autoRules && safeState.autoRules[skillId], getSkillDefinition(skillId));
+            const definition = getSkillDefinition(skillId);
+            skillLevels[skillId] = Math.max(1, Math.min(getSkillMaxLevel(definition), clampPositiveInt(safeState.skillLevels && safeState.skillLevels[skillId], 1, getSkillMaxLevel(definition))));
+            autoRules[skillId] = normalizeSkillRule(safeState.autoRules && safeState.autoRules[skillId], definition);
         });
 
         return {
             mode: normalizeSkillMode(safeState.mode),
             ownedSkills,
+            skillLevels,
             manualLoadout: Array.isArray(safeState.manualLoadout)
                 ? Array.from(new Set(safeState.manualLoadout.filter((skillId) => ownedSkills.includes(skillId)))).slice(0, 3)
                 : [],
@@ -566,7 +731,7 @@
         writeSkillState(state);
         return {
             state: deepClone(state),
-            catalog: deepClone(SKILL_CATALOG),
+            catalog: buildSkillCatalogSnapshot(state),
         };
     }
 
@@ -577,14 +742,14 @@
             return {
                 ...result,
                 state: deepClone(state),
-                catalog: deepClone(SKILL_CATALOG),
+                catalog: buildSkillCatalogSnapshot(state),
             };
         }
         writeSkillState(state);
         return {
             ok: true,
             state: deepClone(state),
-            catalog: deepClone(SKILL_CATALOG),
+            catalog: buildSkillCatalogSnapshot(state),
             ...result,
         };
     }
@@ -605,6 +770,7 @@
 
             setStoredCurrencyAmount(currentCurrency - definition.cost);
             state.ownedSkills.push(skillId);
+            state.skillLevels[skillId] = 1;
             state.autoRules[skillId] = normalizeSkillRule({}, definition);
             if (state.manualLoadout.length < 3) {
                 state.manualLoadout.push(skillId);
@@ -612,6 +778,36 @@
             return {
                 purchasedSkillId: skillId,
                 spentCurrency: definition.cost,
+                currency: getStoredCurrencyAmount(),
+            };
+        });
+    }
+
+    function upgradeSkill(skillId) {
+        return updateSkillState((state) => {
+            if (!state.ownedSkills.includes(skillId)) {
+                return { ok: false, error: "Buy that skill first." };
+            }
+            const definition = getSkillDefinition(skillId);
+            if (!definition) {
+                return { ok: false, error: "That skill does not exist." };
+            }
+            const currentLevel = getOwnedSkillLevel(state, skillId, definition);
+            const nextCost = getSkillUpgradeCost(definition, currentLevel);
+            if (!nextCost) {
+                return { ok: false, error: "That skill is already maxed out." };
+            }
+            const currentCurrency = getStoredCurrencyAmount();
+            if (currentCurrency < nextCost) {
+                return { ok: false, error: "Not enough currency." };
+            }
+
+            setStoredCurrencyAmount(currentCurrency - nextCost);
+            state.skillLevels[skillId] = currentLevel + 1;
+            return {
+                upgradedSkillId: skillId,
+                newLevel: state.skillLevels[skillId],
+                spentCurrency: nextCost,
                 currency: getStoredCurrencyAmount(),
             };
         });
@@ -677,8 +873,20 @@
 
     function getOwnedSkillDefinitions(state) {
         return state.ownedSkills
-            .map((skillId) => getSkillDefinition(skillId))
+            .map((skillId) => getResolvedOwnedSkillDefinition(state, skillId))
             .filter(Boolean);
+    }
+
+    function skillHasHealing(skill) {
+        return Number(skill && skill.healAmount || 0) > 0 || Number(skill && skill.lifestealPercent || 0) > 0;
+    }
+
+    function skillHasGuard(skill) {
+        return Number(skill && skill.enemyMultiplier || 0) > 0 && Number(skill && skill.enemyMultiplier || 0) < 1;
+    }
+
+    function skillHasDamage(skill) {
+        return Number(skill && skill.bonusDamage || 0) > 0;
     }
 
     function createBattleSkillsController(options) {
@@ -700,6 +908,7 @@
             currentTurn: 1,
             usedSkills: {},
             pendingPlayerBonus: 0,
+            pendingLifestealPercent: 0,
             pendingEnemyMultiplier: 1,
             autoUses: 0,
             active: false,
@@ -773,7 +982,7 @@
             }
 
             const loadout = state.manualLoadout
-                .map((skillId) => getSkillDefinition(skillId))
+                .map((skillId) => getResolvedOwnedSkillDefinition(state, skillId))
                 .filter(Boolean);
             if (!loadout.length) {
                 setStatus("Pick up to 3 manual skills on the Skills page.");
@@ -789,7 +998,7 @@
                 button.disabled = !battleState.active || !isPlayerTurn || !isPlayerTurn() || !isBattleActive || !isBattleActive() || !isUnlocked || isUsed;
                 button.innerHTML = `
                     <span class="skill-button-name">${skill.label}</span>
-                    <span class="skill-button-meta">Turn ${skill.unlockTurn}</span>
+                    <span class="skill-button-meta">Turn ${skill.unlockTurn} | Lv ${skill.level}</span>
                 `;
                 button.addEventListener("click", () => {
                     useSkill(skill.id, "manual");
@@ -806,7 +1015,7 @@
                 return { ok: false, error: "Skill not owned." };
             }
 
-            const skill = getSkillDefinition(skillId);
+            const skill = getResolvedOwnedSkillDefinition(state, skillId);
             if (!skill) {
                 return { ok: false, error: "Skill not found." };
             }
@@ -818,18 +1027,24 @@
             }
 
             let message = "";
-            if ((skill.kind === "heal" || skill.kind === "hybrid") && typeof setHealth === "function") {
+            if (skillHasHealing(skill) && Number(skill.healAmount || 0) > 0 && typeof setHealth === "function") {
                 const nextHealth = Math.min(Number(getMaxHealth ? getMaxHealth() : 0) || 0, (Number(getHealth ? getHealth() : 0) || 0) + (skill.healAmount || 0));
                 setHealth(nextHealth);
                 message = `${skill.label} restored ${skill.healAmount} health.`;
             }
-            if (skill.kind === "shield" || skill.kind === "hybrid") {
+            if (skillHasGuard(skill)) {
                 battleState.pendingEnemyMultiplier = Math.min(battleState.pendingEnemyMultiplier, Number(skill.enemyMultiplier || 0.45));
                 message = message ? `${message} Your guard is up for the next enemy hit.` : `${skill.label} will cut the next enemy hit.`;
             }
-            if (skill.kind === "empower" || skill.kind === "hybrid") {
+            if (skillHasDamage(skill)) {
                 battleState.pendingPlayerBonus += Number(skill.bonusDamage || 0);
                 message = message ? `${message} Your next hit gains +${skill.bonusDamage} damage.` : `${skill.label} charged your next strike with +${skill.bonusDamage} damage.`;
+            }
+            if (Number(skill.lifestealPercent || 0) > 0) {
+                battleState.pendingLifestealPercent += Number(skill.lifestealPercent || 0);
+                message = message
+                    ? `${message} Your next hit will steal ${skill.lifestealPercent}% of the damage it deals as health.`
+                    : `${skill.label} primed your next hit to steal ${skill.lifestealPercent}% of the damage it deals as health.`;
             }
 
             battleState.usedSkills[skill.id] = true;
@@ -866,12 +1081,12 @@
             if (phase === "player") {
                 const healSkill = ownedSkills.find((skill) => {
                     const rule = state.autoRules[skill.id];
-                    return (skill.kind === "heal" || skill.kind === "hybrid")
+                    return skillHasHealing(skill)
                         && hpPercent <= Math.min(state.autoSettings.healThreshold, rule.hpThreshold);
                 });
                 if (healSkill) return healSkill;
 
-                const attackSkills = ownedSkills.filter((skill) => skill.kind === "empower" || skill.kind === "hybrid");
+                const attackSkills = ownedSkills.filter((skill) => skillHasDamage(skill));
                 if (!attackSkills.length) return null;
                 if (state.autoSettings.aggression === "aggressive") {
                     return attackSkills.sort((a, b) => b.unlockTurn - a.unlockTurn)[0];
@@ -885,7 +1100,7 @@
             if (phase === "enemy") {
                 return ownedSkills.find((skill) => {
                     const rule = state.autoRules[skill.id];
-                    return skill.kind === "shield"
+                    return skillHasGuard(skill)
                         && hpPercent <= Math.min(state.autoSettings.guardThreshold, rule.hpThreshold);
                 }) || null;
             }
@@ -912,6 +1127,7 @@
                 currentTurn: 1,
                 usedSkills: {},
                 pendingPlayerBonus: 0,
+                pendingLifestealPercent: 0,
                 pendingEnemyMultiplier: 1,
                 autoUses: 0,
                 active: true,
@@ -940,6 +1156,27 @@
             return bonus;
         }
 
+        function applyPlayerLifesteal(damageDealt) {
+            const percent = Math.max(0, Number(battleState.pendingLifestealPercent) || 0);
+            battleState.pendingLifestealPercent = 0;
+            if (!percent || typeof setHealth !== "function") {
+                renderUi();
+                return { healed: 0, lifestealPercent: percent };
+            }
+
+            const currentHealth = Math.max(0, Number(getHealth ? getHealth() : 0) || 0);
+            const maxHealth = Math.max(0, Number(getMaxHealth ? getMaxHealth() : 0) || 0);
+            const damage = Math.max(0, Math.round(Number(damageDealt) || 0));
+            const rawHeal = Math.max(0, Math.round((damage * percent) / 100));
+            const nextHealth = Math.min(maxHealth, currentHealth + rawHeal);
+            const healed = Math.max(0, nextHealth - currentHealth);
+            if (healed > 0) {
+                setHealth(nextHealth);
+            }
+            renderUi();
+            return { healed, lifestealPercent: percent };
+        }
+
         function applyIncomingEnemyDamage(baseDamage) {
             const adjusted = Math.max(1, Math.round(Number(baseDamage || 0) * battleState.pendingEnemyMultiplier));
             battleState.pendingEnemyMultiplier = 1;
@@ -949,6 +1186,7 @@
 
         function endBattle() {
             battleState.active = false;
+            battleState.pendingLifestealPercent = 0;
             renderUi();
         }
 
@@ -959,6 +1197,7 @@
             onPlayerTurnStart,
             onEnemyTurnStart,
             consumePlayerDamageBonus,
+            applyPlayerLifesteal,
             applyIncomingEnemyDamage,
             useSkill,
             endBattle,
@@ -2191,6 +2430,7 @@
         buyExtraSlot,
         getSkillStateSnapshot,
         buySkill,
+        upgradeSkill,
         setSkillMode,
         setManualSkillLoadout,
         updateAutoSkillSettings,

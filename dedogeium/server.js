@@ -414,9 +414,55 @@ function normalizeProfileStats(rawProfile, username) {
     title: normalizePlayerTitle(source.title),
     attack: Math.max(0, Math.round(Number(source.attack) || 0)),
     health: Math.max(0, Math.round(Number(source.health) || 0)),
+    equippedCount: Math.max(0, Math.round(Number(source.equippedCount) || 0)),
+    currency: Math.max(0, Math.round(Number(source.currency) || 0)),
     avatar: typeof source.avatar === 'string' ? source.avatar : '',
     updatedAt: Math.max(0, Math.round(Number(source.updatedAt) || 0)),
   };
+}
+
+function normalizeClientState(rawState) {
+  const source = rawState && typeof rawState === 'object' ? rawState : {};
+  return {
+    updatedAt: Math.max(0, Math.round(Number(source.updatedAt) || 0)),
+    completedLevel: Math.max(0, Math.floor(Number(source.completedLevel) || 0)),
+    currency: Math.max(0, Math.round(Number(source.currency) || 0)),
+    equippedItems: Array.isArray(source.equippedItems) ? source.equippedItems : [],
+    progression: source.progression && typeof source.progression === 'object' ? source.progression : null,
+    dailyReward: source.dailyReward && typeof source.dailyReward === 'object' ? source.dailyReward : null,
+    skillState: source.skillState && typeof source.skillState === 'object' ? source.skillState : null,
+    playerHP: Math.max(0, Math.round(Number(source.playerHP) || 0)),
+    totalHP: Math.max(0, Math.round(Number(source.totalHP) || 0)),
+    hp: Math.max(0, Math.round(Number(source.hp) || 0)),
+    hpEarned: Math.max(0, Math.round(Number(source.hpEarned) || 0)),
+    aprilFoolsEnabled: source.aprilFoolsEnabled === true,
+    earlyGangRedeemed: source.earlyGangRedeemed === true,
+    seenTutorialPrompt: source.seenTutorialPrompt === true,
+  };
+}
+
+function getClientStateScore(rawState) {
+  const state = normalizeClientState(rawState);
+  const progression = state.progression && typeof state.progression === 'object' ? state.progression : {};
+  const boostInventory = progression.boostInventory && typeof progression.boostInventory === 'object'
+    ? progression.boostInventory
+    : {};
+  const dailyReward = state.dailyReward && typeof state.dailyReward === 'object' ? state.dailyReward : {};
+  const skillState = state.skillState && typeof state.skillState === 'object' ? state.skillState : {};
+  const ownedSkills = Array.isArray(skillState.ownedSkills) ? skillState.ownedSkills.length : 0;
+  return (
+    state.completedLevel * 1000000
+    + state.equippedItems.length * 10000
+    + Math.max(0, Math.floor(state.currency / 10))
+    + Math.max(0, Math.floor(Number(progression.extraSlots) || 0)) * 1000
+    + Math.max(0, Math.floor(Number(boostInventory.currency) || 0)) * 50
+    + Math.max(0, Math.floor(Number(boostInventory.luck) || 0)) * 50
+    + ownedSkills * 500
+    + Math.max(0, Math.floor(Number(dailyReward.streak) || 0)) * 10
+    + (state.aprilFoolsEnabled ? 1 : 0)
+    + (state.earlyGangRedeemed ? 1 : 0)
+    + (state.seenTutorialPrompt ? 1 : 0)
+  );
 }
 
 function ensurePlayerRecordShape(rawRecord, username) {
@@ -442,6 +488,7 @@ function ensurePlayerRecordShape(rawRecord, username) {
       ...profileStats,
       title: profileStats.title || resolvedTitle,
     },
+    clientState: normalizeClientState(source.clientState),
     leaderboard: normalizeLeaderboardState(source.leaderboard),
     leaderboardBan: normalizeLeaderboardBan(source.leaderboardBan),
   };
@@ -462,6 +509,7 @@ function getBasePlayerRecord() {
     visits: 0,
     inventory: [],
     profileStats: normalizeProfileStats({}, ''),
+    clientState: normalizeClientState({}),
     leaderboard: normalizeLeaderboardState({}),
   };
 }
@@ -512,6 +560,19 @@ function mergePlayerRecords(existingRecord, incomingRecord, username) {
     const incomingUpdated = Number(incoming.leaderboard.updatedAt) || 0;
     if (!merged.leaderboard || incomingUpdated >= existingUpdated) {
       merged.leaderboard = normalizeLeaderboardState(incoming.leaderboard);
+    }
+  }
+
+  if (incoming.clientState && typeof incoming.clientState === 'object') {
+    const existingUpdated = Number(merged.clientState && merged.clientState.updatedAt) || 0;
+    const incomingState = normalizeClientState(incoming.clientState);
+    const incomingUpdated = Number(incomingState.updatedAt) || 0;
+    if (
+      !merged.clientState
+      || incomingUpdated > existingUpdated
+      || (incomingUpdated === existingUpdated && getClientStateScore(incomingState) > getClientStateScore(merged.clientState))
+    ) {
+      merged.clientState = incomingState;
     }
   }
 
@@ -1041,6 +1102,7 @@ app.post('/api/auth/register', (req, res) => {
     username,
     token: session.token,
     expiresAt: session.expiresAt,
+    player: getStoredPlayerRecord(username) || ensurePlayerRecordShape(record, username),
   });
 });
 
@@ -1075,6 +1137,7 @@ app.post('/api/auth/login', (req, res) => {
     username,
     token: session.token,
     expiresAt: session.expiresAt,
+    player: getStoredPlayerRecord(username) || ensurePlayerRecordShape(record, username),
   });
 });
 
@@ -1083,6 +1146,7 @@ app.get('/api/auth/session', requirePlayerAuth, (req, res) => {
     ok: true,
     username: req.player.username,
     expiresAt: db.prepare('SELECT expires_at FROM auth_tokens WHERE token = ?').get(req.player.token).expires_at,
+    player: getStoredPlayerRecord(req.player.username),
   });
 });
 
@@ -1109,6 +1173,18 @@ app.get('/api/leaderboard', (req, res) => {
 
 app.get('/api/players', requireAdminAuth, (req, res) => {
   res.json(getAllPlayerRecords());
+});
+
+app.get('/api/player', requirePlayerAuth, (req, res) => {
+  const player = getStoredPlayerRecord(req.player.username);
+  if (!player) {
+    return res.status(404).json({ error: 'Player not found' });
+  }
+  res.json({
+    ok: true,
+    username: req.player.username,
+    player,
+  });
 });
 
 app.post('/api/admin/leaderboard-ban', requireAdminAuth, (req, res) => {

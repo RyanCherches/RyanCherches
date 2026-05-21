@@ -411,6 +411,78 @@
             }
         }
 
+        function restoreSharedPlayerState(username, player) {
+            if (!player || typeof player !== "object") {
+                primeLocalPlayerRecord(username);
+                return;
+            }
+            try {
+                const safeInventory = Array.isArray(player.inventory) ? player.inventory : [];
+                const clientState = player.clientState && typeof player.clientState === "object" ? player.clientState : {};
+                const profileStats = player.profileStats && typeof player.profileStats === "object" ? player.profileStats : {};
+                const leaderboard = player.leaderboard && typeof player.leaderboard === "object" ? player.leaderboard : {};
+                const allTime = leaderboard.allTime && typeof leaderboard.allTime === "object" ? leaderboard.allTime : {};
+                const completedLevelFallback = Math.max(0, Number(allTime.victoriesComputer) || 0);
+                const resolvedCompletedLevel = Math.max(
+                    0,
+                    Number(clientState.completedLevel) || 0,
+                    completedLevelFallback > 0 ? completedLevelFallback + 1 : 0
+                );
+                const resolvedCurrency = Math.max(
+                    0,
+                    Number(clientState.currency) || 0,
+                    Number(profileStats.currency) || 0
+                );
+
+                localStorage.setItem("inventory", JSON.stringify(safeInventory));
+                localStorage.setItem(`inventory_${username}`, JSON.stringify(safeInventory));
+                localStorage.setItem("completedLevel", String(resolvedCompletedLevel));
+                localStorage.setItem("currency", String(resolvedCurrency));
+                localStorage.setItem("equippedItems", JSON.stringify(Array.isArray(clientState.equippedItems) ? clientState.equippedItems : []));
+
+                if (clientState.progression && typeof clientState.progression === "object") {
+                    localStorage.setItem("dedogeiumProgressionV1", JSON.stringify(clientState.progression));
+                }
+                if (clientState.dailyReward && typeof clientState.dailyReward === "object") {
+                    localStorage.setItem("dedogeiumDailyRewardV1", JSON.stringify(clientState.dailyReward));
+                }
+                if (clientState.skillState && typeof clientState.skillState === "object") {
+                    localStorage.setItem("dedogeiumSkillStateV1", JSON.stringify(clientState.skillState));
+                }
+
+                localStorage.setItem("playerHP", String(Math.max(0, Number(clientState.playerHP) || 0)));
+                localStorage.setItem("totalHP", String(Math.max(0, Number(clientState.totalHP) || 0)));
+                localStorage.setItem("hp", String(Math.max(0, Number(clientState.hp) || 0)));
+                localStorage.setItem("hpEarned", String(Math.max(0, Number(clientState.hpEarned) || 0)));
+
+                if (clientState.aprilFoolsEnabled) {
+                    localStorage.setItem("aprilFoolsEnabled", "true");
+                } else {
+                    localStorage.removeItem("aprilFoolsEnabled");
+                }
+                if (clientState.earlyGangRedeemed) {
+                    localStorage.setItem("earlyGangRedeemed", "true");
+                } else {
+                    localStorage.removeItem("earlyGangRedeemed");
+                }
+                if (clientState.seenTutorialPrompt) {
+                    localStorage.setItem("seenTutorialPrompt", "true");
+                } else {
+                    localStorage.removeItem("seenTutorialPrompt");
+                }
+                if (Number(clientState.updatedAt) > 0) {
+                    localStorage.setItem("dedogeiumClientStateUpdatedAtV1", String(Math.round(Number(clientState.updatedAt))));
+                }
+
+                const players = JSON.parse(localStorage.getItem("dedogeium_players") || "{}");
+                players[username] = player;
+                localStorage.setItem("dedogeium_players", JSON.stringify(players));
+            } catch (error) {
+                console.error("Could not restore shared player state", error);
+                primeLocalPlayerRecord(username);
+            }
+        }
+
         async function sendAuthRequest(pathname, payload) {
             const preferredServer = getSharedServerBase() || (serverUrlInput ? serverUrlInput.value : "");
             const { apiBase } = await findWorkingApiBase(preferredServer);
@@ -443,7 +515,7 @@
                 persistUsername(payload.username);
                 localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, payload.token);
                 clearStoredPasswords();
-                primeLocalPlayerRecord(payload.username);
+                restoreSharedPlayerState(payload.username, payload.player);
                 setStatus(mode === "register" ? "Account created on the shared SQL server. Redirecting..." : "Login successful on the shared SQL server. Redirecting...");
                 window.location.href = getPostLoginTarget();
             } catch (error) {

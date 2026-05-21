@@ -11,6 +11,8 @@
     const USERNAME_STORAGE_KEYS = ["Username", "Uabcd", "username", "playerName"];
     const PASSWORD_STORAGE_KEYS = ["Password", "Pabc", "password", "pass", "pwd"];
     const AUTH_TOKEN_STORAGE_KEY = "dedogeiumAuthToken";
+    const CLIENT_STATE_UPDATED_AT_STORAGE_KEY = "dedogeiumClientStateUpdatedAtV1";
+    const PLAYER_STATE_POLL_MS = 2500;
     const BOOST_BASE_COSTS = {
         currency: 350,
         luck: 500,
@@ -368,6 +370,10 @@
     let leaderboardTickStarted = false;
     let leaderboardLastTickAt = Date.now();
     const pendingSyncTimers = {};
+    let playerStateWatcherStarted = false;
+    let lastPlayerStateFingerprint = "";
+    let lastHydratedPlayerKey = "";
+    let hydrationPromise = null;
 
     function deepClone(value) {
         return JSON.parse(JSON.stringify(value));
@@ -724,6 +730,36 @@
 
     function setStoredCurrencyAmount(amount) {
         localStorage.setItem("currency", String(Math.max(0, Math.round(Number(amount) || 0))));
+    }
+
+    function getStoredCompletedLevel() {
+        return Math.max(0, Math.floor(Number(localStorage.getItem("completedLevel") || "0") || 0));
+    }
+
+    function getStoredNumericValue(storageKey) {
+        return Math.max(0, Math.round(Number(localStorage.getItem(storageKey) || "0") || 0));
+    }
+
+    function setStoredNumericValue(storageKey, value) {
+        localStorage.setItem(storageKey, String(Math.max(0, Math.round(Number(value) || 0))));
+    }
+
+    function setStoredBooleanFlag(storageKey, enabled) {
+        if (enabled) {
+            localStorage.setItem(storageKey, "true");
+        } else {
+            localStorage.removeItem(storageKey);
+        }
+    }
+
+    function getStoredClientStateUpdatedAt() {
+        return Math.max(0, Math.round(Number(localStorage.getItem(CLIENT_STATE_UPDATED_AT_STORAGE_KEY) || "0") || 0));
+    }
+
+    function setStoredClientStateUpdatedAt(value) {
+        const normalized = Math.max(0, Math.round(Number(value) || 0));
+        localStorage.setItem(CLIENT_STATE_UPDATED_AT_STORAGE_KEY, String(normalized));
+        return normalized;
     }
 
     function getSkillStateSnapshot() {
@@ -1901,6 +1937,100 @@
         return typeof value === "string" && value.trim() ? value.trim().slice(0, 64) : "";
     }
 
+    function normalizeClientState(rawState) {
+        const safeState = rawState && typeof rawState === "object" ? rawState : {};
+        return {
+            updatedAt: Math.max(0, Math.round(Number(safeState.updatedAt) || 0)),
+            completedLevel: Math.max(0, Math.floor(Number(safeState.completedLevel) || 0)),
+            currency: Math.max(0, Math.round(Number(safeState.currency) || 0)),
+            equippedItems: Array.isArray(safeState.equippedItems) ? safeState.equippedItems : [],
+            progression: normalizeState(safeState.progression),
+            dailyReward: normalizeDailyRewardState(safeState.dailyReward),
+            skillState: normalizeSkillState(safeState.skillState),
+            playerHP: Math.max(0, Math.round(Number(safeState.playerHP) || 0)),
+            totalHP: Math.max(0, Math.round(Number(safeState.totalHP) || 0)),
+            hp: Math.max(0, Math.round(Number(safeState.hp) || 0)),
+            hpEarned: Math.max(0, Math.round(Number(safeState.hpEarned) || 0)),
+            aprilFoolsEnabled: safeState.aprilFoolsEnabled === true,
+            earlyGangRedeemed: safeState.earlyGangRedeemed === true,
+            seenTutorialPrompt: safeState.seenTutorialPrompt === true,
+        };
+    }
+
+    function getClientStateScore(rawState) {
+        const state = normalizeClientState(rawState);
+        const progression = state.progression && typeof state.progression === "object" ? state.progression : {};
+        const boostInventory = progression.boostInventory && typeof progression.boostInventory === "object"
+            ? progression.boostInventory
+            : {};
+        const dailyReward = state.dailyReward && typeof state.dailyReward === "object" ? state.dailyReward : {};
+        const skillState = state.skillState && typeof state.skillState === "object" ? state.skillState : {};
+        const ownedSkills = Array.isArray(skillState.ownedSkills) ? skillState.ownedSkills.length : 0;
+        return (
+            state.completedLevel * 1000000
+            + state.equippedItems.length * 10000
+            + Math.max(0, Math.floor(state.currency / 10))
+            + Math.max(0, Math.floor(Number(progression.extraSlots) || 0)) * 1000
+            + Math.max(0, Math.floor(Number(boostInventory.currency) || 0)) * 50
+            + Math.max(0, Math.floor(Number(boostInventory.luck) || 0)) * 50
+            + ownedSkills * 500
+            + Math.max(0, Math.floor(Number(dailyReward.streak) || 0)) * 10
+            + (state.aprilFoolsEnabled ? 1 : 0)
+            + (state.earlyGangRedeemed ? 1 : 0)
+            + (state.seenTutorialPrompt ? 1 : 0)
+        );
+    }
+
+    function buildLocalClientStateSnapshot() {
+        return normalizeClientState({
+            updatedAt: getStoredClientStateUpdatedAt(),
+            completedLevel: getStoredCompletedLevel(),
+            currency: getStoredCurrencyAmount(),
+            equippedItems: getStoredEquippedItems(),
+            progression: normalizeState(readRawState()),
+            dailyReward: normalizeDailyRewardState(readDailyRewardState()),
+            skillState: normalizeSkillState(readRawSkillState()),
+            playerHP: getStoredNumericValue("playerHP"),
+            totalHP: getStoredNumericValue("totalHP"),
+            hp: getStoredNumericValue("hp"),
+            hpEarned: getStoredNumericValue("hpEarned"),
+            aprilFoolsEnabled: localStorage.getItem("aprilFoolsEnabled") === "true",
+            earlyGangRedeemed: localStorage.getItem("earlyGangRedeemed") === "true",
+            seenTutorialPrompt: localStorage.getItem("seenTutorialPrompt") === "true",
+        });
+    }
+
+    function choosePreferredClientState(localState, serverState) {
+        const normalizedLocal = normalizeClientState(localState);
+        const normalizedServer = normalizeClientState(serverState);
+        const localUpdated = Number(normalizedLocal.updatedAt) || 0;
+        const serverUpdated = Number(normalizedServer.updatedAt) || 0;
+        if (serverUpdated > localUpdated) return normalizedServer;
+        if (localUpdated > serverUpdated) return normalizedLocal;
+        return getClientStateScore(normalizedServer) > getClientStateScore(normalizedLocal)
+            ? normalizedServer
+            : normalizedLocal;
+    }
+
+    function applyClientStateToLocalStorage(rawState) {
+        const state = normalizeClientState(rawState);
+        localStorage.setItem("completedLevel", String(state.completedLevel));
+        setStoredCurrencyAmount(state.currency);
+        localStorage.setItem("equippedItems", JSON.stringify(state.equippedItems));
+        writeState(normalizeState(state.progression));
+        writeDailyRewardState(normalizeDailyRewardState(state.dailyReward));
+        writeSkillState(normalizeSkillState(state.skillState));
+        setStoredNumericValue("playerHP", state.playerHP);
+        setStoredNumericValue("totalHP", state.totalHP);
+        setStoredNumericValue("hp", state.hp);
+        setStoredNumericValue("hpEarned", state.hpEarned);
+        setStoredBooleanFlag("aprilFoolsEnabled", state.aprilFoolsEnabled);
+        setStoredBooleanFlag("earlyGangRedeemed", state.earlyGangRedeemed);
+        setStoredBooleanFlag("seenTutorialPrompt", state.seenTutorialPrompt);
+        setStoredClientStateUpdatedAt(state.updatedAt);
+        return state;
+    }
+
     function normalizeLeaderboardBan(rawBan) {
         if (!rawBan || typeof rawBan !== "object") return null;
         const permanent = rawBan.permanent === true;
@@ -1945,9 +2075,144 @@
                 ...profileStats,
                 title: profileStats.title || resolvedTitle,
             },
+            clientState: normalizeClientState(safeRecord.clientState),
             leaderboard: normalizeLeaderboardState(safeRecord.leaderboard),
             leaderboardBan: normalizeLeaderboardBan(safeRecord.leaderboardBan),
         };
+    }
+
+    function getBasePlayerRecord() {
+        return {
+            firstSeen: null,
+            lastSeen: null,
+            visits: 0,
+            inventory: [],
+            title: "",
+            profileStats: normalizeProfileStats({}, ""),
+            clientState: normalizeClientState({}),
+            leaderboard: normalizeLeaderboardState({}),
+            leaderboardBan: null,
+        };
+    }
+
+    function mergePlayerRecords(existingRecord, incomingRecord, username) {
+        const safeUsername = normalizeUsername(username);
+        const existing = ensurePlayerRecordShape(existingRecord || getBasePlayerRecord(), safeUsername);
+        const incoming = incomingRecord && typeof incomingRecord === "object" ? { ...incomingRecord } : {};
+        delete incoming.password;
+        delete incoming.leaderboardBan;
+
+        const merged = ensurePlayerRecordShape(existing, safeUsername);
+        merged.firstSeen = merged.firstSeen
+            ? Math.min(merged.firstSeen, Number(incoming.firstSeen) || merged.firstSeen)
+            : (Number(incoming.firstSeen) || merged.firstSeen);
+        merged.lastSeen = merged.lastSeen
+            ? Math.max(merged.lastSeen, Number(incoming.lastSeen) || merged.lastSeen)
+            : (Number(incoming.lastSeen) || merged.lastSeen);
+        merged.visits = Math.max(merged.visits || 0, Number(incoming.visits) || 0);
+
+        const existingInv = Array.isArray(merged.inventory) ? merged.inventory : [];
+        const newInv = Array.isArray(incoming.inventory) ? incoming.inventory : [];
+        const inventoryById = {};
+        existingInv.concat(newInv).forEach((item) => {
+            if (item && item.id) inventoryById[item.id] = item;
+        });
+        merged.inventory = Object.values(inventoryById);
+
+        if (incoming.profileStats && typeof incoming.profileStats === "object") {
+            const existingUpdated = Number(merged.profileStats && merged.profileStats.updatedAt) || 0;
+            const incomingUpdated = Number(incoming.profileStats.updatedAt) || 0;
+            if (!merged.profileStats || incomingUpdated >= existingUpdated) {
+                merged.profileStats = normalizeProfileStats(incoming.profileStats, safeUsername);
+            }
+        }
+
+        const incomingTitle = normalizePlayerTitle(incoming.title || (incoming.profileStats && incoming.profileStats.title));
+        if (incomingTitle) {
+            merged.title = incomingTitle;
+            merged.profileStats = {
+                ...normalizeProfileStats(merged.profileStats, safeUsername),
+                title: incomingTitle,
+            };
+        }
+
+        if (incoming.clientState && typeof incoming.clientState === "object") {
+            merged.clientState = choosePreferredClientState(merged.clientState, incoming.clientState);
+        }
+
+        if (incoming.leaderboard && typeof incoming.leaderboard === "object") {
+            const existingUpdated = Number(merged.leaderboard && merged.leaderboard.updatedAt) || 0;
+            const incomingUpdated = Number(incoming.leaderboard.updatedAt) || 0;
+            if (!merged.leaderboard || incomingUpdated >= existingUpdated) {
+                merged.leaderboard = normalizeLeaderboardState(incoming.leaderboard);
+            }
+        }
+
+        return merged;
+    }
+
+    function buildStablePlayerStateFingerprint(username = getCurrentUsername()) {
+        const safeUsername = normalizeUsername(username);
+        if (!safeUsername) return "";
+        const players = readPlayerRecords();
+        const playerRecord = safeUsername && players[safeUsername] && typeof players[safeUsername] === "object"
+            ? ensurePlayerRecordShape(players[safeUsername], safeUsername)
+            : ensurePlayerRecordShape({}, safeUsername);
+        const clientState = buildLocalClientStateSnapshot();
+        return JSON.stringify({
+            username: safeUsername,
+            inventory: getStoredInventory(),
+            clientState: {
+                ...clientState,
+                updatedAt: 0,
+            },
+            title: normalizePlayerTitle(playerRecord.title || (playerRecord.profileStats && playerRecord.profileStats.title)),
+        });
+    }
+
+    function applyServerPlayerRecord(rawRecord, username) {
+        const safeUsername = normalizeUsername(username || (rawRecord && rawRecord.profileStats && rawRecord.profileStats.username));
+        if (!safeUsername) return null;
+
+        const players = readPlayerRecords();
+        const localRecord = ensurePlayerRecordShape(players[safeUsername], safeUsername);
+        const localSnapshot = buildLocalClientStateSnapshot();
+        const localRecordWithSnapshot = ensurePlayerRecordShape({
+            ...localRecord,
+            inventory: getStoredInventory(),
+            clientState: localSnapshot,
+            profileStats: {
+                ...localRecord.profileStats,
+                ...getCurrentCombatProfile(),
+                updatedAt: Math.max(Number(localRecord.profileStats && localRecord.profileStats.updatedAt) || 0, Number(localSnapshot.updatedAt) || 0),
+            },
+        }, safeUsername);
+        const serverRecord = ensurePlayerRecordShape(rawRecord, safeUsername);
+        const mergedRecord = mergePlayerRecords(localRecordWithSnapshot, serverRecord, safeUsername);
+        const preferredProfileStats = (Number(serverRecord.profileStats && serverRecord.profileStats.updatedAt) || 0) >= (Number(localRecordWithSnapshot.profileStats && localRecordWithSnapshot.profileStats.updatedAt) || 0)
+            ? serverRecord.profileStats
+            : localRecordWithSnapshot.profileStats;
+
+        localStorage.setItem("inventory", JSON.stringify(mergedRecord.inventory));
+        localStorage.setItem(`inventory_${safeUsername}`, JSON.stringify(mergedRecord.inventory));
+        mergedRecord.clientState = applyClientStateToLocalStorage(mergedRecord.clientState);
+        mergedRecord.profileStats = normalizeProfileStats({
+            ...preferredProfileStats,
+            title: normalizePlayerTitle(mergedRecord.title || (mergedRecord.profileStats && mergedRecord.profileStats.title)),
+            equippedCount: Array.isArray(mergedRecord.clientState.equippedItems) ? mergedRecord.clientState.equippedItems.length : 0,
+            currency: Math.max(
+                Number(mergedRecord.clientState.currency) || 0,
+                Number(mergedRecord.profileStats && mergedRecord.profileStats.currency) || 0
+            ),
+            updatedAt: Math.max(
+                Number(mergedRecord.profileStats && mergedRecord.profileStats.updatedAt) || 0,
+                Number(mergedRecord.clientState && mergedRecord.clientState.updatedAt) || 0
+            ),
+        }, safeUsername);
+        players[safeUsername] = mergedRecord;
+        writePlayerRecords(players);
+        lastPlayerStateFingerprint = buildStablePlayerStateFingerprint(safeUsername);
+        return deepClone(mergedRecord);
     }
 
     function getDayBucket(record, dateKey) {
@@ -2044,6 +2309,46 @@
         return false;
     }
 
+    async function hydrateCurrentPlayerFromServer(force = false) {
+        const safeUsername = getCurrentUsername();
+        const serverBase = getSyncServerBase();
+        const authToken = getAuthToken();
+        if (!safeUsername || !serverBase || typeof fetch !== "function" || !authToken) return false;
+
+        const hydrationKey = `${safeUsername}@${serverBase}`;
+        if (!force && lastHydratedPlayerKey === hydrationKey) return false;
+        if (hydrationPromise) return hydrationPromise;
+
+        hydrationPromise = (async () => {
+            for (const apiBase of buildApiBaseCandidates(serverBase)) {
+                try {
+                    const response = await fetch(`${apiBase}/player`, {
+                        headers: {
+                            "Authorization": `Bearer ${authToken}`,
+                        },
+                    });
+                    if (!response.ok) {
+                        if (response.status === 401 || response.status === 403) return false;
+                        continue;
+                    }
+                    const data = await response.json().catch(() => ({}));
+                    if (data && data.player) {
+                        applyServerPlayerRecord(data.player, data.username || safeUsername);
+                        lastHydratedPlayerKey = hydrationKey;
+                        return true;
+                    }
+                } catch (error) {
+                    // Try the next API base candidate.
+                }
+            }
+            return false;
+        })().finally(() => {
+            hydrationPromise = null;
+        });
+
+        return hydrationPromise;
+    }
+
     function schedulePlayerRecordSync(username, record) {
         const safeUsername = normalizeUsername(username);
         if (!safeUsername) return;
@@ -2076,6 +2381,7 @@
 
         record.inventory = getStoredInventory();
         record.profileStats = getCurrentCombatProfile();
+        record.clientState = buildLocalClientStateSnapshot();
         record.leaderboard.allTime.victoriesComputer = Math.max(
             record.leaderboard.allTime.victoriesComputer,
             Math.max(0, (Number(localStorage.getItem("completedLevel") || "0") || 0) - 1)
@@ -2089,6 +2395,7 @@
         record.leaderboard.days = pruneLeaderboardDays(record.leaderboard.days, new Date(now));
         record.leaderboard.updatedAt = now;
         record.profileStats.updatedAt = now;
+        record.clientState.updatedAt = Math.max(Number(record.clientState.updatedAt) || 0, getStoredClientStateUpdatedAt());
         players[username] = record;
         writePlayerRecords(players);
 
@@ -2359,6 +2666,60 @@
         return deepClone(ensurePlayerRecordShape(players[username], username));
     }
 
+    function syncCurrentPlayerStateIfNeeded() {
+        const username = getCurrentUsername();
+        if (!username) {
+            lastPlayerStateFingerprint = "";
+            return;
+        }
+
+        const nextFingerprint = buildStablePlayerStateFingerprint(username);
+        if (!nextFingerprint) return;
+        if (!lastPlayerStateFingerprint) {
+            lastPlayerStateFingerprint = nextFingerprint;
+            return;
+        }
+        if (nextFingerprint === lastPlayerStateFingerprint) return;
+
+        setStoredClientStateUpdatedAt(Date.now());
+        updateCurrentPlayerRecord(() => ({ ok: true }));
+        lastPlayerStateFingerprint = buildStablePlayerStateFingerprint(username);
+    }
+
+    function initializeSharedPlayerSync() {
+        if (playerStateWatcherStarted || typeof window === "undefined") return;
+        playerStateWatcherStarted = true;
+
+        const bootstrap = async () => {
+            await hydrateCurrentPlayerFromServer();
+            if (getCurrentUsername()) {
+                updateCurrentPlayerRecord(() => ({ ok: true }));
+                lastPlayerStateFingerprint = buildStablePlayerStateFingerprint();
+            }
+        };
+        bootstrap().catch(() => {});
+
+        if (typeof document !== "undefined") {
+            document.addEventListener("visibilitychange", () => {
+                if (!document.hidden) {
+                    hydrateCurrentPlayerFromServer().catch(() => {});
+                    syncCurrentPlayerStateIfNeeded();
+                }
+            });
+        }
+
+        window.addEventListener("focus", () => {
+            hydrateCurrentPlayerFromServer().catch(() => {});
+            syncCurrentPlayerStateIfNeeded();
+        });
+
+        window.addEventListener("beforeunload", () => {
+            syncCurrentPlayerStateIfNeeded();
+        });
+
+        window.setInterval(syncCurrentPlayerStateIfNeeded, PLAYER_STATE_POLL_MS);
+    }
+
     function startLeaderboardTracking() {
         if (leaderboardTickStarted || typeof window === "undefined") return;
         leaderboardTickStarted = true;
@@ -2403,6 +2764,8 @@
         window.setInterval(tick, LEADERBOARD_TICK_MS);
     }
 
+    initializeSharedPlayerSync();
+
     window.DedogeiumSystems = {
         STORAGE_KEY,
         DAILY_REWARD_STORAGE_KEY,
@@ -2443,6 +2806,8 @@
         getCurrentCombatProfile,
         getCurrentPlayerRecord,
         readPlayerRecords,
+        applyServerPlayerRecord,
+        hydrateCurrentPlayerFromServer,
         recordCurrentProfileSnapshot,
         recordTimePlayed,
         recordComputerVictory,

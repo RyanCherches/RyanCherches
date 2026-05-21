@@ -63,6 +63,19 @@ try {
                 $publicUrl = $match.Value.TrimEnd("/")
                 $arenaUrl = "$publicUrl/arena/"
                 $announcedPublicUrl = $true
+                $defaultsPath = Join-Path $PSScriptRoot "server_defaults.js"
+                $defaultsContent = @"
+(function configureDedogeiumDefaults() {
+    // Everyone should use the same public SQL-backed server.
+    // For Cloudflare Quick Tunnels, start_cloudflare_tunnel.ps1 updates this URL.
+    //
+    // Note: Cloudflare Quick Tunnel URLs are temporary and change each time.
+    // For a truly constant public URL, use a real hosted server or a named tunnel.
+    window.DEDOGEIUM_DEFAULT_SERVER_URL = "$publicUrl";
+    window.DEDOGEIUM_FORCE_DEFAULT_SERVER = true;
+})();
+"@
+                Set-Content -Path $defaultsPath -Value $defaultsContent -Encoding UTF8
 
                 Write-Host ""
                 Write-Output "Public Dedogeium URL: $publicUrl"

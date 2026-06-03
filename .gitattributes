@@ -1,0 +1,7 @@
+# Normalize line endings in this repository.
+# Git will store text files with LF in the repo and convert them to CRLF on checkout for Windows.
+* text=auto
+
+# Treat dot-ignore and asset ignore files as text.
+.assetsignore text
+*.ignore text

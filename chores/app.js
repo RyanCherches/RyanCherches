@@ -6,9 +6,22 @@ let familyConfig = {
   allRoles: ["Dad", "Mom", "Child 1", "Child 2"],
 };
 
+const APP_BASE_PATH = (() => {
+  const pathname = window.location.pathname;
+  const directory = pathname.endsWith("/")
+    ? pathname.slice(0, -1)
+    : pathname.replace(/\/[^\/]*$/, "");
+  return directory === "" ? "" : directory;
+})();
+
+function apiUrl(path) {
+  if (!path.startsWith("/")) return `${APP_BASE_PATH}/${path}`.replace(/\/+/g, "/");
+  return `${APP_BASE_PATH}${path}`.replace(/\/+/g, "/");
+}
+
 async function loadFamilyConfig() {
   try {
-    const res = await fetch("/api/config");
+    const res = await fetch(apiUrl("/api/config"));
     if (res.ok) familyConfig = await res.json();
   } catch { /* use defaults */ }
   // Rebuild derived state from config
@@ -1400,7 +1413,7 @@ async function apiFetch(path, options = {}) {
     Object.assign(headers, options.headers);
   }
 
-  const response = await fetch(path, { ...options, headers });
+  const response = await fetch(apiUrl(path), { ...options, headers });
 
   if (response.status === 401) {
     logout();

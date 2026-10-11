@@ -1,0 +1,53 @@
+import assert from 'node:assert/strict';
+const origin='http://127.0.0.1:8787',prefix=process.env.NEXT_PUBLIC_APP_BASE_PATH||'',stamp=Date.now().toString(),name='qa_'+stamp,email=name+'@example.invalid',pass='A long test password '+stamp;
+const user={cookies:new Map()},other={cookies:new Map()},anonymous={cookies:new Map()};
+const testIP='qa-local-'+stamp;
+async function post(client,path,body,extra={}){
+ const r=await fetch(origin+prefix+path,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json','cf-connecting-ip':testIP,Cookie:[...client.cookies].map(([k,v])=>`${k}=${v}`).join('; '),...extra},body:JSON.stringify(body)});
+ for(const header of r.headers.getSetCookie()){const [name,value]=header.split(';')[0].split('=');if(value)client.cookies.set(name,value);else client.cookies.delete(name);}
+ return {status:r.status,data:await r.json(),headers:r.headers};
+}
+const auth=(c,b,h)=>post(c,'/api/auth',b,h),act=(c,b,h)=>post(c,'/api/action',b,h);
+async function state(client=anonymous,extra={}){const r=await fetch(origin+prefix+'/api/data',{headers:{Cookie:[...client.cookies].map(([k,v])=>`${k}=${v}`).join('; '),...extra}});assert.equal(r.status,200);return r.json();}
+assert.equal((await fetch(origin+prefix+'/')).status,200);
+assert.equal((await state()).user,null);
+assert.equal((await state(anonymous,{'oai-authenticated-user-id':'spoof','oai-authenticated-user-email':'spoof@example.invalid'})).user,null,'legacy identity does not authenticate app');
+assert.equal((await act(anonymous,{action:'submit'})).status,401);
+assert.equal((await auth(anonymous,{action:'register',username:name,email,password:pass},{Origin:'https://evil.example'})).status,403);
+assert.equal((await auth(anonymous,{action:'register',username:name,email,password:'short'})).status,400);
+assert.equal((await auth(anonymous,{action:'register',username:name,email:'invalid',password:pass})).status,400);
+const registration=await auth(user,{action:'register',username:name,email,password:pass});assert.equal(registration.status,201,JSON.stringify(registration.data));const originalRecovery=registration.data.recoveryCode;assert.equal(originalRecovery.length,64);assert.match(registration.headers.get('set-cookie'),/HttpOnly/);assert.match(registration.headers.get('set-cookie'),/Secure/);
+assert.equal((await state(user)).user.username,name);assert.equal((await state(user)).user.email,email);
+assert.equal((await auth(anonymous,{action:'register',username:name.toUpperCase(),email:'other'+email,password:pass})).status,409);
+assert.equal((await auth(anonymous,{action:'register',username:'other_'+stamp,email:email.toUpperCase(),password:pass})).status,409);
+assert.equal((await auth(other,{action:'register',username:'other_'+stamp,email:'other'+email,password:pass})).status,201);
+const base={action:'submit',title:stamp+' Étude',composer:'QA composer',instrument:'Piano',url:'https://example.com/score',notes:'Rapid double thirds and long passages.'};
+assert.equal((await act(user,{...base,url:'javascript:alert(1)'})).status,400);
+assert.equal((await act(user,base)).status,200);assert.equal((await act(user,base)).status,400);
+let d=await state(user),id=d.mine[0].id;assert.equal(d.total,0);assert.equal(d.mine[0].status,'pending');assert.equal(d.queue.length,0);assert.equal((await state(other)).mine.length,0);
+assert.equal((await act(user,{action:'review',id,status:'accepted',difficulty:1000})).status,403);
+assert.equal((await act(user,{action:'unlock',password:'wrong'})).status,403);
+assert.equal((await act(user,{action:'unlock',password:'local-test-password'})).status,200);
+assert.equal((await act(user,{action:'review',id,status:'accepted',difficulty:1001})).status,400);
+assert.equal((await act(user,{action:'review',id,status:'accepted',difficulty:1000})).status,200);assert.equal((await state(user)).total,100);
+await act(user,{action:'review',id,status:'accepted',difficulty:1000});assert.equal((await state(user)).total,100);
+await act(user,{...base,title:stamp+' easier'});d=await state(user);const easy=d.mine.find(p=>p.title.endsWith('easier')).id;
+await act(user,{action:'review',id:easy,status:'accepted',difficulty:500});assert.equal((await state(user)).total,150);
+const stolenAdmin={cookies:new Map(other.cookies)};stolenAdmin.cookies.set('music_admin',user.cookies.get('music_admin'));assert.equal((await state(stolenAdmin)).admin,false);
+assert.equal((await act(user,{action:'review',id:easy,status:'denied',review:''})).status,400);
+await act(user,{action:'review',id:easy,status:'denied',review:'Test denial'});assert.equal((await state(user)).total,100);
+const publicData=JSON.stringify(await state());assert.ok(!publicData.includes(email));assert.ok(!publicData.includes('password_hash'));assert.ok(!publicData.includes(originalRecovery));
+const replay={cookies:new Map(user.cookies)};await auth(user,{action:'logout'});assert.equal((await state(replay)).user,null);assert.equal((await state(user)).user,null);
+assert.equal((await auth(user,{action:'login',identifier:name,password:'wrong'})).status,401);
+assert.equal((await auth(user,{action:'login',identifier:email.toUpperCase(),password:pass})).status,200);assert.equal((await state(user)).total,100);assert.equal((await state(user)).admin,false);
+const secondDevice={cookies:new Map()};assert.equal((await auth(secondDevice,{action:'login',identifier:name.toUpperCase(),password:pass})).status,200);
+assert.equal((await auth(user,{action:'change-password',currentPassword:'wrong',password:pass+'new'})).status,400);
+const changed=await auth(user,{action:'change-password',currentPassword:pass,password:pass+'new'});assert.equal(changed.status,200);assert.equal((await state(secondDevice)).user,null);
+assert.equal((await auth(user,{action:'login',identifier:name,password:pass})).status,401);
+assert.equal((await auth(user,{action:'recover',identifier:name,recoveryCode:originalRecovery,password:pass+'recovered'})).status,400);
+const recovery=await auth(user,{action:'recover',identifier:name,recoveryCode:changed.data.recoveryCode,password:pass+'recovered'});assert.equal(recovery.status,200);assert.notEqual(recovery.data.recoveryCode,changed.data.recoveryCode);
+assert.equal((await auth(user,{action:'recover',identifier:name,recoveryCode:changed.data.recoveryCode,password:pass+'again'})).status,400);
+assert.equal((await auth(user,{action:'login',identifier:name,password:pass+'recovered'})).status,200);assert.equal((await state(user)).total,100);
+for(let i=0;i<11;i++)await auth(anonymous,{action:'login',identifier:'missing_'+stamp,password:'wrong'},{'cf-connecting-ip':testIP+'-rate'});
+assert.equal((await auth(anonymous,{action:'login',identifier:'missing_'+stamp,password:'wrong'},{'cf-connecting-ip':testIP+'-rate'})).status,429);
+console.log('PASS: independent registration; validation; unique username/email; secure sessions; no header-based login; CSRF; submission ownership; admin password; review/points; private email; logout/revocation; username/email login; password change; one-time recovery; login rate limits.');
